@@ -1,0 +1,5 @@
+pandas>=2.2
+numpy>=1.26
+sqlalchemy>=2.0
+pyyaml>=6.0
+matplotlib>=3.8

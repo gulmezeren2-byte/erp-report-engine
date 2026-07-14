@@ -1,0 +1,37 @@
+profile: generic
+dialect: any
+description: >
+  Canonical demo schema - the shape every profile must map its ERP into.
+  Used by the bundled demo database; also a template for writing new profiles.
+
+entities:
+  orders:
+    query: |
+      SELECT
+        o.order_id,
+        o.order_date,
+        o.region,
+        o.customer,
+        o.status,
+        o.promised_date,
+        o.actual_ship_date,
+        o.net_total
+      FROM orders o
+      WHERE o.order_date >= :since
+
+  order_lines:
+    query: |
+      SELECT
+        l.order_id,
+        l.item_code,
+        l.qty
+      FROM order_lines l
+      JOIN orders o ON o.order_id = l.order_id
+      WHERE o.order_date >= :since
+
+  inventory:
+    query: |
+      SELECT
+        i.item_code,
+        i.stock_qty
+      FROM inventory i

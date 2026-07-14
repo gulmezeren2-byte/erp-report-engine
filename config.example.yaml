@@ -1,0 +1,31 @@
+# erp-report-engine configuration
+# Copy to config.yaml, adjust, then:  python -m erp_report_engine validate -c config.yaml
+#
+# SECURITY: the connection URL (with credentials) lives in an ENVIRONMENT
+# VARIABLE, never in this file. The loader refuses URLs with embedded
+# passwords on purpose.
+
+connection:
+  url_env: ERP_DB_URL
+  # Set the variable first, e.g. (Windows):
+  #   setx ERP_DB_URL "mssql+pyodbc://readonly_user:PASS@SERVER/LOGODB?driver=ODBC+Driver+17+for+SQL+Server"
+  # or (Linux/macOS):
+  #   export ERP_DB_URL="postgresql+psycopg2://readonly_user:PASS@host/erp"
+  # Use a READ-ONLY database login (db_datareader on MSSQL) - defense in depth.
+
+profile: profiles/logo_tiger.yaml   # or profiles/generic.yaml, or your own
+
+profile_vars:                       # substituted into {placeholders} in the profile
+  firm_no: "001"                    # identifier-safe values only (letters/digits/_)
+  period_no: "01"
+
+report:
+  company_alias: "Company"          # display name in the report header - alias is fine
+  lookback_weeks: 13                # extraction window (completed ISO weeks)
+  low_cover_weeks: 2.0              # stock-cover alert threshold
+  out_dir: reports
+  state_db: state.db                # run memory (decline streaks)
+
+limits:
+  row_cap: 500000                   # refuse suspiciously large extractions
+  query_timeout_s: 60               # per-statement timeout (MSSQL/PostgreSQL)

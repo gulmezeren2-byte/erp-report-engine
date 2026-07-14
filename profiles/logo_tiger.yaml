@@ -1,0 +1,56 @@
+profile: logo_tiger
+dialect: mssql
+description: >
+  Logo Tiger / GO (MSSQL) mapping contract. Logo stores data in firm- and
+  period-suffixed tables: LG_{firm_no}_{period_no}_ORFICHE (order headers),
+  LG_{firm_no}_{period_no}_STLINE (transaction lines), LG_{firm_no}_ITEMS
+  (items), LG_{firm_no}_CLCARD (customers). Set firm_no / period_no in the
+  config's profile_vars (e.g. "001" / "01").
+
+  Field notes (verify against YOUR version - Logo schemas vary by release):
+  - ORFICHE.TRCODE 1 = purchase order, 2 = sales order; we take sales.
+  - ORFICHE.STATUS: 1 = open, 4 = closed (mapped to canonical status).
+  - Dates are datetime; CAPIBLOCK_CREADEDDATE is creation, DATE_ is doc date.
+  - NETTOTAL is the order net amount in local currency.
+  - Ship/delivery dates typically come from the dispatch (irsaliye) linkage;
+    this profile approximates with ORFICHE-level dates - refine per client.
+
+entities:
+  orders:
+    query: |
+      SELECT
+        f.FICHENO                                   AS order_id,
+        f.DATE_                                     AS order_date,
+        COALESCE(sh.TOWNNAME, 'UNKNOWN')            AS region,
+        c.DEFINITION_                               AS customer,
+        CASE f.STATUS WHEN 4 THEN 'delivered' ELSE 'open' END AS status,
+        f.DELIVERYDATE                              AS promised_date,
+        f.SHIPMENTDATE                              AS actual_ship_date,
+        f.NETTOTAL                                  AS net_total
+      FROM LG_{firm_no}_{period_no}_ORFICHE f
+      JOIN LG_{firm_no}_CLCARD c   ON c.LOGICALREF = f.CLIENTREF
+      LEFT JOIN LG_{firm_no}_SHIPINFO sh ON sh.LOGICALREF = f.SHIPINFOREF
+      WHERE f.TRCODE = 2
+        AND f.DATE_ >= :since
+
+  order_lines:
+    query: |
+      SELECT
+        f.FICHENO   AS order_id,
+        i.CODE      AS item_code,
+        l.AMOUNT    AS qty
+      FROM LG_{firm_no}_{period_no}_ORFLINE l
+      JOIN LG_{firm_no}_{period_no}_ORFICHE f ON f.LOGICALREF = l.ORDFICHEREF
+      JOIN LG_{firm_no}_ITEMS i               ON i.LOGICALREF = l.STOCKREF
+      WHERE f.TRCODE = 2
+        AND f.DATE_ >= :since
+        AND l.LINETYPE = 0
+
+  inventory:
+    query: |
+      SELECT
+        i.CODE                       AS item_code,
+        SUM(s.ONHAND)                AS stock_qty
+      FROM LV_{firm_no}_{period_no}_STINVTOT s
+      JOIN LG_{firm_no}_ITEMS i ON i.LOGICALREF = s.STOCKREF
+      GROUP BY i.CODE
