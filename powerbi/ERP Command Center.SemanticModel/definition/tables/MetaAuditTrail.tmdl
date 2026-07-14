@@ -1,0 +1,68 @@
+/// Every SQL statement the engine executed against the ERP database:
+/// the statement, its bound parameters, row count and duration.
+table MetaAuditTrail
+	lineageTag: 2961eecd-5750-4685-ad09-044b3e46ebd2
+
+	column Label
+		dataType: string
+		lineageTag: b75885eb-24fc-4565-8b67-c2fb76e1df90
+		summarizeBy: none
+		sourceColumn: label
+
+		annotation SummarizationSetBy = Automatic
+
+	column SQL
+		dataType: string
+		lineageTag: eef0f094-73d6-472a-8166-8c30e144ac22
+		summarizeBy: none
+		sourceColumn: sql
+
+		annotation SummarizationSetBy = Automatic
+
+	column Params
+		dataType: string
+		lineageTag: fa9266ac-a552-4201-bb7d-fb685802b91e
+		summarizeBy: none
+		sourceColumn: params
+
+		annotation SummarizationSetBy = Automatic
+
+	column Rows
+		dataType: int64
+		formatString: #,##0
+		lineageTag: dc57ab2b-b923-4848-b8b4-2a7a8ad1d472
+		summarizeBy: none
+		sourceColumn: rows
+
+		annotation SummarizationSetBy = User
+
+	column Seconds
+		dataType: double
+		formatString: 0.000
+		lineageTag: 3c1fb5d5-cf58-4a72-b1e7-335211fc0e3e
+		summarizeBy: none
+		sourceColumn: seconds
+
+		annotation SummarizationSetBy = User
+
+	partition MetaAuditTrail = m
+		mode: import
+		source =
+				let
+					Source = Csv.Document(File.Contents(DataFolder & "\meta_audit_trail.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+					Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+					Typed = Table.TransformColumnTypes(
+						Promoted,
+						{
+							{"label", type text},
+							{"sql", type text},
+							{"params", type text},
+							{"rows", Int64.Type},
+							{"seconds", type number}
+						},
+						"en-US"
+					)
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

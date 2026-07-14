@@ -1,0 +1,59 @@
+/// Source reconciliation: rows fetched vs an independent COUNT(*) of the
+/// same query, per entity. Any MISMATCH means: do not trust the KPIs yet.
+table MetaReconciliation
+	lineageTag: 1c65fc6b-66f1-4133-b513-7f6d5518ff55
+
+	column Entity
+		dataType: string
+		lineageTag: 2db6a899-68f3-4fca-bf5b-06ed1907ded8
+		summarizeBy: none
+		sourceColumn: entity
+
+		annotation SummarizationSetBy = Automatic
+
+	column Fetched
+		dataType: int64
+		formatString: #,##0
+		lineageTag: 74c774db-fe79-4ca0-8184-52738f34cb17
+		summarizeBy: none
+		sourceColumn: fetched
+
+		annotation SummarizationSetBy = User
+
+	column 'Source Count'
+		dataType: int64
+		formatString: #,##0
+		lineageTag: 4507f279-ef97-4362-a506-f697c01f9343
+		summarizeBy: none
+		sourceColumn: source_count
+
+		annotation SummarizationSetBy = User
+
+	column Match
+		dataType: string
+		lineageTag: ce0e6d2a-6e32-45fd-9de9-fa1dd552845d
+		summarizeBy: none
+		sourceColumn: match
+
+		annotation SummarizationSetBy = Automatic
+
+	partition MetaReconciliation = m
+		mode: import
+		source =
+				let
+					Source = Csv.Document(File.Contents(DataFolder & "\meta_reconciliation.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+					Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+					Typed = Table.TransformColumnTypes(
+						Promoted,
+						{
+							{"entity", type text},
+							{"fetched", Int64.Type},
+							{"source_count", Int64.Type},
+							{"match", type text}
+						},
+						"en-US"
+					)
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

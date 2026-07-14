@@ -1,0 +1,4 @@
+database 'ERP Command Center'
+	id: 541d4283-5451-4b4d-a586-5d78156fcaab
+	compatibilityLevel: 1601
+	compatibilityMode: powerBI

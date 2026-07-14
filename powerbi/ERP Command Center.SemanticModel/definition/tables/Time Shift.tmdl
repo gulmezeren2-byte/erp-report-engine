@@ -1,0 +1,91 @@
+/// Calculation group: apply week arithmetic to ANY measure. Uses the gapless
+/// Week Ordinal so shifts never break at year boundaries.
+table 'Time Shift'
+	lineageTag: 67a9115c-0014-4000-8000-000000000014
+
+	calculationGroup
+		precedence: 1
+
+		calculationItem Current = SELECTEDMEASURE ()
+
+		calculationItem 'Previous Week' =
+				VAR w = MAX ( DimWeek[Week Ordinal] )
+				RETURN
+				    CALCULATE (
+				        SELECTEDMEASURE (),
+				        REMOVEFILTERS ( DimWeek ),
+				        DimWeek[Week Ordinal] = w - 1
+				    )
+
+		calculationItem 'WoW Change' =
+				VAR w = MAX ( DimWeek[Week Ordinal] )
+				VAR prev =
+				    CALCULATE (
+				        SELECTEDMEASURE (),
+				        REMOVEFILTERS ( DimWeek ),
+				        DimWeek[Week Ordinal] = w - 1
+				    )
+				RETURN
+				    SELECTEDMEASURE () - prev
+
+		calculationItem 'WoW %' =
+				VAR w = MAX ( DimWeek[Week Ordinal] )
+				VAR prev =
+				    CALCULATE (
+				        SELECTEDMEASURE (),
+				        REMOVEFILTERS ( DimWeek ),
+				        DimWeek[Week Ordinal] = w - 1
+				    )
+				RETURN
+				    DIVIDE ( SELECTEDMEASURE () - prev, prev )
+
+			formatStringDefinition = "+0.0%;-0.0%;0.0%"
+
+		calculationItem '8-Week Baseline' =
+				VAR w = MAX ( DimWeek[Week Ordinal] )
+				RETURN
+				    AVERAGEX (
+				        FILTER (
+				            ALL ( DimWeek ),
+				            DimWeek[Week Ordinal] >= w - 8
+				                && DimWeek[Week Ordinal] <= w - 1
+				                && DimWeek[Is Full Week] = 1
+				        ),
+				        CALCULATE ( SELECTEDMEASURE () )
+				    )
+
+		calculationItem 'vs Baseline %' =
+				VAR w = MAX ( DimWeek[Week Ordinal] )
+				VAR base =
+				    AVERAGEX (
+				        FILTER (
+				            ALL ( DimWeek ),
+				            DimWeek[Week Ordinal] >= w - 8
+				                && DimWeek[Week Ordinal] <= w - 1
+				                && DimWeek[Is Full Week] = 1
+				        ),
+				        CALCULATE ( SELECTEDMEASURE () )
+				    )
+				RETURN
+				    DIVIDE ( SELECTEDMEASURE () - base, base )
+
+			formatStringDefinition = "+0.0%;-0.0%;0.0%"
+
+	column Shift
+		dataType: string
+		lineageTag: 67a9115c-0015-4000-8000-000000000015
+		summarizeBy: none
+		sourceColumn: Name
+		sortByColumn: Ordinal
+
+		annotation SummarizationSetBy = Automatic
+
+	column Ordinal
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 67a9115c-0016-4000-8000-000000000016
+		summarizeBy: none
+		sourceColumn: Ordinal
+
+		annotation SummarizationSetBy = User

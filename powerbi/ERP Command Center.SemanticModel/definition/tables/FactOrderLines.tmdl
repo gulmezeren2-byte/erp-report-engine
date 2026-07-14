@@ -1,0 +1,51 @@
+/// One row per order line, restricted to orders present in FactOrders.
+table FactOrderLines
+	lineageTag: 4c266e32-bea4-446a-9adf-c56a606ab168
+
+	column 'Order ID'
+		dataType: string
+		isHidden
+		lineageTag: 61282e97-c3c6-4bfb-9457-eded7fdfd75e
+		summarizeBy: none
+		sourceColumn: order_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Item Code'
+		dataType: string
+		isHidden
+		lineageTag: 290c0c7c-cbe6-4bce-a25b-6c19a9112ce8
+		summarizeBy: none
+		sourceColumn: item_code
+
+		annotation SummarizationSetBy = Automatic
+
+	column Qty
+		dataType: double
+		isHidden
+		formatString: #,##0
+		lineageTag: 4442173c-f354-4461-9a03-1ac23d4bed0f
+		summarizeBy: sum
+		sourceColumn: qty
+
+		annotation SummarizationSetBy = Automatic
+
+	partition FactOrderLines = m
+		mode: import
+		source =
+				let
+					Source = Csv.Document(File.Contents(DataFolder & "\fact_order_lines.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+					Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+					Typed = Table.TransformColumnTypes(
+						Promoted,
+						{
+							{"order_id", type text},
+							{"item_code", type text},
+							{"qty", type number}
+						},
+						"en-US"
+					)
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

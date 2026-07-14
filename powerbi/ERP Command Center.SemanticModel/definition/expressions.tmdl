@@ -1,0 +1,6 @@
+/// Folder holding the CSVs produced by: python -m erp_report_engine export-powerbi
+expression DataFolder = "C:\erp-report-engine\powerbi\data" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: a6d411ff-b48e-4a09-897a-f1a2897420b6
+	queryGroup: Parameters
+
+	annotation PBI_ResultType = Text

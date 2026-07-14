@@ -5,6 +5,11 @@ config.yaml
 state.db
 reports/
 
+# Power BI Desktop per-user runtime state (never commit)
+powerbi/**/.pbi/localSettings.json
+powerbi/**/.pbi/cache.abf
+powerbi/**/.pbi/unappliedChanges.json
+
 # python
 __pycache__/
 *.py[cod]

@@ -67,6 +67,28 @@ def cmd_run(args) -> None:
     }, indent=2, ensure_ascii=False))
 
 
+def cmd_export_powerbi(args) -> None:
+    from .export_powerbi import export_all
+
+    cfg = load_config(args.config)
+    profile = load_profile(cfg.profile_path)
+    engine = make_engine(cfg.db_url, cfg.query_timeout_s)
+    auditor = Auditor()
+
+    ex = extract_all(engine, auditor, profile, cfg)
+    state = State(cfg.state_db)
+    streak = state.streak("revenue")
+    state.close()
+    counts = export_all(cfg, profile, ex, auditor, args.out, streak)
+
+    print(json.dumps({
+        "out_dir": args.out,
+        "files": counts,
+        "queries_executed": len(auditor.entries),
+        "note": "open powerbi/ERP Command Center.pbip and point the DataFolder parameter here",
+    }, indent=2, ensure_ascii=False))
+
+
 def cmd_init_demo(args) -> None:
     from demo.build_demo_db import main as build_demo
 
@@ -92,6 +114,12 @@ def main(argv: list[str] | None = None) -> None:
     s = sub.add_parser("run", help="produce the weekly report")
     s.add_argument("-c", "--config", required=True)
     s.set_defaults(fn=cmd_run)
+
+    s = sub.add_parser("export-powerbi",
+                       help="export the star schema + honesty tables for the Power BI Command Center")
+    s.add_argument("-c", "--config", required=True)
+    s.add_argument("-o", "--out", default=os.path.join("powerbi", "data"))
+    s.set_defaults(fn=cmd_export_powerbi)
 
     s = sub.add_parser("init-demo", help="build the bundled demo database and config")
     s.set_defaults(fn=cmd_init_demo)

@@ -57,6 +57,7 @@ flowchart LR
     PROF --> GUARD
     DB --> GUARD --> GATE --> KPI --> INS --> HTML
     STATE --- HTML
+    GATE --> PBI["Power BI Command Center<br/>(TMDL + PBIR, code-authored)"]
 ```
 
 The layer that makes this portable is the **semantic profile**: a versioned YAML contract that maps one ERP's cryptic schema to three canonical entities — `orders`, `order_lines`, `inventory`. The engine only ever sees canonical columns. Swap the profile, keep the report.
@@ -135,6 +136,17 @@ schtasks /create /tn "erp-weekly-report" /sc weekly /d MON /st 07:00 ^
 
 Each run appends to `state.db`, which is how the report can say *"third consecutive weekly decline"* — memory across runs, without re-querying history from the ERP.
 
+## The Power BI Command Center
+
+The engine also feeds an interactive Power BI layer — and there is no `.pbix` binary in this repo. The entire artifact is a **PBIP project authored as code**: the semantic model in TMDL (star schema, 20+ documented DAX measures, a *Time Shift* calculation group on a gapless week ordinal, a field parameter), the report in PBIR (4 pages / 24 visuals, generated from compact specs by a script), and a custom theme.
+
+```bash
+python -m erp_report_engine export-powerbi -c config.demo.yaml
+# then open powerbi/ERP Command Center.pbip in Power BI Desktop
+```
+
+The signature is the **Trust page**: source reconciliation, the data-quality gate and the full SQL audit trail rendered as visuals — the dashboard shows its receipts. Alert thresholds are the same ones as `insights.py`, re-derived in DAX: one definition, two surfaces. Field bindings are validated against the TMDL model by `pbir-cli` before the project ever meets Desktop. Full guide: [powerbi/README.md](powerbi/README.md).
+
 ## What this does NOT do
 
 Honesty over marketing — you should know the edges before pointing it at production:
@@ -159,7 +171,7 @@ Honesty over marketing — you should know the edges before pointing it at produ
 pip install pytest && python -m pytest tests/ -v
 ```
 
-13 tests: 8 injection attempts against the guard, profile contract validation, variable-injection rejection, plus a full end-to-end run against the demo database asserting that findings fire, the seeded dirt is caught, and the report carries its audit trail.
+15 tests: 8 injection attempts against the guard, profile contract validation, variable-injection rejection, a full end-to-end run against the demo database asserting that findings fire, the seeded dirt is caught, and the report carries its audit trail — plus the Power BI layer: exporter contract (unique keys, gapless week ordinals) and PBIP project integrity (naming rules, visual overlap detection, theme resolution, every visual field exists in the model).
 
 ## Roadmap
 

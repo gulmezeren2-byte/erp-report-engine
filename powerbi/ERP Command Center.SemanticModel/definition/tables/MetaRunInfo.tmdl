@@ -1,0 +1,87 @@
+/// Single-row run metadata: when the export ran, which profile, engine
+/// version, thresholds, and the revenue decline streak from run-state memory.
+table MetaRunInfo
+	lineageTag: 3d2398e0-7041-42ae-8326-6a2403ba5b7f
+
+	column 'Generated At'
+		dataType: string
+		lineageTag: 552cd484-01de-404e-a41d-a148f90bc138
+		summarizeBy: none
+		sourceColumn: generated_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column Profile
+		dataType: string
+		lineageTag: a95b7713-96b8-4dfc-a887-ffc795ad26ea
+		summarizeBy: none
+		sourceColumn: profile
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Company Alias'
+		dataType: string
+		lineageTag: 8bbb5327-317b-4a45-919a-efd35ade4c2a
+		summarizeBy: none
+		sourceColumn: company_alias
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Engine Version'
+		dataType: string
+		lineageTag: 67d024f7-6de7-48d3-88ec-d813f5af525e
+		summarizeBy: none
+		sourceColumn: engine_version
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Lookback Weeks'
+		dataType: int64
+		formatString: 0
+		lineageTag: a29f0ac6-c54d-477a-b8c8-f48a6c2e28ff
+		summarizeBy: none
+		sourceColumn: lookback_weeks
+
+		annotation SummarizationSetBy = User
+
+	column 'Low Cover Threshold'
+		dataType: double
+		formatString: 0.0
+		lineageTag: ea3dfa8e-1887-4a52-b38b-abc76ff9dc37
+		summarizeBy: none
+		sourceColumn: low_cover_weeks
+
+		annotation SummarizationSetBy = User
+
+	column 'Revenue Decline Streak'
+		dataType: int64
+		formatString: 0
+		lineageTag: 75b30e7d-9981-4026-a07a-a73ec8a7ccaf
+		summarizeBy: none
+		sourceColumn: revenue_decline_streak
+
+		annotation SummarizationSetBy = User
+
+	partition MetaRunInfo = m
+		mode: import
+		source =
+				let
+					Source = Csv.Document(File.Contents(DataFolder & "\meta_run_info.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+					Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+					Typed = Table.TransformColumnTypes(
+						Promoted,
+						{
+							{"generated_at", type text},
+							{"profile", type text},
+							{"company_alias", type text},
+							{"engine_version", type text},
+							{"lookback_weeks", Int64.Type},
+							{"low_cover_weeks", type number},
+							{"revenue_decline_streak", Int64.Type}
+						},
+						"en-US"
+					)
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

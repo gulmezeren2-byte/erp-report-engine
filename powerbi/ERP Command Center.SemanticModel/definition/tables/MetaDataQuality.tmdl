@@ -1,0 +1,24 @@
+/// Every issue the data-quality gate found in this extraction: duplicates,
+/// unparseable dates, negative totals, ship-before-order rows.
+table MetaDataQuality
+	lineageTag: 3c82a9ff-1c69-4192-a1aa-d637cbd322f9
+
+	column Issue
+		dataType: string
+		lineageTag: c3d9602b-5b38-429e-b9cc-aad7848626b6
+		summarizeBy: none
+		sourceColumn: issue
+
+		annotation SummarizationSetBy = Automatic
+
+	partition MetaDataQuality = m
+		mode: import
+		source =
+				let
+					Source = Csv.Document(File.Contents(DataFolder & "\meta_data_quality.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+					Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+					Typed = Table.TransformColumnTypes(Promoted, {{"issue", type text}}, "en-US")
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

@@ -57,6 +57,7 @@ flowchart LR
     PROF --> GUARD
     DB --> GUARD --> GATE --> KPI --> INS --> HTML
     STATE --- HTML
+    GATE --> PBI["Power BI Command Center<br/>(TMDL + PBIR, kod-olarak-yazılmış)"]
 ```
 
 Bu sistemi taşınabilir kılan katman **semantik profil**: bir ERP'nin şifreli şemasını üç kanonik varlığa — `orders`, `order_lines`, `inventory` — eşleyen sürümlü bir YAML sözleşmesi. Motor yalnızca kanonik kolonları görür. Profili değiştirin, rapor aynı kalsın.
@@ -135,6 +136,17 @@ schtasks /create /tn "erp-haftalik-rapor" /sc weekly /d MON /st 07:00 ^
 
 Her çalışma `state.db` dosyasına eklenir; raporun *"üçüncü ardışık haftalık düşüş"* diyebilmesi buradan gelir — geçmişi ERP'den yeniden sorgulamadan, çalışmalar arası hafıza.
 
+## Power BI Command Center
+
+Motor, etkileşimli bir Power BI katmanını da besler — ve bu depoda `.pbix` ikilisi yoktur. Ürünün tamamı **kod olarak yazılmış bir PBIP projesi**: semantik model TMDL'de (yıldız şema, açıklamalı 20+ DAX ölçüsü, boşluksuz hafta sırası üstünde çalışan *Time Shift* hesaplama grubu, alan parametresi), rapor PBIR'de (4 sayfa / 24 görsel, bir betikle kompakt spec'lerden üretiliyor), artı özel tema.
+
+```bash
+python -m erp_report_engine export-powerbi -c config.demo.yaml
+# sonra powerbi/ERP Command Center.pbip dosyasını Power BI Desktop'ta açın
+```
+
+İmza özellik **Trust sayfası**: kaynak mutabakatı, veri kalitesi kapısı ve SQL denetim izinin tamamı görsel olarak — pano makbuzlarını gösterir. Uyarı eşikleri `insights.py` ile birebir aynı, DAX'te yeniden türetilmiş: tek tanım, iki yüzey. Alan bağlamaları, proje Desktop'ı görmeden önce `pbir-cli` ile TMDL modele karşı doğrulanır. Tam kılavuz: [powerbi/README.tr.md](powerbi/README.tr.md).
+
 ## Bu sistem ne YAPMAZ?
 
 Pazarlama değil dürüstlük — canlıya doğrultmadan önce sınırları bilin:
@@ -159,7 +171,7 @@ Pazarlama değil dürüstlük — canlıya doğrultmadan önce sınırları bili
 pip install pytest && python -m pytest tests/ -v
 ```
 
-13 test: bekçiye 8 enjeksiyon denemesi, profil sözleşmesi doğrulaması, değişken enjeksiyonu reddi, artı demo veritabanına karşı uçtan uca tam koşu — bulguların ateşlendiğini, ekili kirin yakalandığını ve raporun denetim izini taşıdığını doğrular.
+15 test: bekçiye 8 enjeksiyon denemesi, profil sözleşmesi doğrulaması, değişken enjeksiyonu reddi, demo veritabanına karşı uçtan uca tam koşu (bulgular ateşleniyor, ekili kir yakalanıyor, rapor denetim izini taşıyor) — artı Power BI katmanı: ihraç sözleşmesi (benzersiz anahtarlar, boşluksuz hafta sırası) ve PBIP proje bütünlüğü (adlandırma kuralları, görsel çakışma tespiti, tema çözümleme, görsellerdeki her alanın modelde var olması).
 
 ## Yol haritası
 

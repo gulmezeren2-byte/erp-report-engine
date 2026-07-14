@@ -1,0 +1,84 @@
+/// ISO week calendar for the extraction window. The current partial week is
+/// flagged (Is Full Week = 0), never hidden - measures exclude it explicitly.
+table DimWeek
+	lineageTag: 86013298-0f2a-42d1-8bdb-a8c81f77abb1
+
+	column Week
+		dataType: string
+		lineageTag: 094c407e-9de5-4ec1-97e9-95da778fd409
+		summarizeBy: none
+		sourceColumn: week_key
+		sortByColumn: 'Week Ordinal'
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Week Index'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: b959428a-cc2e-4c8b-a028-3d672b2a48f1
+		summarizeBy: none
+		sourceColumn: week_index
+
+		annotation SummarizationSetBy = User
+
+	column 'Week Ordinal'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 9e3c0a20-6e68-4c2c-b0e1-dd42db855dff
+		summarizeBy: none
+		sourceColumn: week_ordinal
+
+		annotation SummarizationSetBy = User
+
+	column 'Week Start'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 8b6734ca-5049-4fca-89ca-d005af5d78e1
+		summarizeBy: none
+		sourceColumn: week_start
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Week End'
+		dataType: dateTime
+		isHidden
+		formatString: yyyy-mm-dd
+		lineageTag: c6961715-5e3c-41dc-b445-f5b98c2d5ecb
+		summarizeBy: none
+		sourceColumn: week_end
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Is Full Week'
+		dataType: int64
+		formatString: 0
+		lineageTag: c4d99364-89ca-49f3-b6f7-733a881a561c
+		summarizeBy: none
+		sourceColumn: is_full_week
+
+		annotation SummarizationSetBy = User
+
+	partition DimWeek = m
+		mode: import
+		source =
+				let
+					Source = Csv.Document(File.Contents(DataFolder & "\dim_week.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+					Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+					Typed = Table.TransformColumnTypes(
+						Promoted,
+						{
+							{"week_key", type text},
+							{"week_index", Int64.Type},
+							{"week_ordinal", Int64.Type},
+							{"week_start", type date},
+							{"week_end", type date},
+							{"is_full_week", Int64.Type}
+						},
+						"en-US"
+					)
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

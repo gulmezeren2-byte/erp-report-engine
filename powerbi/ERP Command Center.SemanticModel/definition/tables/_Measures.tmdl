@@ -1,0 +1,221 @@
+/// Measure home. Thresholds mirror the engine's insight rules (insights.py):
+/// revenue alert at 5% WoW, on-time alert at 1.5 pts - one definition, two surfaces.
+table _Measures
+	lineageTag: 6b22002b-f1b6-4851-a590-c1bda7438e26
+
+	/// Sum of order net totals in the current filter context.
+	measure Revenue = SUM ( FactOrders[Net Total] )
+		formatString: #,##0
+		displayFolder: 1. Base
+		lineageTag: 1adcf211-9732-4cbd-bcbf-bb859db6c7cc
+
+	/// Count of orders (fact is one row per order).
+	measure Orders = COUNTROWS ( FactOrders )
+		formatString: #,##0
+		displayFolder: 1. Base
+		lineageTag: 4ef8ad7c-87a7-4718-8878-b9575ba1fe3a
+
+	/// Order-level OTIF-lite: shipped on or before promised, over scored
+	/// delivered orders only. Completeness is NOT asserted - see README.
+	measure 'On-Time %' =
+			DIVIDE (
+			    SUM ( FactOrders[Is On Time] ),
+			    COUNT ( FactOrders[Is On Time] )
+			)
+		formatString: 0.0%
+		displayFolder: 1. Base
+		lineageTag: 4ac0e738-a49f-433c-a14b-3412d7787bbe
+
+	/// Average days from order date to actual ship date (delivered orders).
+	measure 'Avg Lead Days' = AVERAGE ( FactOrders[Lead Days] )
+		formatString: 0.0
+		displayFolder: 1. Base
+		lineageTag: ba60b05c-921c-4aeb-b356-7de71a330af5
+
+	/// Total ordered quantity from order lines.
+	measure Qty = SUM ( FactOrderLines[Qty] )
+		formatString: #,##0
+		displayFolder: 1. Base
+		lineageTag: 4fac6206-19f9-43af-b8bb-a5c55184099a
+
+	/// Ordinal of the last COMPLETED ISO week - every headline number anchors
+	/// here, so a two-day week can never masquerade as a crash.
+	measure '_Last Full Week Ordinal' =
+			CALCULATE (
+			    MAX ( DimWeek[Week Ordinal] ),
+			    REMOVEFILTERS ( DimWeek ),
+			    DimWeek[Is Full Week] = 1
+			)
+		isHidden
+		formatString: 0
+		displayFolder: 9. Internals
+		lineageTag: 1ad87ee9-3d5b-4b63-a829-41acee13f067
+
+	measure 'Last Full Week' =
+			VAR w = [_Last Full Week Ordinal]
+			RETURN
+			    CALCULATE (
+			        MAX ( DimWeek[Week] ),
+			        REMOVEFILTERS ( DimWeek ),
+			        DimWeek[Week Ordinal] = w
+			    )
+		displayFolder: 2. This Week
+		lineageTag: 46380c64-715e-4162-886a-1914d27f5bec
+
+	measure 'Revenue (This Week)' =
+			VAR w = [_Last Full Week Ordinal]
+			RETURN
+			    CALCULATE ( [Revenue], REMOVEFILTERS ( DimWeek ), DimWeek[Week Ordinal] = w )
+		formatString: #,##0
+		displayFolder: 2. This Week
+		lineageTag: 5309f8d2-ed0f-4d19-b0d9-317973efffba
+
+	measure 'Revenue (Prev Week)' =
+			VAR w = [_Last Full Week Ordinal]
+			RETURN
+			    CALCULATE ( [Revenue], REMOVEFILTERS ( DimWeek ), DimWeek[Week Ordinal] = w - 1 )
+		formatString: #,##0
+		displayFolder: 2. This Week
+		lineageTag: 8d910593-ec38-4768-a642-8d11a6d4f292
+
+	/// Week-over-week revenue move of the last completed week.
+	measure 'Revenue WoW %' =
+			DIVIDE ( [Revenue (This Week)] - [Revenue (Prev Week)], [Revenue (Prev Week)] )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 2. This Week
+		lineageTag: a8b5cc90-972c-4b2f-9ef4-8bde91cf95bb
+
+	/// Average weekly revenue over the 8 completed weeks before the last one.
+	measure 'Revenue (8W Baseline)' =
+			VAR w = [_Last Full Week Ordinal]
+			RETURN
+			    AVERAGEX (
+			        FILTER (
+			            ALL ( DimWeek ),
+			            DimWeek[Week Ordinal] >= w - 8
+			                && DimWeek[Week Ordinal] <= w - 1
+			                && DimWeek[Is Full Week] = 1
+			        ),
+			        CALCULATE ( [Revenue] )
+			    )
+		formatString: #,##0
+		displayFolder: 2. This Week
+		lineageTag: 67a9115c-0001-4000-8000-000000000001
+
+	measure 'Orders (This Week)' =
+			VAR w = [_Last Full Week Ordinal]
+			RETURN
+			    CALCULATE ( [Orders], REMOVEFILTERS ( DimWeek ), DimWeek[Week Ordinal] = w )
+		formatString: #,##0
+		displayFolder: 2. This Week
+		lineageTag: 67a9115c-0002-4000-8000-000000000002
+
+	measure 'On-Time % (This Week)' =
+			VAR w = [_Last Full Week Ordinal]
+			RETURN
+			    CALCULATE ( [On-Time %], REMOVEFILTERS ( DimWeek ), DimWeek[Week Ordinal] = w )
+		formatString: 0.0%
+		displayFolder: 2. This Week
+		lineageTag: 67a9115c-0003-4000-8000-000000000003
+
+	measure 'On-Time % (Prev Week)' =
+			VAR w = [_Last Full Week Ordinal]
+			RETURN
+			    CALCULATE ( [On-Time %], REMOVEFILTERS ( DimWeek ), DimWeek[Week Ordinal] = w - 1 )
+		formatString: 0.0%
+		displayFolder: 2. This Week
+		lineageTag: 67a9115c-0004-4000-8000-000000000004
+
+	/// On-time move in percentage points, last completed week vs the one before.
+	measure 'On-Time Change (pts)' =
+			( [On-Time % (This Week)] - [On-Time % (Prev Week)] ) * 100
+		formatString: +0.0;-0.0;0.0
+		displayFolder: 2. This Week
+		lineageTag: 67a9115c-0005-4000-8000-000000000005
+
+	/// Items below the cover threshold configured in the engine (MetaRunInfo).
+	measure 'Low Cover Items' =
+			VAR t = MAX ( MetaRunInfo[Low Cover Threshold] )
+			RETURN
+			    COUNTROWS (
+			        FILTER (
+			            DimItem,
+			            NOT ISBLANK ( DimItem[Cover Weeks] ) && DimItem[Cover Weeks] < t
+			        )
+			    )
+		formatString: 0
+		displayFolder: 3. Alerts
+		lineageTag: 67a9115c-0006-4000-8000-000000000006
+
+	measure 'DQ Issues' = COUNTROWS ( MetaDataQuality )
+		formatString: 0
+		displayFolder: 3. Alerts
+		lineageTag: 67a9115c-0007-4000-8000-000000000007
+
+	measure 'Reconciliation Mismatches' =
+			COUNTROWS ( FILTER ( MetaReconciliation, MetaReconciliation[Match] = "MISMATCH" ) )
+		formatString: 0
+		displayFolder: 3. Alerts
+		lineageTag: 67a9115c-0008-4000-8000-000000000008
+
+	measure 'Audited Statements' = COUNTROWS ( MetaAuditTrail )
+		formatString: 0
+		displayFolder: 3. Alerts
+		lineageTag: 67a9115c-0009-4000-8000-000000000009
+
+	/// Number of insight rules currently firing. Thresholds identical to the
+	/// engine's insights.py: |revenue WoW| >= 5%, on-time move >= 1.5 pts.
+	measure 'Alert Count' =
+			VAR revAlert = IF ( ABS ( [Revenue WoW %] ) >= 0.05, 1, 0 )
+			VAR otpAlert = IF ( ABS ( [On-Time Change (pts)] ) >= 1.5, 1, 0 )
+			VAR coverAlert = IF ( [Low Cover Items] > 0, 1, 0 )
+			VAR reconAlert = IF ( [Reconciliation Mismatches] > 0, 1, 0 )
+			VAR streakAlert = IF ( MAX ( MetaRunInfo[Revenue Decline Streak] ) >= 2, 1, 0 )
+			RETURN
+			    revAlert + otpAlert + coverAlert + reconAlert + streakAlert
+		formatString: 0
+		displayFolder: 3. Alerts
+		lineageTag: 67a9115c-0010-4000-8000-000000000010
+
+	/// One-line plain-language verdict for the headline card - the same story
+	/// the HTML report tells, recomputed live on every refresh.
+	measure 'Weekly Verdict' =
+			VAR wow = [Revenue WoW %]
+			VAR dp = [On-Time Change (pts)]
+			VAR low = [Low Cover Items]
+			VAR t = MAX ( MetaRunInfo[Low Cover Threshold] )
+			RETURN
+			    "Week " & [Last Full Week]
+			        & ":  revenue " & FORMAT ( wow, "+0.0%;-0.0%;0.0%" )
+			        & " WoW  ·  on-time " & FORMAT ( dp, "+0.0;-0.0;0.0" )
+			        & " pts  ·  " & low & " items below " & FORMAT ( t, "0.0" )
+			        & " weeks of cover  ·  " & [DQ Issues] & " data-quality issues"
+		displayFolder: 3. Alerts
+		lineageTag: 67a9115c-0011-4000-8000-000000000011
+
+	/// Reads OK only when every entity's row count matches its source COUNT(*).
+	measure 'Trust Statement' =
+			IF (
+			    [Reconciliation Mismatches] = 0,
+			    "All " & COUNTROWS ( MetaReconciliation )
+			        & " entities reconcile with source counts - "
+			        & [Audited Statements] & " read-only statements audited",
+			    [Reconciliation Mismatches]
+			        & " entity(ies) DO NOT reconcile with source - investigate before trusting KPIs"
+			)
+		displayFolder: 3. Alerts
+		lineageTag: 67a9115c-0012-4000-8000-000000000012
+
+	column Value
+		isHidden
+		lineageTag: 67a9115c-0013-4000-8000-000000000013
+		summarizeBy: none
+		sourceColumn: [Value]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition _Measures = calculated
+		mode: import
+		source = ROW ( "Value", BLANK () )
+
+	annotation PBI_Id = 7d78874a-e809-4e05-8d25-70ae00399f53

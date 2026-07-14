@@ -1,0 +1,145 @@
+/// One row per order (deduplicated on order_id by the exporter; duplicates stay visible in MetaDataQuality).
+table FactOrders
+	lineageTag: 9b921863-a384-4210-a1f4-21253f998973
+
+	column 'Order ID'
+		dataType: string
+		isHidden
+		lineageTag: fbd60b41-1120-4573-95f3-125b22a9a4b9
+		summarizeBy: none
+		sourceColumn: order_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Order Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 9ea7a423-8b7c-4d96-b81b-0a5c27a6194f
+		summarizeBy: none
+		sourceColumn: order_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Week Key'
+		dataType: string
+		isHidden
+		lineageTag: 7b54b08e-f244-4fb9-9ca9-52954adbea6b
+		summarizeBy: none
+		sourceColumn: week_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column Region
+		dataType: string
+		lineageTag: 5947d331-3c16-444f-961b-68f7bfae7042
+		summarizeBy: none
+		sourceColumn: region
+
+		annotation SummarizationSetBy = Automatic
+
+	column Customer
+		dataType: string
+		lineageTag: 48972790-668c-4983-b62e-29ca54b04d49
+		summarizeBy: none
+		sourceColumn: customer
+
+		annotation SummarizationSetBy = Automatic
+
+	column Status
+		dataType: string
+		lineageTag: 610abde3-a01b-484e-8661-3efc5e607aa8
+		summarizeBy: none
+		sourceColumn: status
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Promised Date'
+		dataType: dateTime
+		isHidden
+		formatString: yyyy-mm-dd
+		lineageTag: c7091d14-7a81-4845-9545-06145b0aa5be
+		summarizeBy: none
+		sourceColumn: promised_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Ship Date'
+		dataType: dateTime
+		isHidden
+		formatString: yyyy-mm-dd
+		lineageTag: 86ded57b-53c1-4075-a712-c78aeca7adbf
+		summarizeBy: none
+		sourceColumn: actual_ship_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Net Total'
+		dataType: double
+		isHidden
+		formatString: #,##0
+		lineageTag: 855a3411-7d2b-47f3-9715-000e697142e4
+		summarizeBy: sum
+		sourceColumn: net_total
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Is Delivered'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 3498c8eb-2572-4d8f-9537-4424e38103f1
+		summarizeBy: none
+		sourceColumn: is_delivered
+
+		annotation SummarizationSetBy = User
+
+	column 'Is On Time'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 243c7ab5-e2be-47b4-a40c-c99859ca4a8e
+		summarizeBy: none
+		sourceColumn: is_on_time
+
+		annotation SummarizationSetBy = User
+
+	column 'Lead Days'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: acb2bbfa-cb36-43e5-97b4-cee336e787db
+		summarizeBy: none
+		sourceColumn: lead_days
+
+		annotation SummarizationSetBy = User
+
+	partition FactOrders = m
+		mode: import
+		source =
+				let
+					Source = Csv.Document(File.Contents(DataFolder & "\fact_orders.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+					Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+					Typed = Table.TransformColumnTypes(
+						Promoted,
+						{
+							{"order_id", type text},
+							{"order_date", type date},
+							{"week_key", type text},
+							{"week_index", Int64.Type},
+							{"region", type text},
+							{"customer", type text},
+							{"status", type text},
+							{"promised_date", type date},
+							{"actual_ship_date", type date},
+							{"net_total", type number},
+							{"is_delivered", Int64.Type},
+							{"is_on_time", Int64.Type},
+							{"lead_days", Int64.Type}
+						},
+						"en-US"
+					),
+					Removed = Table.RemoveColumns(Typed, {"week_index"})
+				in
+					Removed
+
+	annotation PBI_ResultType = Table

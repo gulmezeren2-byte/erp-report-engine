@@ -1,0 +1,102 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "table_audit",
+  "position": {
+    "x": 540,
+    "y": 248,
+    "z": 5000,
+    "height": 432,
+    "width": 716,
+    "tabOrder": 5000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "MetaAuditTrail"
+                    }
+                  },
+                  "Property": "Label"
+                }
+              },
+              "queryRef": "MetaAuditTrail.Label",
+              "nativeQueryRef": "Label"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "MetaAuditTrail"
+                    }
+                  },
+                  "Property": "Rows"
+                }
+              },
+              "queryRef": "MetaAuditTrail.Rows",
+              "nativeQueryRef": "Rows"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "MetaAuditTrail"
+                    }
+                  },
+                  "Property": "Seconds"
+                }
+              },
+              "queryRef": "MetaAuditTrail.Seconds",
+              "nativeQueryRef": "Seconds"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "MetaAuditTrail"
+                    }
+                  },
+                  "Property": "SQL"
+                }
+              },
+              "queryRef": "MetaAuditTrail.SQL",
+              "nativeQueryRef": "SQL"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'SQL audit trail \u2014 every statement executed'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -19,19 +19,24 @@ A read-only autonomous reporting engine that runs SQL against the database behin
 
 ```
 erp_report_engine/
-  config.py     # YAML config; refuses embedded passwords
-  connect.py    # THE security layer: guard, engine, safe_read, Auditor
-  semantic.py   # profile contracts (canonical entities, REQUIRED_COLUMNS)
-  extract.py    # extraction + quality gate + COUNT(*) reconciliation
-  kpi.py        # ISO-week KPIs vs 8-week baseline
-  insights.py   # deterministic findings + driver attribution
-  state.py      # SQLite run memory (decline streaks)
-  render.py     # self-contained HTML (inline SVG via matplotlib)
-  cli.py        # validate / run / init-demo
-profiles/       # generic.yaml (canonical), logo_tiger.yaml (MSSQL)
-demo/           # synthetic demo DB builder (seeded, deliberately dirty)
-tests/          # guard, contracts, end-to-end on the demo DB
+  config.py          # YAML config; refuses embedded passwords
+  connect.py         # THE security layer: guard, engine, safe_read, Auditor
+  semantic.py        # profile contracts (canonical entities, REQUIRED_COLUMNS)
+  extract.py         # extraction + quality gate + COUNT(*) reconciliation
+  kpi.py             # ISO-week KPIs vs 8-week baseline
+  insights.py        # deterministic findings + driver attribution
+  state.py           # SQLite run memory (decline streaks)
+  render.py          # self-contained HTML (inline SVG via matplotlib)
+  export_powerbi.py  # star-schema CSV export for the PBIP layer
+  cli.py             # validate / run / export-powerbi / init-demo
+profiles/            # generic.yaml (canonical), logo_tiger.yaml (MSSQL)
+powerbi/             # PBIP project authored as code (TMDL model + PBIR report)
+  tools/generate_report_pages.py  # PBIR pages are GENERATED - edit specs, rerun, never hand-edit visual.json
+demo/                # synthetic demo DB builder (seeded, deliberately dirty)
+tests/               # guard, contracts, e2e on demo DB, PBIP integrity
 ```
+
+Power BI layer rules: keep DAX alert thresholds identical to `insights.py` (5% revenue, 1.5 pts on-time) — one definition, two surfaces. After changing the generator or TMDL, run `pytest tests/test_powerbi.py` and, if available, `pbir validate "powerbi/ERP Command Center.Report" --allow-download-schemas --fields --qa`.
 
 ## Commands
 

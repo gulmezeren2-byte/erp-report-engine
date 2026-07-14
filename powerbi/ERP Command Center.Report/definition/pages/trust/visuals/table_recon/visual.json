@@ -1,0 +1,102 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "table_recon",
+  "position": {
+    "x": 24,
+    "y": 248,
+    "z": 3000,
+    "height": 200,
+    "width": 500,
+    "tabOrder": 3000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "MetaReconciliation"
+                    }
+                  },
+                  "Property": "Entity"
+                }
+              },
+              "queryRef": "MetaReconciliation.Entity",
+              "nativeQueryRef": "Entity"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "MetaReconciliation"
+                    }
+                  },
+                  "Property": "Fetched"
+                }
+              },
+              "queryRef": "MetaReconciliation.Fetched",
+              "nativeQueryRef": "Fetched"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "MetaReconciliation"
+                    }
+                  },
+                  "Property": "Source Count"
+                }
+              },
+              "queryRef": "MetaReconciliation.Source Count",
+              "nativeQueryRef": "Source Count"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "MetaReconciliation"
+                    }
+                  },
+                  "Property": "Match"
+                }
+              },
+              "queryRef": "MetaReconciliation.Match",
+              "nativeQueryRef": "Match"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Source reconciliation'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

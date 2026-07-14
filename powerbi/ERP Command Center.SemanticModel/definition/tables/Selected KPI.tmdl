@@ -1,0 +1,49 @@
+/// Field parameter: lets one visual switch between the four headline KPIs
+/// instead of four near-duplicate charts.
+table 'Selected KPI'
+	lineageTag: 67a9115c-0017-4000-8000-000000000017
+
+	column 'Selected KPI'
+		lineageTag: 67a9115c-0018-4000-8000-000000000018
+		summarizeBy: none
+		sourceColumn: [Value1]
+		sortByColumn: 'Selected KPI Order'
+
+		relatedColumnDetails
+			groupByColumn: 'Selected KPI Fields'
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Selected KPI Fields'
+		isHidden
+		lineageTag: 67a9115c-0019-4000-8000-000000000019
+		summarizeBy: none
+		sourceColumn: [Value2]
+		sortByColumn: 'Selected KPI Order'
+
+		extendedProperty ParameterMetadata =
+				{
+				  "version": 3,
+				  "kind": 2
+				}
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Selected KPI Order'
+		isHidden
+		formatString: 0
+		lineageTag: 67a9115c-0020-4000-8000-000000000020
+		summarizeBy: none
+		sourceColumn: [Value3]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Selected KPI' = calculated
+		mode: import
+		source =
+				{
+				    ( "Revenue", NAMEOF ( [Revenue] ), 0 ),
+				    ( "Orders", NAMEOF ( [Orders] ), 1 ),
+				    ( "On-Time %", NAMEOF ( [On-Time %] ), 2 ),
+				    ( "Avg Lead Days", NAMEOF ( [Avg Lead Days] ), 3 )
+				}

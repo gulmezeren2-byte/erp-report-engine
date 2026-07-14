@@ -1,0 +1,60 @@
+/// Item master with demand context: average weekly demand over the last 8
+/// completed weeks and the resulting stock cover, both computed by the engine.
+table DimItem
+	lineageTag: 0806e2f1-e181-4682-9e9b-831980fc5cb3
+
+	column 'Item Code'
+		dataType: string
+		lineageTag: 2f09ef4f-086e-43d9-b922-8a374c06b49d
+		summarizeBy: none
+		sourceColumn: item_code
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Stock Qty'
+		dataType: double
+		formatString: #,##0
+		lineageTag: f2a7300a-be5f-4527-8bee-32373c7d364d
+		summarizeBy: sum
+		sourceColumn: stock_qty
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Avg Weekly Demand'
+		dataType: double
+		formatString: #,##0.0
+		lineageTag: 7b805158-1b7c-4a93-b5c2-ac5101618f8a
+		summarizeBy: none
+		sourceColumn: avg_weekly_demand
+
+		annotation SummarizationSetBy = User
+
+	column 'Cover Weeks'
+		dataType: double
+		formatString: 0.0
+		lineageTag: e139ecbf-d174-49e9-a1e5-a00e95055ee7
+		summarizeBy: none
+		sourceColumn: cover_weeks
+
+		annotation SummarizationSetBy = User
+
+	partition DimItem = m
+		mode: import
+		source =
+				let
+					Source = Csv.Document(File.Contents(DataFolder & "\dim_item.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+					Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+					Typed = Table.TransformColumnTypes(
+						Promoted,
+						{
+							{"item_code", type text},
+							{"stock_qty", type number},
+							{"avg_weekly_demand", type number},
+							{"cover_weeks", type number}
+						},
+						"en-US"
+					)
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

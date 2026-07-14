@@ -1,0 +1,11 @@
+relationship bc4a1e89-20b3-46af-baa7-358347f495ba
+	fromColumn: FactOrders.'Week Key'
+	toColumn: DimWeek.Week
+
+relationship 55aaef15-8b8f-41ff-bf43-11459bb26c1c
+	fromColumn: FactOrderLines.'Order ID'
+	toColumn: FactOrders.'Order ID'
+
+relationship 523f2ce5-2db5-45b9-a720-b2a11e4fd48f
+	fromColumn: FactOrderLines.'Item Code'
+	toColumn: DimItem.'Item Code'
