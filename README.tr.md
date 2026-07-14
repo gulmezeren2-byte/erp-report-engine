@@ -4,6 +4,7 @@
 
 **ERP'nizin arkasındaki SQL veritabanından otonom haftalık raporlar — mimarisi gereği salt-okunur, her sorgu denetim izinde.**
 
+[![CI](https://github.com/gulmezeren2-byte/erp-report-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/gulmezeren2-byte/erp-report-engine/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/requirements.txt)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
