@@ -49,10 +49,13 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
     rev = o.groupby("week").net_total.sum().reindex(axis, fill_value=0.0)
     cnt = o.groupby("week").size().reindex(axis, fill_value=0).astype(float)
 
-    delivered = o[o.status.astype(str).str.lower().isin(("delivered", "shipped", "closed"))].copy()
-    delivered = delivered[delivered.actual_ship_date.notna() & delivered.promised_date.notna()]
+    all_delivered = o[o.status.astype(str).str.lower().isin(("delivered", "shipped", "closed"))]
+    delivered = all_delivered[all_delivered.actual_ship_date.notna() & all_delivered.promised_date.notna()].copy()
     delivered["on_time"] = delivered.actual_ship_date <= delivered.promised_date
     otp = (delivered.groupby("week").on_time.mean() * 100).reindex(axis)  # NaN where no scored deliveries
+    # how much of this week's on-time % is actually backed by data (K3 honesty)
+    scored_this = int(len(delivered[delivered.week == this_w]))
+    delivered_this = int(len(all_delivered[all_delivered.week == this_w]))
 
     lines = frames["order_lines"].copy()
     lines["qty"] = pd.to_numeric(lines.qty, errors="coerce").fillna(0.0)
@@ -64,6 +67,9 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
     inv["stock_qty"] = pd.to_numeric(inv.stock_qty, errors="coerce").fillna(0.0)
     inv = inv.set_index("item_code")
     cover = (inv.stock_qty / weekly_demand.reindex(inv.index)).rename("cover_weeks")
+    # A stocked-out item is always "low cover", even with no recent demand signal -
+    # otherwise stock_qty 0 / demand NaN = NaN slips past the threshold (K5).
+    cover.loc[inv.stock_qty == 0] = 0.0
     low = cover[cover < low_cover_weeks].sort_values()
 
     def wow(series: pd.Series) -> dict:
@@ -79,7 +85,7 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
         "as_of": as_of.isoformat(),
         "revenue": wow(rev),
         "orders": wow(cnt),
-        "on_time_pct": wow(otp),
+        "on_time_pct": {**wow(otp), "scored": scored_this, "delivered": delivered_this},
         "trend": {  # completed weeks only - the current partial week is never plotted
             "weeks": trend_weeks,
             "revenue": [float(rev.get(w, 0.0)) for w in trend_weeks],

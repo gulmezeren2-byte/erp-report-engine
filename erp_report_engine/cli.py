@@ -64,17 +64,20 @@ def cmd_run(args) -> None:
     kpis = compute(ex.frames, cfg.low_cover_weeks, ex.as_of)
     findings = build_insights(kpis, ex.frames, cfg.low_cover_weeks)
 
+    os.makedirs(cfg.out_dir, exist_ok=True)
+    path = os.path.join(cfg.out_dir, f"erp_report_{kpis['this_week']}.html")
+
     state = State(cfg.state_db)
+    # record THIS week before computing the streak, so "declined N weeks" counts
+    # the week the reader is looking at, not the one before it (K6 off-by-one).
+    state.record(kpis["this_week"], kpis, path)
     streak = state.streak("revenue")
     html = render(cfg, profile, kpis, findings, ex, auditor, streak)
 
-    os.makedirs(cfg.out_dir, exist_ok=True)
-    path = os.path.join(cfg.out_dir, f"erp_report_{kpis['this_week']}.html")
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         f.write(html)
     os.replace(tmp, path)  # atomic: never leave a half-written report behind
-    state.record(kpis["this_week"], kpis, path)
     state.close()
     _log.info("wrote %s (week %s, %d queries)", path, kpis["this_week"], len(auditor.entries))
 

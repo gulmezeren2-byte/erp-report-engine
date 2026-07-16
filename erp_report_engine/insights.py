@@ -69,7 +69,11 @@ def _driver(o: pd.DataFrame, this_w: str, prev_w: str, value_col: str) -> dict:
             continue
         now = o[o.week == this_w].groupby(dim)[value_col].sum()
         prev = o[o.week == prev_w].groupby(dim)[value_col].sum()
-        delta = (now - prev.reindex(now.index).fillna(0)).fillna(0)
+        # union the index so a segment that had revenue LAST week and vanished this
+        # week (a lost key account - the biggest possible negative driver) is not
+        # silently dropped by reindexing onto only this week's segments (K4).
+        idx = now.index.union(prev.index)
+        delta = (now.reindex(idx, fill_value=0) - prev.reindex(idx, fill_value=0)).fillna(0)
         if delta.abs().max() == 0:
             continue
         seg = delta.abs().idxmax()

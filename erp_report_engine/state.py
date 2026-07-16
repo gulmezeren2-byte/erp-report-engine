@@ -30,22 +30,24 @@ class State:
         self.conn.commit()
 
     def streak(self, metric: str = "revenue") -> int:
-        """Consecutive weekly declines of a metric across recorded runs (latest first)."""
+        """Consecutive weekly declines of a metric, newest week first.
+
+        Ordered by the ISO WEEK key, not by run timestamp: two runs recorded in
+        the same second (a re-run, or a test) must not scramble the sequence.
+        The latest run per week wins via MAX(run_at).
+        """
         rows = self.conn.execute(
-            "SELECT week, kpis_json FROM runs ORDER BY run_at DESC LIMIT 12"
+            "SELECT week, kpis_json, MAX(run_at) FROM runs GROUP BY week ORDER BY week DESC LIMIT 13"
         ).fetchall()
-        seen, values = set(), []
-        for week, blob in rows:
-            if week in seen:
-                continue
-            seen.add(week)
+        values = []
+        for _week, blob, _run_at in rows:
             try:
                 values.append(json.loads(blob)[metric]["now"])
             except Exception:
                 break
         streak = 0
-        for a, b in zip(values, values[1:], strict=False):
-            if a < b:
+        for newer, older in zip(values, values[1:], strict=False):
+            if newer < older:
                 streak += 1
             else:
                 break

@@ -64,14 +64,23 @@ def extract_all(engine, auditor: Auditor, profile: Profile, cfg: Config) -> Extr
     return ex
 
 
+_DELIVERED = ("delivered", "shipped", "closed")
+
+
 def _quality_gate(ex: Extraction) -> None:
     o = ex.frames["orders"].copy()
     for col in ("order_date", "promised_date", "actual_ship_date"):
         o[col] = pd.to_datetime(o[col], errors="coerce")
 
+    # Deduplicate ONCE here (keep first) so the HTML report and the Power BI
+    # export compute revenue over the same rows - "one definition, two surfaces".
     dupes = int(o.duplicated(subset=["order_id"]).sum())
     if dupes:
-        ex.issues.append(f"orders: {dupes} duplicated order_id rows (kept - check the profile join)")
+        o = o.drop_duplicates(subset=["order_id"], keep="first")
+        ex.issues.append(
+            f"orders: {dupes} duplicated order_id rows collapsed to one for all KPIs "
+            "(check the profile join)"
+        )
 
     bad_dates = int(o.order_date.isna().sum())
     if bad_dates:
@@ -85,8 +94,18 @@ def _quality_gate(ex: Extraction) -> None:
     if ship_before_order:
         ex.issues.append(f"orders: {ship_before_order} rows ship BEFORE order date (data entry suspicion)")
 
+    # On-time % only scores delivered orders that HAVE both dates. Surface the
+    # unscored share so a high on-time % over a fraction of orders isn't mistaken
+    # for the whole picture (survivorship bias is on-brand to confess, not hide).
+    delivered = o[o.status.astype(str).str.lower().isin(_DELIVERED)]
+    unscored = int((delivered.promised_date.isna() | delivered.actual_ship_date.isna()).sum())
+    if unscored:
+        ex.issues.append(
+            f"orders: {unscored} delivered orders lack a promised or ship date - "
+            "excluded from on-time %, which is scored over the rest"
+        )
+
     lines = ex.frames["order_lines"]
-    orphan = int(~lines.order_id.isin(o.order_id).sum() if len(lines) else 0)
     orphan = int((~lines.order_id.isin(o.order_id)).sum()) if len(lines) else 0
     if orphan:
         ex.issues.append(f"order_lines: {orphan} lines reference orders outside the window (ignored)")

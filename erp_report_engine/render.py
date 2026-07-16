@@ -107,6 +107,13 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
         pct = (d["now"] / d["prev"] - 1) * 100
         return f"{pct:+.1f}% vs prev · baseline {d['baseline8']:,.0f}{unit}"
 
+    def _otp_delta(d):
+        base = f"{(d['now'] - d['prev']):+.1f} pts vs prev" if d["prev"] == d["prev"] else "—"
+        delivered, scored = d.get("delivered", 0), d.get("scored", 0)
+        if delivered and scored < delivered:
+            base += f" · {scored}/{delivered} scored"
+        return base
+
     cards = [
         {"label": "Revenue", "value": f"{r['now']:,.0f}", "delta": fmt_delta(r),
          "color": GOOD if r["now"] >= (r["prev"] or 0) else RED},
@@ -114,7 +121,7 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
          "color": GOOD if c["now"] >= (c["prev"] or 0) else RED},
         {"label": "On-time shipping",
          "value": f"{s['now']:.1f}%" if s["now"] == s["now"] else "n/a",
-         "delta": f"{(s['now'] - s['prev']):+.1f} pts vs prev" if s["prev"] == s["prev"] else "—",
+         "delta": _otp_delta(s),
          "color": GOOD if (s["now"] or 0) >= (s["prev"] or 0) else RED},
         {"label": "Items low on stock", "value": f"{kpis['n_low_cover']}",
          "delta": f"< {cfg.low_cover_weeks:g} weeks cover",

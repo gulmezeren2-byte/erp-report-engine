@@ -115,7 +115,12 @@ def export_all(cfg: Config, profile: Profile, ex: Extraction, auditor: Auditor,
     item_rows = []
     for r in inv.itertuples(index=False):
         wd = float(weekly_demand.get(r.item_code, float("nan")))
-        cover = (float(r.stock_qty) / wd) if wd and wd == wd and wd > 0 else ""
+        if float(r.stock_qty) == 0:
+            cover = 0.0                                   # stocked out is always low cover (K5)
+        elif wd and wd == wd and wd > 0:
+            cover = float(r.stock_qty) / wd
+        else:
+            cover = ""                                   # has stock but no demand signal -> not urgent
         item_rows.append([r.item_code, float(r.stock_qty),
                           round(wd, 2) if wd == wd else "",
                           round(cover, 1) if cover != "" else ""])
