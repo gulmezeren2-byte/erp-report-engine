@@ -23,11 +23,18 @@ class Extraction:
     issues: list[str] = field(default_factory=list)
     reconciliation: dict[str, dict] = field(default_factory=dict)
     since: dt.date | None = None
+    as_of: dt.date | None = None
 
 
 def extract_all(engine, auditor: Auditor, profile: Profile, cfg: Config) -> Extraction:
+    from . import week_calendar as wc
+    from .connect import server_today
+
     ex = Extraction()
-    ex.since = dt.date.today() - dt.timedelta(weeks=cfg.lookback_weeks + 1)
+    # anchor on the DATABASE server's date, and snap the window start to a Monday
+    # so the oldest week in the window is a full ISO week, not a partial one.
+    ex.as_of = server_today(engine, auditor)
+    ex.since = wc.monday_of(ex.as_of) - dt.timedelta(weeks=cfg.lookback_weeks + 1)
     since = ex.since.isoformat()
 
     for entity in ("orders", "order_lines", "inventory"):

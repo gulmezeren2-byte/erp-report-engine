@@ -44,7 +44,7 @@ def cmd_run(args) -> None:
     auditor = Auditor()
 
     ex = extract_all(engine, auditor, profile, cfg)
-    kpis = compute(ex.frames, cfg.low_cover_weeks)
+    kpis = compute(ex.frames, cfg.low_cover_weeks, ex.as_of)
     findings = build_insights(kpis, ex.frames, cfg.low_cover_weeks)
 
     state = State(cfg.state_db)

@@ -16,6 +16,7 @@ import os
 import pandas as pd
 
 from . import __version__
+from . import week_calendar as wc
 from .config import Config
 from .connect import Auditor
 from .extract import Extraction
@@ -89,10 +90,24 @@ def export_all(cfg: Config, profile: Profile, ex: Extraction, auditor: Auditor,
         [[r.order_id, r.item_code, float(r.qty)] for r in lines.itertuples(index=False)],
     )
 
-    # item dimension with demand context (8 completed weeks, same rule as kpi.py)
+    # Calendar anchor (server date), shared with the HTML report so both surfaces
+    # agree on 'this week'. The week axis is continuous by the calendar - empty
+    # weeks appear as rows (with zero orders) instead of vanishing.
+    as_of = ex.as_of or dt.date.today()
+    current_monday = wc.monday_of(as_of)
+    last_full_monday = wc.last_completed_monday(as_of)
+    current_wk = wc.iso_week(current_monday)
     o["week_key"] = [w for w, _ in (_iso_week(d.date()) for d in o.order_date)]
-    weeks = sorted(o.week_key.unique())
-    recent = o[o.week_key.isin(weeks[-9:-1])][["order_id"]]
+    if len(o):
+        first_monday = min(wc.monday_of(o.order_date.min().date()), last_full_monday)
+    else:
+        first_monday = last_full_monday
+    dim_axis = wc.week_axis(first_monday, current_monday)          # includes the current partial week
+    completed_axis = wc.week_axis(first_monday, last_full_monday)  # excludes it
+    demand_weeks = completed_axis[-8:]                             # last 8 completed weeks, same as kpi.py
+
+    # item dimension with demand context (8 completed weeks, same rule as kpi.py)
+    recent = o[o.week_key.isin(demand_weeks)][["order_id"]]
     weekly_demand = (lines.merge(recent, on="order_id")
                      .groupby("item_code").qty.sum() / 8.0)
     inv = ex.frames["inventory"].copy()
@@ -110,13 +125,11 @@ def export_all(cfg: Config, profile: Profile, ex: Extraction, auditor: Auditor,
         item_rows,
     )
 
-    # week dimension; the current partial week is FLAGGED, never hidden.
-    # week_ordinal is a gapless 1..n counter so DAX week arithmetic never
-    # breaks at year boundaries.
-    today = dt.date.today()
-    current_wk, _ = _iso_week(today)
+    # week dimension over the continuous calendar axis. week_ordinal is a gapless
+    # 1..n counter (safe for year boundaries AND empty weeks); is_full_week is 0
+    # only for the current, still-open week.
     week_rows = []
-    for i, w in enumerate(weeks, start=1):
+    for i, w in enumerate(dim_axis, start=1):
         year, num = int(w[:4]), int(w[-2:])
         monday = dt.date.fromisocalendar(year, num, 1)
         week_rows.append([w, year * 100 + num, i, monday.isoformat(),

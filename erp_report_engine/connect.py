@@ -93,3 +93,38 @@ def safe_read(
 def scalar(engine: Engine, auditor: Auditor, label: str, sql: str, params: dict | None = None):
     df = safe_read(engine, auditor, label, sql, params, row_cap=10)
     return None if df.empty else df.iloc[0, 0]
+
+
+_TODAY_SQL = {
+    "mssql": "SELECT CAST(GETDATE() AS date)",
+    "postgresql": "SELECT CURRENT_DATE",
+    "sqlite": "SELECT date('now', 'localtime')",
+    "mysql": "SELECT CURDATE()",
+}
+
+
+def server_today(engine: Engine, auditor: Auditor):
+    """The current date according to the DATABASE server, through the guarded path.
+
+    The report anchor must not depend on the report host's clock/timezone: a UTC
+    server and an Istanbul host running just after midnight would otherwise
+    disagree on 'today' and shift the reporting week by a day. Falls back to the
+    local date if the query fails for any reason.
+    """
+    import datetime as dt
+
+    sql = _TODAY_SQL.get(engine.dialect.name, "SELECT CURRENT_DATE")
+    try:
+        val = scalar(engine, auditor, "as_of:server_date", sql)
+    except Exception:
+        return dt.date.today()
+    if isinstance(val, dt.datetime):
+        return val.date()
+    if isinstance(val, dt.date):
+        return val
+    if isinstance(val, str) and len(val) >= 10:
+        try:
+            return dt.date.fromisoformat(val[:10])
+        except ValueError:
+            pass
+    return dt.date.today()
