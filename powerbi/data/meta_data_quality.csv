@@ -1,5 +1,4 @@
 issue
-orders: 2 duplicated order_id rows (kept - check the profile join)
+orders: 2 duplicated order_id rows collapsed to one for all KPIs (check the profile join)
 orders: 1 rows with negative net_total (returns/credit notes? counted as-is)
 orders: 1 rows ship BEFORE order date (data entry suspicion)
-orders: 2 duplicate order_id rows collapsed to one in fact_orders (kept in the HTML report's gate; Power BI fact needs a unique key)

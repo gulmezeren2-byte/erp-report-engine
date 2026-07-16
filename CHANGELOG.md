@@ -3,6 +3,23 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [0.4.0] — 2026-07-16 · "Installable, correct, and agent-ready"
+
+### Added
+- **Guarded ERP MCP server** (`erp-report-engine mcp`, optional `[mcp]` extra): an agent talks to canonical entities through the same three-layer read-only guard and audit trail as the report. Five tools (`describe_model`, `weekly_report`, `reconcile`, `check_query`, `query`); every data result is framed as untrusted input. The first SQL-level-guarded ERP MCP server, and the first for Logo Tiger.
+- **Proper packaging**: `pyproject.toml` (hatchling), the `erp-report-engine` console script, `pipx`/`uv` installability, and profiles shipped as package data (referenced by name). Extras: `[mssql]`, `[postgres]`, `[mcp]`, `[dev]`.
+- **Exit-code taxonomy** (`errors.py`): 2 config · 3 database · 4 contract · 5 data-quality, so a scheduler can branch on *why* a run failed. `--strict` fails on a reconciliation mismatch. Structured logging (stderr + `--log-file` JSON-lines, a run id); result JSON stays on stdout.
+- **Runner facade** (`runner.py`): one orchestration path shared by the CLI and the MCP server; `guarded_query` is the safe seam for ad-hoc reads.
+- Property-based calendar tests (hypothesis) and a CI gate that fails on PBIR generator drift; CI now installs the package and runs ruff on 3.10–3.13.
+
+### Fixed (correctness & security)
+- **Calendar anchor**: "this week" is now the last completed ISO week by the calendar (from the database server's date), not the last week that happens to hold orders — a Monday-07:00 run no longer reports a stale week. Continuous, gap-filled week axis (empty weeks read as zero; W53 handled). The Power BI `DimWeek` shares the same axis.
+- **Stored XSS**: the report renders through Jinja2 autoescape; ERP-sourced strings (and SQL in the audit trail) can no longer execute or break the layout.
+- **Read-only guard hardened**: a `sqlglot` AST layer over the lexical checks (rejects writes hidden in CTEs, lock hints, `#` comments), plus read-only sessions (PostgreSQL `default_transaction_read_only`, SQLite `PRAGMA query_only`).
+- **Duplicate handling unified** so the HTML report and Power BI agree on revenue; on-time survivorship, vanished-segment drivers, stocked-out items, and the decline-streak off-by-one all fixed and disclosed.
+- **Data-leak & credential footguns**: `export-powerbi` defaults to a gitignored folder; embedded credentials are rejected in every URL shape (`?password=`, `?pwd=`, pyodbc `odbc_connect`).
+- MSSQL per-execute query timeout (was a login timeout); atomic report writes; bounded retries on transient DB errors.
+
 ## [0.2.0] — 2026-07-14 · "The command center"
 
 ### Added

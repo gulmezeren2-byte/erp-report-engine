@@ -1,7 +1,8 @@
 label,sql,params,rows,seconds
-orders,"SELECT o.order_id, o.order_date, o.region, o.customer, o.status, o.promised_date, o.actual_ship_date, o.net_total FROM orders o WHERE o.order_date >= :since",{'since': '2026-04-07'},494,0.015
-orders:count,"SELECT COUNT(*) FROM ( SELECT o.order_id, o.order_date, o.region, o.customer, o.status, o.promised_date, o.actual_ship_date, o.net_total FROM orders o WHERE o.order_date >= :since ) t",{'since': '2026-04-07'},1,0.003
-order_lines,"SELECT l.order_id, l.item_code, l.qty FROM order_lines l JOIN orders o ON o.order_id = l.order_id WHERE o.order_date >= :since",{'since': '2026-04-07'},1231,0.01
-order_lines:count,"SELECT COUNT(*) FROM ( SELECT l.order_id, l.item_code, l.qty FROM order_lines l JOIN orders o ON o.order_id = l.order_id WHERE o.order_date >= :since ) t",{'since': '2026-04-07'},1,0.003
-inventory,"SELECT i.item_code, i.stock_qty FROM inventory i",{},40,0.001
+as_of:server_date,"SELECT date('now', 'localtime')",{},1,0.012
+orders,"SELECT o.order_id, o.order_date, o.region, o.customer, o.status, o.promised_date, o.actual_ship_date, o.net_total FROM orders o WHERE o.order_date >= :since",{'since': '2026-04-06'},524,0.008
+orders:count,"SELECT COUNT(*) FROM ( SELECT o.order_id, o.order_date, o.region, o.customer, o.status, o.promised_date, o.actual_ship_date, o.net_total FROM orders o WHERE o.order_date >= :since ) t",{'since': '2026-04-06'},1,0.002
+order_lines,"SELECT l.order_id, l.item_code, l.qty FROM order_lines l JOIN orders o ON o.order_id = l.order_id WHERE o.order_date >= :since",{'since': '2026-04-06'},1323,0.008
+order_lines:count,"SELECT COUNT(*) FROM ( SELECT l.order_id, l.item_code, l.qty FROM order_lines l JOIN orders o ON o.order_id = l.order_id WHERE o.order_date >= :since ) t",{'since': '2026-04-06'},1,0.003
+inventory,"SELECT i.item_code, i.stock_qty FROM inventory i",{},40,0.002
 inventory:count,"SELECT COUNT(*) FROM ( SELECT i.item_code, i.stock_qty FROM inventory i ) t",{},1,0.001

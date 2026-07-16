@@ -19,22 +19,27 @@ A read-only autonomous reporting engine that runs SQL against the database behin
 
 ```
 erp_report_engine/
-  config.py          # YAML config; refuses embedded passwords
-  connect.py         # THE security layer: guard, engine, safe_read, Auditor
-  semantic.py        # profile contracts (canonical entities, REQUIRED_COLUMNS)
-  extract.py         # extraction + quality gate + COUNT(*) reconciliation
-  kpi.py             # ISO-week KPIs vs 8-week baseline
+  errors.py          # exception taxonomy with stable exit codes (2/3/4/5)
+  config.py          # YAML config; refuses embedded credentials (make_url parse)
+  connect.py         # THE security layer: 3-layer guard, engine, safe_read, Auditor, retries
+  semantic.py        # profile contracts (canonical entities, REQUIRED_COLUMNS); bundled resolver
+  week_calendar.py   # ISO-week anchor + continuous axis (shared by report and Power BI)
+  extract.py         # extraction + quality gate (dedup once) + COUNT(*) reconciliation
+  kpi.py             # calendar-anchored ISO-week KPIs vs 8-week baseline
   insights.py        # deterministic findings + driver attribution
-  state.py           # SQLite run memory (decline streaks)
-  render.py          # self-contained HTML (inline SVG via matplotlib)
+  state.py           # SQLite run memory (decline streaks, ordered by week)
+  render.py          # self-contained HTML via Jinja2 autoescape (inline SVG)
+  runner.py          # orchestration facade (validate / build_report / guarded_query)
   export_powerbi.py  # star-schema CSV export for the PBIP layer
-  cli.py             # validate / run / export-powerbi / init-demo
+  mcp_server.py      # guarded MCP server (FastMCP tools over the same read-only path)
+  logsetup.py        # stderr + JSON-lines logging, run id
+  cli.py             # validate / run / export-powerbi / mcp / init-demo
   demo_builder.py    # bundled synthetic demo DB builder (seeded, deliberately dirty)
   profiles/          # bundled package-data profiles: generic (canonical), logo_tiger (MSSQL)
 powerbi/             # PBIP project authored as code (TMDL model + PBIR report)
   tools/generate_report_pages.py  # PBIR pages are GENERATED - edit specs, rerun, never hand-edit visual.json
 demo/                # thin shim -> erp_report_engine.demo_builder (kept for docs)
-tests/               # guard, contracts, e2e on demo DB, PBIP integrity
+tests/               # guard, contracts, calendar props, render/XSS, honesty, CLI, MCP, PBIP
 pyproject.toml       # packaging (hatchling), console script, extras, ruff config
 ```
 
@@ -44,11 +49,14 @@ Power BI layer rules: keep DAX alert thresholds identical to `insights.py` (5% r
 
 ```bash
 pip install -e ".[dev]"                         # editable install with dev tools
-python -m pytest tests/ -q                       # must stay green (17 tests)
+python -m pytest tests/ -q                       # must stay green (59 tests)
 python -m ruff check erp_report_engine demo tests
 erp-report-engine init-demo                      # rebuild demo.db + config.demo.yaml
 erp-report-engine run -c config.demo.yaml
+erp-report-engine mcp -c config.demo.yaml        # guarded MCP server (needs the [mcp] extra)
 ```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the dependency direction and the invariants that must never regress.
 
 The e2e test rebuilds the demo DB itself; running pytest from a clean clone works with no setup.
 
