@@ -70,7 +70,7 @@ flowchart LR
     GATE --> PBI["Power BI Command Center<br/>(TMDL + PBIR, kod-olarak-yazılmış)"]
 ```
 
-Bu sistemi taşınabilir kılan katman **semantik profil**: bir ERP'nin şifreli şemasını üç kanonik varlığa — `orders`, `order_lines`, `inventory` — eşleyen sürümlü bir YAML sözleşmesi. Motor yalnızca kanonik kolonları görür. Profili değiştirin, rapor aynı kalsın.
+Bu sistemi taşınabilir kılan katman **semantik profil**: bir ERP'nin şifreli şemasını üç kanonik varlığa — `orders`, `order_lines`, `inventory` — artı **opsiyonel bir `receivables`** varlığına (açık cari, yaşlandırma için; defter erişilebilirse profil eşler, değilse alt katmanlar sorunsuz atlar) eşleyen sürümlü bir YAML sözleşmesi. Motor yalnızca kanonik kolonları görür. Profili değiştirin, rapor aynı kalsın.
 
 ## Güvenlik modeli
 
@@ -127,8 +127,8 @@ python -m erp_report_engine run -c config.yaml
 Profiller paketin içinde gelir ve adla referans verilir (`generic`, `logo_tiger`) — config'inizin yanında bir `profiles/` klasörü bulunması gerekmez.
 
 - **`generic`** — kanonik şema; kendi profilinizi yazmak için de şablon.
-- **`logo_tiger`** — MSSQL üzerinde Logo Tiger / GO: `LG_{firma}_{dönem}_ORFICHE` sipariş başlıkları `CLCARD` cari kartlarına bağlı, `ORFLINE` satırları, `STINVTOT` stok toplamları, `TRCODE = 2` satış filtresi. Logo şemaları sürüme göre değişir — profil, güvenmeden önce **kendi** sürümünüzde neyi doğrulamanız gerektiğini not düşer.
-- **`netsis`** — MSSQL üzerinde Logo Netsis 3 (şirket-başına-veritabanı): `TBLSIPAMAS`/`TBLSIPATRA` satış siparişleri (`FTIRSIP = '6'`), `TBLCASABIT` cariler, `TBLSTOKPH` stok toplamları. Gerçek üretim entegrasyonlarından saha-eşlemeli; dürüst zayıf noktaları (sipariş durumu, teslim tarihleri) kendi kurulumunuzda doğrulamanız için satır-içi işaretli.
+- **`logo_tiger`** — MSSQL üzerinde Logo Tiger / GO: `LG_{firma}_{dönem}_ORFICHE` sipariş başlıkları `CLCARD` cari kartlarına bağlı, `ORFLINE` satırları, `STINVTOT` stok toplamları, `TRCODE = 2` satış filtresi ve **opsiyonel cari yaşlandırma** `PAYTRANS`'tan (taksit `TOTAL − PAID`, `MODULENR = 4`). Logo şemaları sürüme göre değişir — profil, güvenmeden önce **kendi** sürümünüzde neyi doğrulamanız gerektiğini not düşer.
+- **`netsis`** — MSSQL üzerinde Logo Netsis 3 (şirket-başına-veritabanı): `TBLSIPAMAS`/`TBLSIPATRA` satış siparişleri (`FTIRSIP = '6'`), `TBLCASABIT` cariler, `TBLSTOKPH` stok toplamları ve **opsiyonel cari yaşlandırma** `TBLCAHAR`'dan (açık-kalem vs. yürüyen-bakiye uyarısı satır-içi belirtilmiş — dürüst zayıf nokta). Gerçek üretim entegrasyonlarından saha-eşlemeli; zayıf noktaları (sipariş durumu, teslim tarihleri, cari kapatma yöntemi) kendi kurulumunuzda doğrulamanız için satır-içi işaretli.
 
 Logo Tiger ve Netsis birlikte Türkiye KOBİ ERP pazarının çoğunu kapsar (ikisi de MSSQL). Başka bir ERP için profil yazmak (Mikro, SAP B1, Odoo, özel sistem) kanonik kolonları üreten **üç SELECT ifadesi** yazmak demektir — ya `profile:` ile gösterdiğiniz bağımsız bir YAML, ya da gömülü gelmesi için `erp_report_engine/profiles/` içine bırakılan bir dosya. Sözleşmenin tamamı bu — ve `validate` doğru yazıp yazmadığınızı anında söyler.
 

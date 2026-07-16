@@ -30,6 +30,20 @@ description: >
     (teslim tarihi) is often more accurate.
   - actual_ship_date is derived from the earliest dispatch (irsaliye) date on the
     order lines; it is only populated if the site creates irsaliye from the order.
+  Optional receivables (cari yaslandirma) map from TBLCAHAR (cari hareket) +
+  TBLCASABIT. VADE_TARIHI = due date, BELGE_NO = document no. open_amount is THE
+  weak point:
+  - This mapping assumes "Ozel Hesap Kapatma" (open-item matching) is in use, so
+    KAPATILMIS_TUTAR holds the settled amount and open = BORC - KAPATILMIS_TUTAR.
+    If your install runs the common running-balance ("kapali") mode,
+    KAPATILMIS_TUTAR is empty and this OVERSTATES receivables - you must instead
+    FIFO-match ALACAK to the oldest BORC per cari. Reconcile against Netsis's own
+    Borc/Alacak Yaslandirma report before trusting the numbers.
+  - CARI_KOD LIKE '120%' restricts to Alicilar (customers under the uniform chart
+    of accounts); adjust to your account codes.
+  - BELGE_NO is not guaranteed unique across doc types/branches; combine with
+    SUBE_KODU or join TBLFATUIRS for the true invoice header.
+  - TBLCAHAR has no KAPAT_FISNO / ACIKKAPALI / FISNO columns - don't guess them.
   This is an honest field mapping to build from, not a certified integration.
 
 contract:
@@ -40,6 +54,9 @@ contract:
   order_lines:
     severity: warn
     relationships: {order_id: orders}
+  receivables:
+    severity: warn
+    not_null: [due_date, open_amount]
 
 entities:
   orders:
@@ -84,3 +101,18 @@ entities:
       FROM TBLSTSABIT s
       JOIN TBLSTOKPH p ON p.STOK_KODU = s.STOK_KODU
       GROUP BY s.STOK_KODU
+
+  # Optional: open customer receivables for aging (cari yaslandirma). See the
+  # description's weak-point notes - open_amount depends on the closing method.
+  receivables:
+    query: |
+      SELECT
+        h.BELGE_NO                                AS invoice_id,
+        s.CARI_ISIM                               AS customer,
+        h.VADE_TARIHI                             AS due_date,
+        (h.BORC - ISNULL(h.KAPATILMIS_TUTAR, 0))  AS open_amount
+      FROM TBLCAHAR h
+      JOIN TBLCASABIT s ON s.CARI_KOD = h.CARI_KOD
+      WHERE h.BORC > 0
+        AND h.CARI_KOD LIKE '120%'
+        AND (h.BORC - ISNULL(h.KAPATILMIS_TUTAR, 0)) > 0.005

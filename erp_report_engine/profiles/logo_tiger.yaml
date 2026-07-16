@@ -15,6 +15,25 @@ description: >
   - Ship/delivery dates typically come from the dispatch (irsaliye) linkage;
     this profile approximates with ORFICHE-level dates - refine per client.
 
+  Optional receivables (cari yaslandirma) map from PAYTRANS - the standard AR
+  aging table. It holds one row per payment-plan installment, so it buckets by
+  due date naturally:
+  - open_amount = TOTAL - PAID. There is NO closed flag on PAYTRANS; an
+    installment is open while TOTAL - PAID > 0.
+  - Filters: MODULENR = 4 (Fatura), TRCODE IN (7,8,9) (retail/wholesale sale and
+    service = the sales/AR side), SIGN = 0 (Borc/receivable). Confirm the TRCODE
+    set covers your sales-invoice types before trusting the totals.
+  - invoice_id comes from INVOICE.FICHENO via PAYTRANS.FICHEREF (correct because
+    MODULENR = 4). Verify it is the number you want, or drop the join and use
+    p.FICHEREF as a stable surrogate.
+  - Opening balances / cari dekont are NOT MODULENR=4 and won't appear here.
+  - PAYTRANS is per-period; to age across fiscal years UNION each period's table.
+
+contract:
+  receivables:
+    severity: warn
+    not_null: [due_date, open_amount]
+
 entities:
   orders:
     query: |
@@ -54,3 +73,20 @@ entities:
       FROM LV_{firm_no}_{period_no}_STINVTOT s
       JOIN LG_{firm_no}_ITEMS i ON i.LOGICALREF = s.STOCKREF
       GROUP BY i.CODE
+
+  # Optional: open customer receivables for aging (cari yaslandirma).
+  receivables:
+    query: |
+      SELECT
+        inv.FICHENO              AS invoice_id,
+        c.DEFINITION_            AS customer,
+        p.DATE_                  AS due_date,
+        (p.TOTAL - p.PAID)       AS open_amount
+      FROM LG_{firm_no}_{period_no}_PAYTRANS p
+      JOIN LG_{firm_no}_CLCARD c                     ON c.LOGICALREF = p.CARDREF
+      LEFT JOIN LG_{firm_no}_{period_no}_INVOICE inv ON inv.LOGICALREF = p.FICHEREF
+      WHERE p.MODULENR = 4
+        AND p.TRCODE IN (7, 8, 9)
+        AND p.SIGN = 0
+        AND p.CANCELLED = 0
+        AND (p.TOTAL - p.PAID) > 0.005

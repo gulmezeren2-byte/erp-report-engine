@@ -70,7 +70,7 @@ flowchart LR
     GATE --> PBI["Power BI Command Center<br/>(TMDL + PBIR, code-authored)"]
 ```
 
-The layer that makes this portable is the **semantic profile**: a versioned YAML contract that maps one ERP's cryptic schema to three canonical entities — `orders`, `order_lines`, `inventory`. The engine only ever sees canonical columns. Swap the profile, keep the report.
+The layer that makes this portable is the **semantic profile**: a versioned YAML contract that maps one ERP's cryptic schema to three canonical entities — `orders`, `order_lines`, `inventory` — plus an **optional `receivables`** entity (open AR, for aging) that a profile maps when the ledger is reachable and everything downstream skips gracefully when it isn't. The engine only ever sees canonical columns. Swap the profile, keep the report.
 
 ## The security model
 
@@ -127,8 +127,8 @@ python -m erp_report_engine run -c config.yaml
 Profiles ship inside the package and are referenced by name (`generic`, `logo_tiger`) — no `profiles/` folder needs to exist next to your config.
 
 - **`generic`** — the canonical schema; also the template for writing your own.
-- **`logo_tiger`** — Logo Tiger / GO on MSSQL: `LG_{firm}_{period}_ORFICHE` order headers joined to `CLCARD` customers, `ORFLINE` lines, `STINVTOT` stock totals, `TRCODE = 2` sales filter. Logo schemas vary by release — the profile carries field notes on exactly what to verify against **your** version before trusting it.
-- **`netsis`** — Logo Netsis 3 on MSSQL (database-per-company): `TBLSIPAMAS`/`TBLSIPATRA` sales orders (`FTIRSIP = '6'`), `TBLCASABIT` customers, `TBLSTOKPH` stock totals. Field-mapped from real production integrations, with the honest weak points (order status, delivery dates) flagged inline to verify against your install.
+- **`logo_tiger`** — Logo Tiger / GO on MSSQL: `LG_{firm}_{period}_ORFICHE` order headers joined to `CLCARD` customers, `ORFLINE` lines, `STINVTOT` stock totals, `TRCODE = 2` sales filter, and **optional receivables aging** from `PAYTRANS` (installment `TOTAL − PAID`, `MODULENR = 4`). Logo schemas vary by release — the profile carries field notes on exactly what to verify against **your** version before trusting it.
+- **`netsis`** — Logo Netsis 3 on MSSQL (database-per-company): `TBLSIPAMAS`/`TBLSIPATRA` sales orders (`FTIRSIP = '6'`), `TBLCASABIT` customers, `TBLSTOKPH` stock totals, and **optional receivables aging** from `TBLCAHAR` (with the open-item vs. running-balance caveat called out inline — the honest weak point). Field-mapped from real production integrations, with the weak points (order status, delivery dates, AR closing method) flagged inline to verify against your install.
 
 Together, Logo Tiger and Netsis cover most of the Turkish SME ERP market (both MSSQL). Writing a profile for another ERP (Mikro, SAP B1, Odoo, a custom system) means writing **three SELECT statements** that output the canonical columns — either a standalone YAML you point `profile:` at, or a file dropped into `erp_report_engine/profiles/` to ship it bundled. That's the whole contract — and `validate` tells you immediately whether you got it right.
 

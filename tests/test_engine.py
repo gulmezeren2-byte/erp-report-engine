@@ -57,8 +57,10 @@ def test_profiles_load_and_are_read_only():
         assert set(prof.entities) <= {"orders", "order_lines", "inventory", *OPTIONAL_COLUMNS}
         assert prof.optional_entities <= set(OPTIONAL_COLUMNS)
 
-    # the generic (demo) profile maps the optional receivables entity
-    assert "receivables" in load_profile("generic").optional_entities
+    # all three bundled profiles now map the optional receivables entity (aging);
+    # loading above already ran the read-only guard over each receivables query
+    for name in ("generic", "logo_tiger", "netsis"):
+        assert "receivables" in load_profile(name).optional_entities
 
 
 def test_bundled_profiles_discoverable():
