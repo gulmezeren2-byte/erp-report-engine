@@ -1,0 +1,83 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "erp-report-engine"
+description = "Autonomous weekly reports straight from the SQL database behind your ERP - read-only by construction, every query audited."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Eren Gülmez" }]
+keywords = ["erp", "reporting", "sql", "kpi", "logo-tiger", "mssql", "audit", "read-only", "supply-chain"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Database :: Front-Ends",
+]
+dynamic = ["version"]
+dependencies = [
+    "pandas>=2.2,<3",
+    "numpy>=1.26",
+    "sqlalchemy>=2.0,<3",
+    "pyyaml>=6.0",
+    "matplotlib>=3.8,<4",
+]
+
+[project.optional-dependencies]
+mssql = ["pyodbc>=5.0"]
+postgres = ["psycopg2-binary>=2.9"]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+erp-report-engine = "erp_report_engine.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/gulmezeren2-byte/erp-report-engine"
+Repository = "https://github.com/gulmezeren2-byte/erp-report-engine"
+Issues = "https://github.com/gulmezeren2-byte/erp-report-engine/issues"
+Changelog = "https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "erp_report_engine/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["erp_report_engine"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"erp_report_engine/profiles/generic.yaml" = "erp_report_engine/profiles/generic.yaml"
+"erp_report_engine/profiles/logo_tiger.yaml" = "erp_report_engine/profiles/logo_tiger.yaml"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "erp_report_engine",
+    "demo",
+    "tests",
+    "config.example.yaml",
+    "README.md",
+    "README.tr.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    "LICENSE",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

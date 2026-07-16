@@ -19,13 +19,15 @@ Zamanlanmış tek bir `run` komutu **6 denetlenmiş SELECT** çalıştırır ve 
 ## 60 saniyede demo (ERP gerekmez)
 
 ```bash
-git clone https://github.com/gulmezeren2-byte/erp-report-engine.git
-cd erp-report-engine
-pip install -r requirements.txt
+# kurulum (pipx veya uv izole tutar; düz pip de çalışır)
+pipx install erp-report-engine          # veya: uv tool install erp-report-engine
+# kaynaktan:  pip install .
 
-python -m erp_report_engine init-demo            # demo.db + config.demo.yaml üretir
-python -m erp_report_engine run -c config.demo.yaml
+erp-report-engine init-demo             # demo.db + config.demo.yaml üretir
+erp-report-engine run -c config.demo.yaml
 ```
+
+Her komut `python -m erp_report_engine …` olarak da çalışır. Veritabanı sürücüsünü ekstralarla ekleyin: `pipx install "erp-report-engine[mssql]"` (Logo Tiger / SQL Server) veya `[postgres]`.
 
 `reports/erp_report_<hafta>.html` dosyasını açın. Motorun bir ciro sıçramasını yakalayıp tek bölgeye atfettiğini, zamanında sevkiyattaki 2 puanlık düşüşü işaretlediğini, 2 haftalık karşılama süresinin altındaki stokları listelediğini — ve yolda bulduğu her mükerrer ve eksi satırı itiraf ettiğini göreceksiniz. Hazır üretilmiş bir kopya [`docs/sample-report.html`](docs/sample-report.html) içinde.
 
@@ -93,7 +95,7 @@ setx ERP_DB_URL "mssql+pyodbc://readonly_user:***@SUNUCU/LOGODB?driver=ODBC+Driv
 ```yaml
 connection:
   url_env: ERP_DB_URL          # motor URL'yi bu ortam değişkeninden okur
-profile: profiles/logo_tiger.yaml
+profile: logo_tiger            # pakete gömülü profil adı, ya da kendi YAML'ınızın yolu
 profile_vars:
   firm_no: "001"               # yalnız tanımlayıcı-güvenli değerler, doğrulanır
   period_no: "01"
@@ -115,10 +117,12 @@ python -m erp_report_engine run -c config.yaml
 
 ### Dahil profiller
 
-- **`profiles/generic.yaml`** — kanonik şema; kendi profilinizi yazmak için de şablon.
-- **`profiles/logo_tiger.yaml`** — MSSQL üzerinde Logo Tiger / GO: `LG_{firma}_{dönem}_ORFICHE` sipariş başlıkları `CLCARD` cari kartlarına bağlı, `ORFLINE` satırları, `STINVTOT` stok toplamları, `TRCODE = 2` satış filtresi. Logo şemaları sürüme göre değişir — profil, güvenmeden önce **kendi** sürümünüzde neyi doğrulamanız gerektiğini not düşer.
+Profiller paketin içinde gelir ve adla referans verilir (`generic`, `logo_tiger`) — config'inizin yanında bir `profiles/` klasörü bulunması gerekmez.
 
-Başka bir ERP için profil yazmak (Netsis, SAP B1, Odoo, özel sistem) kanonik kolonları üreten **üç SELECT ifadesi** yazmak demektir. Sözleşmenin tamamı bu — ve `validate` doğru yazıp yazmadığınızı anında söyler.
+- **`generic`** — kanonik şema; kendi profilinizi yazmak için de şablon.
+- **`logo_tiger`** — MSSQL üzerinde Logo Tiger / GO: `LG_{firma}_{dönem}_ORFICHE` sipariş başlıkları `CLCARD` cari kartlarına bağlı, `ORFLINE` satırları, `STINVTOT` stok toplamları, `TRCODE = 2` satış filtresi. Logo şemaları sürüme göre değişir — profil, güvenmeden önce **kendi** sürümünüzde neyi doğrulamanız gerektiğini not düşer.
+
+Başka bir ERP için profil yazmak (Netsis, SAP B1, Odoo, özel sistem) kanonik kolonları üreten **üç SELECT ifadesi** yazmak demektir — ya `profile:` ile gösterdiğiniz bağımsız bir YAML, ya da gömülü gelmesi için `erp_report_engine/profiles/` içine bırakılan bir dosya. Sözleşmenin tamamı bu — ve `validate` doğru yazıp yazmadığınızı anında söyler.
 
 ## Otonom hale getirin
 

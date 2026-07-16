@@ -29,11 +29,15 @@ values only); :since is bound as a real query parameter.
 
 from __future__ import annotations
 
+import importlib.resources
 import re
+from pathlib import Path
 
 import yaml
 
 from .connect import assert_read_only
+
+_BUNDLED = "erp_report_engine.profiles"
 
 REQUIRED_COLUMNS: dict[str, list[str]] = {
     "orders": [
@@ -73,7 +77,7 @@ class Profile:
                     f"profile var {key}={val!r} is not identifier-safe (letters/digits/underscore only)"
                 )
             sql = sql.replace("{" + key + "}", val)
-        leftover = re.search(r"\{([a-z_]+)\}", sql)
+        leftover = re.search(r"\{([A-Za-z0-9_]+)\}", sql)
         if leftover:
             raise ProfileError(
                 f"entity '{entity}' still contains unfilled placeholder {{{leftover.group(1)}}} - "
@@ -83,15 +87,52 @@ class Profile:
         return sql
 
 
-def load_profile(path: str) -> Profile:
+def bundled_profiles() -> list[str]:
+    """Names of the profiles shipped inside the wheel (e.g. 'generic', 'logo_tiger')."""
     try:
-        with open(path, encoding="utf-8") as f:
-            raw = yaml.safe_load(f) or {}
+        return sorted(
+            r.name[:-5]
+            for r in importlib.resources.files(_BUNDLED).iterdir()
+            if r.name.endswith(".yaml")
+        )
+    except (ModuleNotFoundError, FileNotFoundError, NotADirectoryError):
+        return []
+
+
+def _resolve(ref: str):
+    """Resolve a profile reference to (source, display_name).
+
+    `ref` may be a path to a YAML file on disk, or the name of a bundled
+    profile ('logo_tiger' or 'logo_tiger.yaml'). The returned source exposes
+    ``read_text`` (a pathlib.Path or an importlib.resources Traversable), so an
+    installed wheel needs no ``profiles/`` folder next to the working directory.
+    """
+    p = Path(ref)
+    if p.is_file():
+        return p, str(p)
+    name = p.name[:-5] if p.name.endswith(".yaml") else p.name
+    try:
+        res = importlib.resources.files(_BUNDLED).joinpath(f"{name}.yaml")
+        if res.is_file():
+            return res, f"{name} (bundled)"
+    except (ModuleNotFoundError, FileNotFoundError, NotADirectoryError):
+        pass
+    known = ", ".join(bundled_profiles()) or "none"
+    raise ProfileError(
+        f"profile not found: {ref!r} - not a file on disk and not a bundled "
+        f"profile (bundled profiles: {known})"
+    )
+
+
+def load_profile(ref: str) -> Profile:
+    source, display = _resolve(ref)
+    try:
+        raw = yaml.safe_load(source.read_text(encoding="utf-8")) or {}
     except FileNotFoundError:
-        raise ProfileError(f"profile not found: {path}")
-    prof = Profile(raw, path)
+        raise ProfileError(f"profile not found: {display}") from None
+    prof = Profile(raw, display)
     # validate every query is read-only at load time, with dummy vars
-    dummy = {m: "X" for q in prof.entities.values() for m in re.findall(r"\{([a-z_]+)\}", q)}
+    dummy = {m: "X" for q in prof.entities.values() for m in re.findall(r"\{([A-Za-z0-9_]+)\}", q)}
     for entity in prof.entities:
         prof.render(entity, dummy)
     return prof

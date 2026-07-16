@@ -90,10 +90,10 @@ def cmd_export_powerbi(args) -> None:
 
 
 def cmd_init_demo(args) -> None:
-    from demo.build_demo_db import main as build_demo
+    from .demo_builder import build
 
-    build_demo()
-    print("demo ready: run  python -m erp_report_engine run -c config.demo.yaml")
+    build()
+    print("demo ready: run  erp-report-engine run -c config.demo.yaml")
 
 
 def main(argv: list[str] | None = None) -> None:

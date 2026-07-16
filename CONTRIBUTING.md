@@ -13,7 +13,7 @@ See [AGENTS.md](AGENTS.md) for the full invariant list and repo layout.
 
 If you know the schema of Netsis, Mikro, SAP B1, Odoo, Dynamics or any other ERP, a profile is three `SELECT` statements in one YAML file:
 
-1. Copy `profiles/generic.yaml` to `profiles/<erp>.yaml`.
+1. Copy `erp_report_engine/profiles/generic.yaml` to `erp_report_engine/profiles/<erp>.yaml` (it ships bundled, referenced as `profile: <erp>`).
 2. Map your ERP's tables to the canonical columns in `erp_report_engine/semantic.py::REQUIRED_COLUMNS`.
 3. Use `{vars}` only for schema identifiers (firm/period numbers), `:since` for the date filter, single statement per entity, no comments.
 4. Add **field notes** in the description: which ERP versions you verified against, which fields vary, what a user must check before trusting it.

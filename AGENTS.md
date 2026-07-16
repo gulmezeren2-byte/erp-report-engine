@@ -29,11 +29,13 @@ erp_report_engine/
   render.py          # self-contained HTML (inline SVG via matplotlib)
   export_powerbi.py  # star-schema CSV export for the PBIP layer
   cli.py             # validate / run / export-powerbi / init-demo
-profiles/            # generic.yaml (canonical), logo_tiger.yaml (MSSQL)
+  demo_builder.py    # bundled synthetic demo DB builder (seeded, deliberately dirty)
+  profiles/          # bundled package-data profiles: generic (canonical), logo_tiger (MSSQL)
 powerbi/             # PBIP project authored as code (TMDL model + PBIR report)
   tools/generate_report_pages.py  # PBIR pages are GENERATED - edit specs, rerun, never hand-edit visual.json
-demo/                # synthetic demo DB builder (seeded, deliberately dirty)
+demo/                # thin shim -> erp_report_engine.demo_builder (kept for docs)
 tests/               # guard, contracts, e2e on demo DB, PBIP integrity
+pyproject.toml       # packaging (hatchling), console script, extras, ruff config
 ```
 
 Power BI layer rules: keep DAX alert thresholds identical to `insights.py` (5% revenue, 1.5 pts on-time) — one definition, two surfaces. After changing the generator or TMDL, run `pytest tests/test_powerbi.py` and, if available, `pbir validate "powerbi/ERP Command Center.Report" --allow-download-schemas --fields --qa`.
@@ -41,17 +43,18 @@ Power BI layer rules: keep DAX alert thresholds identical to `insights.py` (5% r
 ## Commands
 
 ```bash
-pip install -r requirements.txt
-python -m pytest tests/ -v                      # must stay green (13 tests)
-python -m erp_report_engine init-demo           # rebuild demo.db + config.demo.yaml
-python -m erp_report_engine run -c config.demo.yaml
+pip install -e ".[dev]"                         # editable install with dev tools
+python -m pytest tests/ -q                       # must stay green (17 tests)
+python -m ruff check erp_report_engine demo tests
+erp-report-engine init-demo                      # rebuild demo.db + config.demo.yaml
+erp-report-engine run -c config.demo.yaml
 ```
 
 The e2e test rebuilds the demo DB itself; running pytest from a clean clone works with no setup.
 
 ## Adding an ERP profile (most valuable contribution)
 
-Write three `SELECT`s in a new `profiles/<erp>.yaml` producing the canonical columns listed in `semantic.REQUIRED_COLUMNS`. Rules: `{vars}` for schema identifiers only, `:since` for the date filter, no comments, single statement each. Load-time validation and `validate -c` will tell you immediately if the contract is broken. Include field notes about version differences — profiles here are honest field mappings, not certified integrations.
+Write three `SELECT`s in a new `erp_report_engine/profiles/<erp>.yaml` producing the canonical columns listed in `semantic.REQUIRED_COLUMNS`; it ships bundled and becomes referenceable as `profile: <erp>`. Rules: `{vars}` for schema identifiers only, `:since` for the date filter, no comments, single statement each. Load-time validation and `validate -c` will tell you immediately if the contract is broken. Include field notes about version differences — profiles here are honest field mappings, not certified integrations.
 
 ## Style
 

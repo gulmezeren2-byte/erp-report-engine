@@ -44,7 +44,7 @@ class State:
             except Exception:
                 break
         streak = 0
-        for a, b in zip(values, values[1:]):
+        for a, b in zip(values, values[1:], strict=False):
             if a < b:
                 streak += 1
             else:

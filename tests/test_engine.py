@@ -4,7 +4,6 @@ end-to-end run against the bundled demo database."""
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -41,13 +40,23 @@ def test_guard_allows_selects():
 
 # ---------------------------------------------------------- profiles --------
 def test_profiles_load_and_are_read_only():
-    for name in ("generic.yaml", "logo_tiger.yaml"):
-        prof = load_profile(str(ROOT / "profiles" / name))
+    for name in ("generic", "logo_tiger"):          # bundled by name, no path
+        prof = load_profile(name)
         assert set(prof.entities) == {"orders", "order_lines", "inventory"}
 
 
+def test_bundled_profiles_discoverable():
+    from erp_report_engine.semantic import bundled_profiles
+    assert {"generic", "logo_tiger"} <= set(bundled_profiles())
+
+
+def test_unknown_profile_is_rejected():
+    with pytest.raises(ProfileError):
+        load_profile("no_such_erp")
+
+
 def test_profile_var_injection_is_rejected():
-    prof = load_profile(str(ROOT / "profiles" / "logo_tiger.yaml"))
+    prof = load_profile("logo_tiger")
     with pytest.raises(ProfileError):
         prof.render("orders", {"firm_no": "001; DROP TABLE x", "period_no": "01"})
 

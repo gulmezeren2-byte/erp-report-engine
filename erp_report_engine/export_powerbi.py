@@ -15,11 +15,11 @@ import os
 
 import pandas as pd
 
+from . import __version__
 from .config import Config
 from .connect import Auditor
 from .extract import Extraction
 from .semantic import Profile
-from . import __version__
 
 _ENC = "utf-8"  # no BOM: Power BI's Csv.Document reads 65001 cleanly
 

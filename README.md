@@ -19,13 +19,15 @@ One scheduled `run` executes **6 audited SELECT statements** and delivers a self
 ## 60-second demo (no ERP required)
 
 ```bash
-git clone https://github.com/gulmezeren2-byte/erp-report-engine.git
-cd erp-report-engine
-pip install -r requirements.txt
+# install (pipx or uv keep it isolated; plain pip works too)
+pipx install erp-report-engine          # or: uv tool install erp-report-engine
+# from source instead:  pip install .
 
-python -m erp_report_engine init-demo            # builds demo.db + config.demo.yaml
-python -m erp_report_engine run -c config.demo.yaml
+erp-report-engine init-demo             # builds demo.db + config.demo.yaml here
+erp-report-engine run -c config.demo.yaml
 ```
+
+Every command is also available as `python -m erp_report_engine …`. Add a database driver with the extras: `pipx install "erp-report-engine[mssql]"` (Logo Tiger / SQL Server) or `[postgres]`.
 
 Open `reports/erp_report_<week>.html`. You'll see the engine catch a revenue spike and attribute it to one region, flag a two-point on-time decline, list items below two weeks of stock cover — and confess every duplicate and negative row it found on the way. A pre-generated copy ships in [`docs/sample-report.html`](docs/sample-report.html).
 
@@ -93,7 +95,7 @@ setx ERP_DB_URL "mssql+pyodbc://readonly_user:***@SERVER/LOGODB?driver=ODBC+Driv
 ```yaml
 connection:
   url_env: ERP_DB_URL          # the engine reads the URL from this env var
-profile: profiles/logo_tiger.yaml
+profile: logo_tiger            # a bundled profile name, or a path to your own YAML
 profile_vars:
   firm_no: "001"               # identifier-safe values only, validated
   period_no: "01"
@@ -115,10 +117,12 @@ python -m erp_report_engine run -c config.yaml
 
 ### Included profiles
 
-- **`profiles/generic.yaml`** — the canonical schema; also the template for writing your own.
-- **`profiles/logo_tiger.yaml`** — Logo Tiger / GO on MSSQL: `LG_{firm}_{period}_ORFICHE` order headers joined to `CLCARD` customers, `ORFLINE` lines, `STINVTOT` stock totals, `TRCODE = 2` sales filter. Logo schemas vary by release — the profile carries field notes on exactly what to verify against **your** version before trusting it.
+Profiles ship inside the package and are referenced by name (`generic`, `logo_tiger`) — no `profiles/` folder needs to exist next to your config.
 
-Writing a profile for another ERP (Netsis, SAP B1, Odoo, a custom system) means writing **three SELECT statements** that output the canonical columns. That's the whole contract — and `validate` tells you immediately whether you got it right.
+- **`generic`** — the canonical schema; also the template for writing your own.
+- **`logo_tiger`** — Logo Tiger / GO on MSSQL: `LG_{firm}_{period}_ORFICHE` order headers joined to `CLCARD` customers, `ORFLINE` lines, `STINVTOT` stock totals, `TRCODE = 2` sales filter. Logo schemas vary by release — the profile carries field notes on exactly what to verify against **your** version before trusting it.
+
+Writing a profile for another ERP (Netsis, SAP B1, Odoo, a custom system) means writing **three SELECT statements** that output the canonical columns — either a standalone YAML you point `profile:` at, or a file dropped into `erp_report_engine/profiles/` to ship it bundled. That's the whole contract — and `validate` tells you immediately whether you got it right.
 
 ## Make it autonomous
 

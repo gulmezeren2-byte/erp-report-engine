@@ -54,7 +54,7 @@ def load_config(path: str) -> Config:
         with open(path, encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
     except FileNotFoundError:
-        raise ConfigError(f"config file not found: {path}")
+        raise ConfigError(f"config file not found: {path}") from None
 
     conn = raw.get("connection") or {}
     url = None

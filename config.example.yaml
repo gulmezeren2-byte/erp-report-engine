@@ -13,7 +13,7 @@ connection:
   #   export ERP_DB_URL="postgresql+psycopg2://readonly_user:PASS@host/erp"
   # Use a READ-ONLY database login (db_datareader on MSSQL) - defense in depth.
 
-profile: profiles/logo_tiger.yaml   # or profiles/generic.yaml, or your own
+profile: logo_tiger   # bundled name (logo_tiger | generic), or a path to your own YAML
 
 profile_vars:                       # substituted into {placeholders} in the profile
   firm_no: "001"                    # identifier-safe values only (letters/digits/_)
