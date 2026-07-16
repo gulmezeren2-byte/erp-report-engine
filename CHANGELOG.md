@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [0.5.0] — 2026-07-16 · "Signals, contracts, delivery, a plural profile library"
+
+### Added
+- **SPC/XmR anomaly layer**: an individuals control chart over the weekly trend separates a genuine shift from week-to-week noise. Every signal ships its arithmetic (UCL/LCL = mean ± 2.66 × avg moving range) plus a Western Electric run rule; provisional limits are labelled while the baseline is short. Deterministic, no black box — flows into the report and the MCP `weekly_report`.
+- **Native delivery** (`run --send`): SMTP e-mail (the HTML report inline), Slack and Microsoft Teams (Power Automate Workflows) webhooks, and a healthchecks.io dead-man's-switch that fires on success *or* failure. Secrets via environment variables only; a failed channel is logged, never fatal. Optional `[notify]` extra (apprise) for 143 services.
+- **Declarative profile contracts** (`contract:` block): `not_null`, `unique`, `accepted_values`, `relationships`, `min_rows`/`max_rows`, checked over the extracted data and reported in the quality gate; `severity: fail` trips `run --strict`.
+- **Netsis profile** — Logo Netsis 3 on MSSQL (database-per-company), field-mapped from real production integrations (`TBLSIPAMAS`/`TBLSIPATRA` sales orders, `TBLCASABIT`, `TBLSTOKPH`), with the uncertain fields flagged inline. With Logo Tiger, the bundled profiles now cover most of the Turkish SME ERP market.
+- **Live sample report** via GitHub Pages, linked from the README.
+
 ## [0.4.0] — 2026-07-16 · "Installable, correct, and agent-ready"
 
 ### Added

@@ -49,14 +49,14 @@ def test_guard_allows_real_read_queries():
 
 # ---------------------------------------------------------- profiles --------
 def test_profiles_load_and_are_read_only():
-    for name in ("generic", "logo_tiger"):          # bundled by name, no path
+    for name in ("generic", "logo_tiger", "netsis"):   # bundled by name, no path
         prof = load_profile(name)
         assert set(prof.entities) == {"orders", "order_lines", "inventory"}
 
 
 def test_bundled_profiles_discoverable():
     from erp_report_engine.semantic import bundled_profiles
-    assert {"generic", "logo_tiger"} <= set(bundled_profiles())
+    assert {"generic", "logo_tiger", "netsis"} <= set(bundled_profiles())
 
 
 def test_unknown_profile_is_rejected():

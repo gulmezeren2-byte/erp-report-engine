@@ -1,0 +1,86 @@
+profile: netsis
+dialect: mssql
+description: >
+  Logo Netsis 3 (Standard / Entegre / Enterprise) on MSSQL. Netsis stores each
+  company in its OWN database with constant table names (no firm/period suffixes
+  like Logo Tiger) - so point connection.url at the target company database and
+  this profile needs no profile_vars. Community convention is a new database per
+  fiscal year (created at year-end "devir"); pick the year by the connection.
+
+  Core mapping (well corroborated across real production integrations):
+  - Sales orders: TBLSIPAMAS (headers) + TBLSIPATRA (lines), filtered TRCODE
+    FTIRSIP = '6' (Müşteri Siparişi). '7' would be a purchase order.
+  - TBLSIPAMAS.FATIRS_NO = order no; TARIH = order date; CARI_KODU joins
+    TBLCASABIT.CARI_KOD (note: the customer table's column is CARI_KOD, the
+    order's is CARI_KODU); GENELTOPLAM = grand total.
+  - TBLSIPATRA joins the header on FISNO = FATIRS_NO AND STHAR_FTIRSIP = FTIRSIP
+    (add SUBE_KODU in multi-branch databases); STOK_KODU = item, STHAR_GCMIK = qty.
+  - Stock on-hand from the aggregate table TBLSTOKPH (TOP_GIRIS_MIK - TOP_CIKIS_MIK).
+
+  VERIFY AGAINST YOUR VERSION - Netsis schemas drift between releases and these
+  fields are the honest weak points, so confirm before trusting the numbers:
+  - net_total uses GENELTOPLAM, which is VAT-INCLUSIVE. For net-of-VAT revenue
+    use (m.GENELTOPLAM - m.KDV) instead, and check the KDV_DAHILMI flag.
+  - status maps TBLSIPAMAS.KAPATILMIS, whose closed value varies by install
+    (seen: NULL / 'S' / 'H' / 'K'). Run  SELECT KAPATILMIS, COUNT(*) FROM
+    TBLSIPAMAS GROUP BY KAPATILMIS  and adjust the CASE below. On-time % depends
+    on this plus the two dates - if they are wrong, on-time is wrong (the report
+    will confess how many delivered orders lack dates).
+  - promised_date uses the header SIPARIS_TEST; a line-level TBLSIPATRA.STHAR_TESTAR
+    (teslim tarihi) is often more accurate.
+  - actual_ship_date is derived from the earliest dispatch (irsaliye) date on the
+    order lines; it is only populated if the site creates irsaliye from the order.
+  This is an honest field mapping to build from, not a certified integration.
+
+contract:
+  orders:
+    severity: warn
+    not_null: [order_id, order_date]
+    min_rows: 1
+  order_lines:
+    severity: warn
+    relationships: {order_id: orders}
+
+entities:
+  orders:
+    query: |
+      SELECT
+        m.FATIRS_NO                                        AS order_id,
+        m.TARIH                                            AS order_date,
+        COALESCE(c.CARI_IL, 'UNKNOWN')                     AS region,
+        c.CARI_ISIM                                        AS customer,
+        CASE WHEN m.KAPATILMIS = 'K' THEN 'closed' ELSE 'open' END AS status,
+        m.SIPARIS_TEST                                     AS promised_date,
+        (SELECT MIN(t.IRSALIYE_TARIH)
+           FROM TBLSIPATRA t
+          WHERE t.FISNO = m.FATIRS_NO
+            AND t.STHAR_FTIRSIP = m.FTIRSIP
+            AND t.SUBE_KODU = m.SUBE_KODU
+            AND t.IRSALIYE_TARIH IS NOT NULL)             AS actual_ship_date,
+        m.GENELTOPLAM                                      AS net_total
+      FROM TBLSIPAMAS m
+      LEFT JOIN TBLCASABIT c ON c.CARI_KOD = m.CARI_KODU
+      WHERE m.FTIRSIP = '6'
+        AND m.TARIH >= :since
+
+  order_lines:
+    query: |
+      SELECT
+        t.FISNO       AS order_id,
+        t.STOK_KODU   AS item_code,
+        t.STHAR_GCMIK AS qty
+      FROM TBLSIPATRA t
+      JOIN TBLSIPAMAS m ON m.FATIRS_NO = t.FISNO
+                       AND m.FTIRSIP = t.STHAR_FTIRSIP
+                       AND m.SUBE_KODU = t.SUBE_KODU
+      WHERE t.STHAR_FTIRSIP = '6'
+        AND m.TARIH >= :since
+
+  inventory:
+    query: |
+      SELECT
+        s.STOK_KODU                            AS item_code,
+        SUM(p.TOP_GIRIS_MIK - p.TOP_CIKIS_MIK) AS stock_qty
+      FROM TBLSTSABIT s
+      JOIN TBLSTOKPH p ON p.STOK_KODU = s.STOK_KODU
+      GROUP BY s.STOK_KODU

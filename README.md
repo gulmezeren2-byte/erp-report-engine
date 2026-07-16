@@ -124,8 +124,9 @@ Profiles ship inside the package and are referenced by name (`generic`, `logo_ti
 
 - **`generic`** — the canonical schema; also the template for writing your own.
 - **`logo_tiger`** — Logo Tiger / GO on MSSQL: `LG_{firm}_{period}_ORFICHE` order headers joined to `CLCARD` customers, `ORFLINE` lines, `STINVTOT` stock totals, `TRCODE = 2` sales filter. Logo schemas vary by release — the profile carries field notes on exactly what to verify against **your** version before trusting it.
+- **`netsis`** — Logo Netsis 3 on MSSQL (database-per-company): `TBLSIPAMAS`/`TBLSIPATRA` sales orders (`FTIRSIP = '6'`), `TBLCASABIT` customers, `TBLSTOKPH` stock totals. Field-mapped from real production integrations, with the honest weak points (order status, delivery dates) flagged inline to verify against your install.
 
-Writing a profile for another ERP (Netsis, SAP B1, Odoo, a custom system) means writing **three SELECT statements** that output the canonical columns — either a standalone YAML you point `profile:` at, or a file dropped into `erp_report_engine/profiles/` to ship it bundled. That's the whole contract — and `validate` tells you immediately whether you got it right.
+Together, Logo Tiger and Netsis cover most of the Turkish SME ERP market (both MSSQL). Writing a profile for another ERP (Mikro, SAP B1, Odoo, a custom system) means writing **three SELECT statements** that output the canonical columns — either a standalone YAML you point `profile:` at, or a file dropped into `erp_report_engine/profiles/` to ship it bundled. That's the whole contract — and `validate` tells you immediately whether you got it right.
 
 ## Make it autonomous
 
@@ -212,14 +213,16 @@ Honesty over marketing — you should know the edges before pointing it at produ
 pip install pytest && python -m pytest tests/ -v
 ```
 
-15 tests: 8 injection attempts against the guard, profile contract validation, variable-injection rejection, a full end-to-end run against the demo database asserting that findings fire, the seeded dirt is caught, and the report carries its audit trail — plus the Power BI layer: exporter contract (unique keys, gapless week ordinals) and PBIP project integrity (naming rules, visual overlap detection, theme resolution, every visual field exists in the model).
+The suite covers the read-only guard (a battery of injection attempts), profile contracts, the calendar core (unit + property-based), render escaping, the honesty fixes, CLI exit codes, the MCP tools, SPC signals, delivery routing, and a full end-to-end run plus Power BI PBIP integrity (exporter keys, gapless week ordinals, visual-overlap detection, every visual field exists in the model). CI additionally runs `ruff` and fails on PBIR generator drift, on Python 3.10–3.13.
 
 ## Roadmap
 
-- `profiles/netsis.yaml` — second Turkish ERP mapping (`TBLSIPAMAS`-family)
-- Optional e-mail dispatch (SMTP via env vars only, following [auto-report-pipeline](https://github.com/gulmezeren2-byte/auto-report-pipeline))
-- Anomaly layer: control-limit breaches on top of WoW rules
-- MCP server wrapper: ask the ERP questions through the same read-only guard
+Shipped: the guarded MCP server, the SPC/XmR anomaly layer, native delivery (SMTP/Slack/Teams/healthchecks), declarative profile contracts, and the Netsis profile. Next:
+
+- `profiles/mikro.yaml` — a third Turkish ERP mapping
+- Receivables/aging entities (cari yaşlandırma) — the #1 requested Turkish report, beyond the orders/inventory canon
+- LLM-optional narrative layer: an executive summary generated from aggregates only (never raw rows), with a "what the model saw" appendix
+- A first-party agent skill pack (`erp-safe-query`, `explain-kpi-move`, `write-erp-profile`)
 
 ## Part of the measurement-honesty series
 

@@ -124,8 +124,9 @@ Profiller paketin içinde gelir ve adla referans verilir (`generic`, `logo_tiger
 
 - **`generic`** — kanonik şema; kendi profilinizi yazmak için de şablon.
 - **`logo_tiger`** — MSSQL üzerinde Logo Tiger / GO: `LG_{firma}_{dönem}_ORFICHE` sipariş başlıkları `CLCARD` cari kartlarına bağlı, `ORFLINE` satırları, `STINVTOT` stok toplamları, `TRCODE = 2` satış filtresi. Logo şemaları sürüme göre değişir — profil, güvenmeden önce **kendi** sürümünüzde neyi doğrulamanız gerektiğini not düşer.
+- **`netsis`** — MSSQL üzerinde Logo Netsis 3 (şirket-başına-veritabanı): `TBLSIPAMAS`/`TBLSIPATRA` satış siparişleri (`FTIRSIP = '6'`), `TBLCASABIT` cariler, `TBLSTOKPH` stok toplamları. Gerçek üretim entegrasyonlarından saha-eşlemeli; dürüst zayıf noktaları (sipariş durumu, teslim tarihleri) kendi kurulumunuzda doğrulamanız için satır-içi işaretli.
 
-Başka bir ERP için profil yazmak (Netsis, SAP B1, Odoo, özel sistem) kanonik kolonları üreten **üç SELECT ifadesi** yazmak demektir — ya `profile:` ile gösterdiğiniz bağımsız bir YAML, ya da gömülü gelmesi için `erp_report_engine/profiles/` içine bırakılan bir dosya. Sözleşmenin tamamı bu — ve `validate` doğru yazıp yazmadığınızı anında söyler.
+Logo Tiger ve Netsis birlikte Türkiye KOBİ ERP pazarının çoğunu kapsar (ikisi de MSSQL). Başka bir ERP için profil yazmak (Mikro, SAP B1, Odoo, özel sistem) kanonik kolonları üreten **üç SELECT ifadesi** yazmak demektir — ya `profile:` ile gösterdiğiniz bağımsız bir YAML, ya da gömülü gelmesi için `erp_report_engine/profiles/` içine bırakılan bir dosya. Sözleşmenin tamamı bu — ve `validate` doğru yazıp yazmadığınızı anında söyler.
 
 ## Otonom hale getirin
 
@@ -214,10 +215,12 @@ pip install pytest && python -m pytest tests/ -v
 
 ## Yol haritası
 
-- `profiles/netsis.yaml` — ikinci Türk ERP eşlemesi (`TBLSIPAMAS` ailesi)
-- İsteğe bağlı e-posta gönderimi (SMTP yalnız ortam değişkenleriyle, [auto-report-pipeline](https://github.com/gulmezeren2-byte/auto-report-pipeline) izinde)
-- Anomali katmanı: haftalık kuralların üstüne kontrol limiti ihlalleri
-- MCP sunucu sarmalayıcı: aynı salt-okunur bekçi üzerinden ERP'ye soru sormak
+Tamamlananlar: bekçili MCP sunucusu, SPC/XmR anomali katmanı, yerel teslimat (SMTP/Slack/Teams/healthchecks), deklaratif profil kontratları ve Netsis profili. Sıradaki:
+
+- `profiles/mikro.yaml` — üçüncü Türk ERP eşlemesi
+- Cari yaşlandırma varlıkları — Türkiye'de #1 talep edilen rapor (sipariş/stok kanonundan öte)
+- LLM-opsiyonel anlatı katmanı: yalnız agregalardan üretilen yönetici özeti (asla ham satır değil), "modelin gördüğü" ekiyle
+- Birinci-parti ajan skill paketi (`erp-safe-query`, `explain-kpi-move`, `write-erp-profile`)
 
 ## Ölçüm dürüstlüğü serisinin parçası
 
