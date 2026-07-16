@@ -29,7 +29,9 @@ erp-report-engine run -c config.demo.yaml
 
 Every command is also available as `python -m erp_report_engine …`. Add a database driver with the extras: `pipx install "erp-report-engine[mssql]"` (Logo Tiger / SQL Server) or `[postgres]`.
 
-Open `reports/erp_report_<week>.html`. You'll see the engine catch a revenue spike and attribute it to one region, flag a two-point on-time decline, list items below two weeks of stock cover — and confess every duplicate and negative row it found on the way. A pre-generated copy ships in [`docs/sample-report.html`](docs/sample-report.html).
+Open `reports/erp_report_<week>.html`. You'll see the engine catch a revenue spike and attribute it to one region, flag a two-point on-time decline, list items below two weeks of stock cover — and confess every duplicate and negative row it found on the way.
+
+**▶ See a live sample report: [gulmezeren2-byte.github.io/erp-report-engine](https://gulmezeren2-byte.github.io/erp-report-engine/)** (also committed at [`docs/sample-report.html`](docs/sample-report.html)).
 
 ## What one run produces
 

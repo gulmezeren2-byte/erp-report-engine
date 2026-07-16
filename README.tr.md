@@ -29,7 +29,9 @@ erp-report-engine run -c config.demo.yaml
 
 Her komut `python -m erp_report_engine …` olarak da çalışır. Veritabanı sürücüsünü ekstralarla ekleyin: `pipx install "erp-report-engine[mssql]"` (Logo Tiger / SQL Server) veya `[postgres]`.
 
-`reports/erp_report_<hafta>.html` dosyasını açın. Motorun bir ciro sıçramasını yakalayıp tek bölgeye atfettiğini, zamanında sevkiyattaki 2 puanlık düşüşü işaretlediğini, 2 haftalık karşılama süresinin altındaki stokları listelediğini — ve yolda bulduğu her mükerrer ve eksi satırı itiraf ettiğini göreceksiniz. Hazır üretilmiş bir kopya [`docs/sample-report.html`](docs/sample-report.html) içinde.
+`reports/erp_report_<hafta>.html` dosyasını açın. Motorun bir ciro sıçramasını yakalayıp tek bölgeye atfettiğini, zamanında sevkiyattaki 2 puanlık düşüşü işaretlediğini, 2 haftalık karşılama süresinin altındaki stokları listelediğini — ve yolda bulduğu her mükerrer ve eksi satırı itiraf ettiğini göreceksiniz.
+
+**▶ Canlı örnek raporu görün: [gulmezeren2-byte.github.io/erp-report-engine](https://gulmezeren2-byte.github.io/erp-report-engine/)** (ayrıca [`docs/sample-report.html`](docs/sample-report.html) içinde commit'li).
 
 ## Tek çalıştırma ne üretir?
 
