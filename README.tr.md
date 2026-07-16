@@ -144,6 +144,8 @@ Her çalışma `state.db` dosyasına eklenir; raporun *"üçüncü ardışık ha
 
 **Çıkış kodları** zamanlayıcının *neden* başarısız olduğuna göre dallanmasını sağlar: `0` başarı · `2` config hatası · `3` veritabanı/bağlantı hatası · `4` sözleşme hatası (profil şeması yanlış veya kaynak sayıları mutabık değil) · `5` `--strict` altında veri kalitesi hatası · `1` beklenmeyen. Makine-okunur sonuç stdout'a gider (`… run -c config.yaml | jq`); loglar stderr'e, istenirse `--log-file run.jsonl` ile bir JSON-satır dosyasına da yazılır. Sayılar mutabık değilse CI hattını düşürmek için `validate --strict` çalıştırın.
 
+**Teslimat gömülü.** `run --send` raporu e-postayla gönderir (SMTP), Slack veya Teams'e (Power Automate Workflows) özet atar ve başarı *veya* başarısızlıkta bir [healthchecks.io](https://healthchecks.io) ölü-adam anahtarını pingler — böylece sessiz bir cron fark edilir. Her sır bir ortam değişkeninden gelir; başarısız kanal loglanır, asla ölümcül değildir. Bir `delivery:` bloğunda yapılandırın (bkz. `config.example.yaml`). Rapor kendini yazar *ve* kendini gönderir — çoğu BI aracının paralı sattığı özellik.
+
 ## Power BI Command Center
 
 Motor, etkileşimli bir Power BI katmanını da besler — ve bu depoda `.pbix` ikilisi yoktur. Ürünün tamamı **kod olarak yazılmış bir PBIP projesi**: semantik model TMDL'de (yıldız şema, açıklamalı 20+ DAX ölçüsü, boşluksuz hafta sırası üstünde çalışan *Time Shift* hesaplama grubu, alan parametresi), rapor PBIR'de (4 sayfa / 24 görsel, bir betikle kompakt spec'lerden üretiliyor), artı özel tema.

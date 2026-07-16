@@ -144,6 +144,8 @@ Each run appends to `state.db`, which is how the report can say *"third consecut
 
 **Exit codes** let the scheduler branch on *why* a run failed: `0` success · `2` config error · `3` database/connection error · `4` contract error (profile schema wrong or source counts don't reconcile) · `5` data-quality failure under `--strict` · `1` anything unexpected. The machine-readable result goes to stdout (`… run -c config.yaml | jq`); logs go to stderr, optionally also to a JSON-lines file with `--log-file run.jsonl`. Run `validate --strict` in CI to fail the pipeline when the numbers don't reconcile.
 
+**Delivery is built in.** `run --send` emails the report (SMTP), posts a summary to Slack or Teams (Power Automate Workflows), and pings a [healthchecks.io](https://healthchecks.io) dead-man's-switch on success *or* failure — so a silent cron is detectable. Every secret comes from an environment variable; a channel that fails is logged, never fatal. Configure it in a `delivery:` block (see `config.example.yaml`). The report writes itself *and* delivers itself — the feature most BI tools charge for.
+
 ## The Power BI Command Center
 
 The engine also feeds an interactive Power BI layer — and there is no `.pbix` binary in this repo. The entire artifact is a **PBIP project authored as code**: the semantic model in TMDL (star schema, 20+ documented DAX measures, a *Time Shift* calculation group on a gapless week ordinal, a field parameter), the report in PBIR (4 pages / 24 visuals, generated from compact specs by a script), and a custom theme.

@@ -45,13 +45,19 @@ def cmd_run(args) -> None:
     rr = runner.build_report(cfg, write=True)
     _log.info("wrote %s (week %s, %d queries, %d DQ issue(s))",
               rr.report_path, rr.kpis["this_week"], len(rr.auditor.entries), len(rr.extraction.issues))
-    print(json.dumps({
+    out = {
         "report": rr.report_path,
         "week": rr.kpis["this_week"],
         "findings": [f["text"] for f in rr.findings],
         "data_quality_issues": rr.extraction.issues,
         "queries_executed": len(rr.auditor.entries),
-    }, indent=2, ensure_ascii=False))
+    }
+    if args.send:
+        from . import delivery
+        out["delivery"] = delivery.send_report(
+            cfg, week=rr.kpis["this_week"], findings=out["findings"], html=rr.html)
+        _log.info("delivery: %s", out["delivery"])
+    print(json.dumps(out, indent=2, ensure_ascii=False))
     if args.strict and rr.mismatches:
         raise DataQualityError("--strict: reconciliation mismatch - the report was written but do not trust it")
 
@@ -116,6 +122,7 @@ def main(argv: list[str] | None = None) -> None:
     s = sub.add_parser("run", help="produce the weekly report")
     s.add_argument("-c", "--config", required=True)
     s.add_argument("--strict", action="store_true", help="exit non-zero on a reconciliation mismatch")
+    s.add_argument("--send", action="store_true", help="deliver the report via the config's delivery: channels")
     s.set_defaults(fn=cmd_run)
 
     s = sub.add_parser("export-powerbi",

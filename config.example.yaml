@@ -29,3 +29,22 @@ report:
 limits:
   row_cap: 500000                   # refuse suspiciously large extractions
   query_timeout_s: 60               # per-statement timeout (MSSQL/PostgreSQL)
+
+# Optional. Used only with `run --send`. Every secret (SMTP password, webhook
+# URLs, the healthcheck URL) is read from an environment variable - never here.
+# delivery:
+#   email:
+#     to: ["ops@company.com"]
+#     from_addr: "reports@company.com"
+#     host_env: ERP_SMTP_HOST       # host/port/user may be plain (non-secret)
+#     port: 587
+#     user_env: ERP_SMTP_USER
+#     password_env: ERP_SMTP_PASSWORD   # password ONLY via env
+#     starttls: true
+#     subject: "Weekly ERP report {week}"
+#   slack:
+#     webhook_url_env: ERP_SLACK_WEBHOOK
+#   teams:                          # Power Automate Workflows URL (connectors retired 2026)
+#     webhook_url_env: ERP_TEAMS_WEBHOOK
+#   healthcheck:                    # healthchecks.io dead-man's-switch
+#     ping_url_env: ERP_HEALTHCHECK_URL
