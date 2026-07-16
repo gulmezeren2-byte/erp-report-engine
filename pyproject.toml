@@ -61,9 +61,14 @@ path = "erp_report_engine/__init__.py"
 packages = ["erp_report_engine"]
 
 [tool.hatch.build.targets.wheel.force-include]
-# ship every bundled profile (generic, logo_tiger, netsis, mikro, and any added
-# later) inside the wheel, so `profile: netsis` resolves from an installed package
-"erp_report_engine/profiles" = "erp_report_engine/profiles"
+# ship every bundled profile's YAML inside the wheel (the .py package files are
+# already included; only the data files need this), so `profile: netsis` resolves
+# from an installed package. Add a line when you add a profile — the CI wheel
+# check fails loudly if one is missing.
+"erp_report_engine/profiles/generic.yaml" = "erp_report_engine/profiles/generic.yaml"
+"erp_report_engine/profiles/logo_tiger.yaml" = "erp_report_engine/profiles/logo_tiger.yaml"
+"erp_report_engine/profiles/netsis.yaml" = "erp_report_engine/profiles/netsis.yaml"
+"erp_report_engine/profiles/mikro.yaml" = "erp_report_engine/profiles/mikro.yaml"
 
 [tool.hatch.build.targets.sdist]
 include = [
