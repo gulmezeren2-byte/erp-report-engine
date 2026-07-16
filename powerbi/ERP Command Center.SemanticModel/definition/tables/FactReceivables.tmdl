@@ -1,0 +1,91 @@
+/// Open receivables with aging fields, computed by the exporter as of the same anchor date the HTML report uses (so both surfaces bucket identically). Empty when the profile maps no receivables.
+table FactReceivables
+	lineageTag: 67a9115c-0025-4000-8000-000000000025
+
+	column 'Invoice ID'
+		dataType: string
+		isHidden
+		lineageTag: 67a9115c-0026-4000-8000-000000000026
+		summarizeBy: none
+		sourceColumn: invoice_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column Customer
+		dataType: string
+		lineageTag: 67a9115c-0027-4000-8000-000000000027
+		summarizeBy: none
+		sourceColumn: customer
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Due Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 67a9115c-0028-4000-8000-000000000028
+		summarizeBy: none
+		sourceColumn: due_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Open Amount'
+		dataType: double
+		formatString: #,##0
+		lineageTag: 67a9115c-0029-4000-8000-000000000029
+		summarizeBy: sum
+		sourceColumn: open_amount
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Overdue Days'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 67a9115c-002a-4000-8000-00000000002a
+		summarizeBy: none
+		sourceColumn: overdue_days
+
+		annotation SummarizationSetBy = User
+
+	column 'Aging Bucket'
+		dataType: string
+		lineageTag: 67a9115c-002b-4000-8000-00000000002b
+		summarizeBy: none
+		sourceColumn: aging_bucket
+		sortByColumn: 'Bucket Order'
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Bucket Order'
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 67a9115c-002c-4000-8000-00000000002c
+		summarizeBy: none
+		sourceColumn: bucket_order
+
+		annotation SummarizationSetBy = User
+
+	partition FactReceivables = m
+		mode: import
+		source =
+				let
+					Source = Csv.Document(File.Contents(DataFolder & "\fact_receivables.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+					Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+					Typed = Table.TransformColumnTypes(
+						Promoted,
+						{
+							{"invoice_id", type text},
+							{"customer", type text},
+							{"due_date", type date},
+							{"open_amount", type number},
+							{"overdue_days", Int64.Type},
+							{"aging_bucket", type text},
+							{"bucket_order", Int64.Type}
+						},
+						"en-US"
+					)
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

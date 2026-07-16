@@ -155,7 +155,7 @@ Her çalışma `state.db` dosyasına eklenir; raporun *"üçüncü ardışık ha
 
 ## Power BI Command Center
 
-Motor, etkileşimli bir Power BI katmanını da besler — ve bu depoda `.pbix` ikilisi yoktur. Ürünün tamamı **kod olarak yazılmış bir PBIP projesi**: semantik model TMDL'de (yıldız şema, açıklamalı 24 DAX ölçüsü — **DAX'ten doğrudan müşteri sparkline'ı ve ürün karşılama çubuğu çizen SVG mikro-grafik ölçüleri** dahil — boşluksuz hafta sırası üstünde çalışan *Time Shift* hesaplama grubu ve alan parametresi), rapor PBIR'de (4 sayfa / 24 görsel, bir betikle kompakt spec'lerden üretiliyor), artı **Microsoft'un resmi tema şemasına karşı doğrulanmış fütüristik koyu tema**.
+Motor, etkileşimli bir Power BI katmanını da besler — ve bu depoda `.pbix` ikilisi yoktur. Ürünün tamamı **kod olarak yazılmış bir PBIP projesi**: semantik model TMDL'de (yıldız şema, açıklamalı 28 DAX ölçüsü — **DAX'ten doğrudan müşteri sparkline'ı ve ürün karşılama çubuğu çizen SVG mikro-grafik ölçüleri** ve bir **cari yaşlandırma** fact + ölçüleri dahil — boşluksuz hafta sırası üstünde çalışan *Time Shift* hesaplama grubu ve alan parametresi), rapor PBIR'de (5 sayfa / 30 görsel, bir betikle kompakt spec'lerden üretiliyor), artı **Microsoft'un resmi tema şemasına karşı doğrulanmış fütüristik koyu tema**.
 
 ```bash
 python -m erp_report_engine export-powerbi -c config.demo.yaml

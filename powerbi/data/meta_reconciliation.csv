@@ -2,3 +2,4 @@ entity,fetched,source_count,match
 orders,532,532,OK
 order_lines,1325,1325,OK
 inventory,40,40,OK
+receivables,84,84,OK

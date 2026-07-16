@@ -2,3 +2,7 @@ issue
 orders: 2 duplicated order_id rows collapsed to one for all KPIs (check the profile join)
 orders: 1 rows with negative net_total (returns/credit notes? counted as-is)
 orders: 1 rows ship BEFORE order date (data entry suspicion)
+receivables: 1 duplicated invoice_id rows collapsed to one
+receivables: 1 rows with unparseable due_date (excluded from aging)
+receivables: 1 rows with negative open_amount (credit balances? excluded from aging)
+contract[receivables]: 1 rows have a null due_date

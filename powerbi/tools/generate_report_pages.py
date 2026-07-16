@@ -92,20 +92,22 @@ def line_chart(cat_entity: str, cat_prop: str, y_props: list[str], title: str) -
 
 
 def bar_chart(cat_entity: str, cat_prop: str, y_prop: str, title: str,
-              chart_type: str = "barChart") -> dict:
+              chart_type: str = "barChart", sort_by_value: bool = True) -> dict:
+    query: dict = {
+        "queryState": {
+            "Category": {"projections": [
+                dict(projection(column(cat_entity, cat_prop), cat_entity, cat_prop), active=True)]},
+            "Y": {"projections": [projection(measure(MEASURES, y_prop), MEASURES, y_prop)]},
+        },
+    }
+    if sort_by_value:   # rank by magnitude; otherwise the category's own sort order (e.g. bucket order) holds
+        query["sortDefinition"] = {
+            "sort": [{"field": measure(MEASURES, y_prop), "direction": "Descending"}],
+            "isDefaultSort": True,
+        }
     return {
         "visualType": chart_type,
-        "query": {
-            "queryState": {
-                "Category": {"projections": [
-                    dict(projection(column(cat_entity, cat_prop), cat_entity, cat_prop), active=True)]},
-                "Y": {"projections": [projection(measure(MEASURES, y_prop), MEASURES, y_prop)]},
-            },
-            "sortDefinition": {
-                "sort": [{"field": measure(MEASURES, y_prop), "direction": "Descending"}],
-                "isDefaultSort": True,
-            },
-        },
+        "query": query,
         "visualContainerObjects": vc_title(title),
         "drillFilterOtherVisuals": True,
     }
@@ -243,9 +245,27 @@ def main() -> None:
                                     "SQL audit trail — every statement executed")),
     })
 
-    n_pages = 4
+    page("aging", "Aging", {
+        "title_box": visual("title_box", 24, 16, 1000, 56, 1000,
+                            title_props("Receivables aging — chase the oldest balances first")),
+        "card_total_ar": visual("card_total_ar", 24, 92, 296, 140, 2000,
+                                card("Total AR", "Open receivables")),
+        "card_overdue_pct": visual("card_overdue_pct", 336, 92, 296, 140, 2100,
+                                   card("Overdue %", "Share past due")),
+        "card_over90": visual("card_over90", 648, 92, 296, 140, 2200,
+                              card("AR 90+ Days", "Hardest to collect")),
+        "bar_buckets": visual("bar_buckets", 24, 252, 608, 428, 3000,
+                              bar_chart("FactReceivables", "Aging Bucket", "Total AR",
+                                        "Open receivables by age", chart_type="columnChart",
+                                        sort_by_value=False)),
+        "bar_overdue_cust": visual("bar_overdue_cust", 648, 252, 608, 428, 4000,
+                                   bar_chart("FactReceivables", "Customer", "Overdue AR",
+                                             "Overdue by customer — worst first")),
+    })
+
+    n_pages = 5
     n_visuals = sum(len(os.listdir(os.path.join(ROOT, p, "visuals")))
-                    for p in ("overview", "drivers", "stock", "trust"))
+                    for p in ("overview", "drivers", "stock", "aging", "trust"))
     print(f"generated {n_pages} pages, {n_visuals} visuals under {ROOT}")
 
 

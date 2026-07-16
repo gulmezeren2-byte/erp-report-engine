@@ -20,6 +20,7 @@ from . import week_calendar as wc
 from .config import Config
 from .connect import Auditor
 from .extract import Extraction
+from .kpi import _AGING_BUCKETS, _bucket  # one bucket definition, shared with the HTML aging
 from .semantic import Profile
 
 _ENC = "utf-8"  # no BOM: Power BI's Csv.Document reads 65001 cleanly
@@ -36,6 +37,27 @@ def _write(path: str, header: list[str], rows: list[list]) -> int:
 def _iso_week(d: dt.date) -> tuple[str, int]:
     iso = d.isocalendar()
     return f"{iso.year}-W{iso.week:02d}", iso.year * 100 + iso.week
+
+
+def _export_receivables(ex: Extraction, out_dir: str, as_of: dt.date) -> int:
+    """Write fact_receivables.csv (open balances with aging fields) when the
+    profile maps receivables; an empty file otherwise so the model still loads.
+    Buckets come from kpi._bucket, so Power BI and the HTML report agree."""
+    header = ["invoice_id", "customer", "due_date", "open_amount",
+              "overdue_days", "aging_bucket", "bucket_order"]
+    rows: list[list] = []
+    rec = ex.frames.get("receivables")
+    if rec is not None and len(rec):
+        r = rec.copy()
+        r["due_date"] = pd.to_datetime(r["due_date"], errors="coerce")
+        r["open_amount"] = pd.to_numeric(r["open_amount"], errors="coerce")
+        r = r[r["due_date"].notna() & (r["open_amount"] > 0)]
+        for t in r.itertuples(index=False):
+            od = int((pd.Timestamp(as_of) - t.due_date).days)
+            bucket = _bucket(od)
+            rows.append([t.invoice_id, t.customer, t.due_date.date().isoformat(),
+                         round(float(t.open_amount), 2), od, bucket, _AGING_BUCKETS.index(bucket)])
+    return _write(os.path.join(out_dir, "fact_receivables.csv"), header, rows)
 
 
 def export_all(cfg: Config, profile: Profile, ex: Extraction, auditor: Auditor,
@@ -145,6 +167,11 @@ def export_all(cfg: Config, profile: Profile, ex: Extraction, auditor: Auditor,
         ["week_key", "week_index", "week_ordinal", "week_start", "week_end", "is_full_week"],
         week_rows,
     )
+
+    # optional receivables fact with aging fields, computed as of the same anchor
+    # date the HTML report used (so both surfaces bucket identically). Always
+    # written - empty when the profile maps no receivables - so the model loads.
+    counts["fact_receivables.csv"] = _export_receivables(ex, out_dir, as_of)
 
     counts["meta_reconciliation.csv"] = _write(
         os.path.join(out_dir, "meta_reconciliation.csv"),

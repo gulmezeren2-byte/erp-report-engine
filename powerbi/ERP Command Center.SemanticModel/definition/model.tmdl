@@ -11,7 +11,7 @@ queryGroup Parameters
 
 	annotation PBI_QueryGroupOrder = 0
 
-annotation PBI_QueryOrder = ["DataFolder","FactOrders","FactOrderLines","DimItem","DimWeek","MetaReconciliation","MetaDataQuality","MetaAuditTrail","MetaRunInfo"]
+annotation PBI_QueryOrder = ["DataFolder","FactOrders","FactOrderLines","DimItem","DimWeek","FactReceivables","MetaReconciliation","MetaDataQuality","MetaAuditTrail","MetaRunInfo"]
 
 annotation __PBI_TimeIntelligenceEnabled = 0
 
@@ -19,6 +19,7 @@ ref table FactOrders
 ref table FactOrderLines
 ref table DimItem
 ref table DimWeek
+ref table FactReceivables
 ref table MetaReconciliation
 ref table MetaDataQuality
 ref table MetaAuditTrail

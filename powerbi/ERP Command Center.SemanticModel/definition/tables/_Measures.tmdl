@@ -340,6 +340,32 @@ table _Measures
 		displayFolder: 2. This Week
 		lineageTag: 67a9115c-0024-4000-8000-000000000024
 
+	/// Total open receivables across all aging buckets.
+	measure 'Total AR' = SUM ( FactReceivables[Open Amount] )
+		formatString: #,##0
+		displayFolder: 5. Receivables
+		lineageTag: 67a9115c-002d-4000-8000-00000000002d
+
+	/// Open receivables that are past due (overdue days > 0).
+	measure 'Overdue AR' =
+			CALCULATE ( [Total AR], FactReceivables[Overdue Days] > 0 )
+		formatString: #,##0
+		displayFolder: 5. Receivables
+		lineageTag: 67a9115c-002e-4000-8000-00000000002e
+
+	/// Share of open receivables that is overdue.
+	measure 'Overdue %' = DIVIDE ( [Overdue AR], [Total AR] )
+		formatString: 0.0%
+		displayFolder: 5. Receivables
+		lineageTag: 67a9115c-002f-4000-8000-00000000002f
+
+	/// Open receivables 90+ days past due - the hardest to collect.
+	measure 'AR 90+ Days' =
+			CALCULATE ( [Total AR], FactReceivables[Aging Bucket] = "90+" )
+		formatString: #,##0
+		displayFolder: 5. Receivables
+		lineageTag: 67a9115c-0030-4000-8000-000000000030
+
 	column Value
 		isHidden
 		lineageTag: 67a9115c-0013-4000-8000-000000000013

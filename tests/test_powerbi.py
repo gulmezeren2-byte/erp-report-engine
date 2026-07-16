@@ -35,11 +35,20 @@ def test_export_powerbi_end_to_end(tmp_path):
     payload = json.loads(proc.stdout)
 
     expected = {"fact_orders.csv", "fact_order_lines.csv", "dim_item.csv", "dim_week.csv",
-                "meta_reconciliation.csv", "meta_data_quality.csv",
+                "fact_receivables.csv", "meta_reconciliation.csv", "meta_data_quality.csv",
                 "meta_audit_trail.csv", "meta_run_info.csv"}
     assert set(payload["files"]) == expected
     for name in expected:
         assert (out / name).exists(), f"{name} missing"
+
+    # the receivables fact carries the aging fields, and every bucket is a known one
+    with open(out / "fact_receivables.csv", encoding="utf-8") as f:
+        rec = list(csv.DictReader(f))
+    assert rec, "demo should export open receivables"
+    assert set(rec[0]) == {"invoice_id", "customer", "due_date", "open_amount",
+                           "overdue_days", "aging_bucket", "bucket_order"}
+    assert {r["aging_bucket"] for r in rec} <= {"current", "1-30", "31-60", "61-90", "90+"}
+    assert all(float(r["open_amount"]) > 0 for r in rec)          # only positive open balances
 
     # fact must have a unique order_id (the model relies on it as a key)
     with open(out / "fact_orders.csv", encoding="utf-8") as f:
