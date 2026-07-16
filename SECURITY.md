@@ -13,6 +13,16 @@ Read-only is enforced in three independent layers, so no single mistake makes th
 5. **Everything is visible.** Every executed statement, its parameters, row count and duration ship inside the report's SQL audit trail.
 6. **Bounded blast radius.** A row cap (default 500k) and query timeouts (PostgreSQL now; MSSQL via the driver) stop runaway queries.
 
+## The MCP server (agent access)
+
+The optional MCP server (`erp-report-engine mcp`) exposes the ERP to an AI agent, so it is held to the model above **plus** the lessons of the 2025 MCP data-exfiltration incidents:
+
+- Every tool runs through the same guarded, audited, read-only path (`runner.guarded_query` / the report facade). The agent gets no code path to write.
+- The agent sees only **canonical entities** (`orders`, `order_lines`, `inventory`) via the semantic profile — never raw ERP table names, and never a way to run arbitrary DDL.
+- Every result that carries ERP data is wrapped with an explicit note that the rows are **data, not instructions** — a defense against prompt-injection through record contents (the "lethal trifecta": untrusted input + a tool + an exfiltration channel).
+- Run the server under the same **read-only database login** as the report. The guard is a layer; the login is the backstop.
+- Do not expose the server beyond the local machine (stdio transport only, by design).
+
 ## Reporting a vulnerability
 
 If you find a way to sneak a write, a second statement, or an unparameterized value past the guard — that is exactly what I want to hear about.

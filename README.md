@@ -156,6 +156,33 @@ erp-report-engine export-powerbi -c config.yaml
 
 The signature is the **Trust page**: source reconciliation, the data-quality gate and the full SQL audit trail rendered as visuals — the dashboard shows its receipts. Alert thresholds are the same ones as `insights.py`, re-derived in DAX: one definition, two surfaces. Field bindings are validated against the TMDL model by `pbir-cli` before the project ever meets Desktop. Full guide: [powerbi/README.md](powerbi/README.md).
 
+## Ask your ERP through an agent — the guarded MCP server
+
+An AI agent connecting to an ERP is a trust problem nobody has solved well: every existing "ERP MCP" is a REST wrapper that leans on the ERP's own permissions, and every database MCP hands the agent raw tables. This engine ships the combination that doesn't exist elsewhere — a [Model Context Protocol](https://modelcontextprotocol.io) server where the agent talks to **canonical entities** (`orders`, never `LG_001_01_ORFICHE`), through the **same three-layer read-only guard and audit trail** as the report, with every data result framed as untrusted input.
+
+```bash
+pipx install "erp-report-engine[mcp]"
+erp-report-engine mcp -c config.yaml          # stdio server
+```
+
+Five tools, all funneled through the guarded path:
+
+| Tool | What the agent gets |
+|---|---|
+| `describe_model` | the canonical entities/columns it may query (no raw ERP table names) |
+| `weekly_report` | the full KPI briefing — findings, data-quality gate, reconciliation, SQL audit trail |
+| `reconcile` | fetched rows vs an independent `COUNT(*)` per entity, with a trust verdict |
+| `check_query` | whether a SQL statement would pass the guard — *without running it* |
+| `query` | run a read-only `SELECT`/`WITH`, capped and audited; rows returned as **untrusted data** |
+
+Point Claude Desktop (or any MCP client) at it:
+
+```json
+{ "mcpServers": { "erp": { "command": "erp-report-engine", "args": ["mcp", "-c", "C:\\path\\config.yaml"] } } }
+```
+
+The agent **cannot write**: the lexical + AST guard rejects anything but a single read query, the session is read-only, and — per the 2025 MCP data-exfiltration incidents — every returned value carries a note that rows are data, not instructions. It is, as far as we can find, the first SQL-level-guarded ERP MCP server, and the first for Logo Tiger.
+
 ## What this does NOT do
 
 Honesty over marketing — you should know the edges before pointing it at production:

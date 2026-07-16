@@ -82,6 +82,13 @@ def cmd_init_demo(args) -> None:
     print("demo ready: run  erp-report-engine run -c config.demo.yaml")
 
 
+def cmd_mcp(args) -> None:
+    from .mcp_server import serve
+
+    _log.info("starting MCP server (stdio) with config %s", args.config)
+    serve(args.config)
+
+
 def _safe_dsn(url: str) -> str:
     """A DSN with any credential and host removed, safe to log."""
     scheme = url.split("://", 1)[0] if "://" in url else url
@@ -122,6 +129,10 @@ def main(argv: list[str] | None = None) -> None:
 
     s = sub.add_parser("init-demo", help="build the bundled demo database and config")
     s.set_defaults(fn=cmd_init_demo)
+
+    s = sub.add_parser("mcp", help="run the guarded MCP server (stdio) for agent access to the ERP")
+    s.add_argument("-c", "--config", required=True)
+    s.set_defaults(fn=cmd_mcp)
 
     args = p.parse_args(argv)
     run_id = logsetup.configure(verbose=args.verbose, log_file=args.log_file)

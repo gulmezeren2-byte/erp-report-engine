@@ -154,6 +154,33 @@ python -m erp_report_engine export-powerbi -c config.demo.yaml
 
 İmza özellik **Trust sayfası**: kaynak mutabakatı, veri kalitesi kapısı ve SQL denetim izinin tamamı görsel olarak — pano makbuzlarını gösterir. Uyarı eşikleri `insights.py` ile birebir aynı, DAX'te yeniden türetilmiş: tek tanım, iki yüzey. Alan bağlamaları, proje Desktop'ı görmeden önce `pbir-cli` ile TMDL modele karşı doğrulanır. Tam kılavuz: [powerbi/README.tr.md](powerbi/README.tr.md).
 
+## ERP'nize bir ajanla sorun — bekçili MCP sunucusu
+
+Bir yapay zeka ajanının ERP'ye bağlanması kimsenin iyi çözmediği bir güven problemi: mevcut her "ERP MCP" projesi ERP'nin kendi izinlerine güvenen bir REST sarmalayıcısı, her veritabanı MCP'si ajana ham tabloları veriyor. Bu motor başka hiçbir yerde olmayan bileşimi sunuyor — ajanın **kanonik varlıklarla** (`orders`, asla `LG_001_01_ORFICHE` değil) konuştuğu, raporla **aynı üç-katmanlı salt-okunur bekçi ve denetim izi** üzerinden çalışan, her veri sonucunu güvenilmez girdi olarak çerçeveleyen bir [Model Context Protocol](https://modelcontextprotocol.io) sunucusu.
+
+```bash
+pipx install "erp-report-engine[mcp]"
+erp-report-engine mcp -c config.yaml          # stdio sunucusu
+```
+
+Hepsi bekçili yoldan geçen beş araç:
+
+| Araç | Ajanın aldığı |
+|---|---|
+| `describe_model` | sorgulayabileceği kanonik varlıklar/kolonlar (ham ERP tablo adları yok) |
+| `weekly_report` | tam KPI brifingi — bulgular, veri kalitesi kapısı, mutabakat, SQL denetim izi |
+| `reconcile` | çekilen satırlar vs varlık başına bağımsız `COUNT(*)`, güven hükmüyle |
+| `check_query` | bir SQL ifadesinin bekçiden geçip geçmeyeceği — *çalıştırmadan* |
+| `query` | salt-okunur `SELECT`/`WITH` çalıştır, sınırlı ve denetlenmiş; satırlar **güvenilmez veri** olarak döner |
+
+Claude Desktop'ı (veya herhangi bir MCP istemcisini) ona yöneltin:
+
+```json
+{ "mcpServers": { "erp": { "command": "erp-report-engine", "args": ["mcp", "-c", "C:\\yol\\config.yaml"] } } }
+```
+
+Ajan **yazamaz**: sözcüksel + AST bekçisi tek okuma sorgusu dışında her şeyi reddeder, oturum salt-okunurdur ve — 2025 MCP veri-sızdırma olaylarının dersiyle — dönen her değer, satırların komut değil veri olduğu notunu taşır. Bildiğimiz kadarıyla, SQL-düzeyinde bekçili ilk ERP MCP sunucusu ve Logo Tiger için ilk.
+
 ## Bu sistem ne YAPMAZ?
 
 Pazarlama değil dürüstlük — canlıya doğrultmadan önce sınırları bilin:
