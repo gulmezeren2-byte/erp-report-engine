@@ -10,7 +10,7 @@
 
 🇬🇧 English: [README.md](README.md)
 
-Zamanlanmış tek bir `run` komutu **6 denetlenmiş SELECT** çalıştırır ve kendi kendine yeten bir HTML rapor üretir: 8 haftalık taban çizgisine karşı dört KPI, sürücüsü isimlendirilmiş bulgular, veri kalitesi kapısı ve kaynakla mutabakatı yapılmış satır sayıları. BI lisansı yok, ERP sunucusuna kurulan ajan yok ve **asla yazma yok — dokümanda vaat edilerek değil, kodda zorlanarak**.
+Zamanlanmış tek bir `run` komutu **6 denetlenmiş SELECT** çalıştırır ve kendi kendine yeten bir HTML rapor üretir: 8 haftalık taban çizgisine karşı dört KPI, sürücüsü isimlendirilmiş bulgular, veri kalitesi kapısı ve kaynakla mutabakatı yapılmış satır sayıları. BI lisansı yok, ERP sunucusuna kurulan ajan yok ve **yazma yok — üç katmanda zorlanır (sözcüksel + ayrıştırma-ağacı bekçisi ve salt-okunur oturum), dokümanda vaat edilerek değil**.
 
 ![Motorun ürettiği haftalık rapor (demo veritabanından)](assets/erp_report_preview.png)
 
@@ -69,17 +69,17 @@ Bu sistemi taşınabilir kılan katman **semantik profil**: bir ERP'nin şifreli
 
 Bir yazılımı canlı ERP veritabanına doğrultmak bir güven kararıdır. Bu motor konuya böyle yaklaşır — garantiler kodda zorlanır ve testlerle kapsanır:
 
-| Garanti | Nerede zorlanıyor |
-|---|---|
-| Yalnızca tek ifadeli `SELECT`/`WITH` | `assert_read_only()` — ifade başı kontrolü, noktalı virgül reddi |
-| Yazma/DDL kelimesi yok, `SELECT INTO` yok, `EXEC` yok | Yasaklı kelime taraması (`insert, update, delete, drop, alter, create, truncate, merge, grant, revoke, exec, execute, call, into`) |
-| SQL yorumu yok (`--`, `/*`) | Peşinen reddedilir — klasik enjeksiyon taşıyıcısı |
-| Profil değişkenleri tanımlayıcı-güvenli | `^[A-Za-z0-9_]{1,16}$` — `"001; DROP TABLE x"` daha bağlantı kurulmadan hata fırlatır |
-| Sırlar asla config dosyasında değil | `connection.url` içine parola gömülmüşse yükleyici **çalışmayı reddeder**; `url_env` kullanın |
-| Çalıştırılan her ifade görünür | `Auditor` — tam iz her raporun içinde gönderilir |
-| Kaçak sorgu zarar veremez | Satır tavanı (varsayılan 500 bin) + lehçeye göre sorgu zaman aşımı |
+Salt-okunur **üç katmanda** zorlanır; tek bir hata motoru yazma yapabilir hale getirmez:
 
-Test paketi bekçiye sekiz enjeksiyon denemesi fırlatır — çoklu ifade, yorum kaçakçılığı, `SELECT INTO`, `EXEC`, yazma fiilleri — ve her birinin hata üretmesini bekler. Derinlemesine savunma yine de geçerli: motoru **salt-okunur bir veritabanı kullanıcısıyla** çalıştırın (MSSQL'de `db_datareader`) ki kod hatalı olsa bile garanti ayakta kalsın. Bkz. [SECURITY.md](SECURITY.md).
+| Katman | Nerede zorlanıyor |
+|---|---|
+| Sözcüksel bekçi | Tek ifade, `SELECT`/`WITH` başı, yorum yok (`--`, `/*`, `#`), yazma/DDL kelimesi yok, yazma-yükselten kilit ipucu yok (`TABLOCKX`, `UPDLOCK`, `XLOCK`) |
+| Ayrıştırma-ağacı bekçisi | `sqlglot` ifadeyi ayrıştırır; tek bir okuma sorgusu olmalı ve ağacında `INSERT`/`UPDATE`/`DELETE`/`CREATE`/`DROP`/`ALTER`/`MERGE`/`EXEC`/`INTO` düğümü bulunmamalı (CTE içine gizlenmiş yazmaları yakalar) |
+| Salt-okunur oturum | PostgreSQL `default_transaction_read_only=on`, SQLite `PRAGMA query_only` ve son güvence olarak belgelenmiş bir **salt-okunur kullanıcı** (MSSQL'de `db_datareader`) — böylece yazmaya çalışan bir fonksiyon bile veritabanınca reddedilir |
+
+Ayrıca: profil değişkenleri tanımlayıcı-güvenli (`^[A-Za-z0-9_]{1,16}$`, yani `"001; DROP TABLE x"` daha bağlantı kurulmadan hata fırlatır), sırlar asla config dosyasında yaşamaz (yükleyici gömülü kimlik bilgisini reddeder — `url_env` kullanın), çalıştırılan her ifade raporun denetim izinde gönderilir ve satır tavanı (varsayılan 500 bin) her sorguyu sınırlar.
+
+Test paketi bekçiye bir dizi enjeksiyon fırlatır — çoklu ifade, üç sözdiziminde yorum kaçakçılığı, işlem-kontrol eklemeleri (`ROLLBACK`/`COMMIT`), `SELECT INTO`, kilit ipuçları ve bir CTE içine gizlenmiş `DELETE` — ve her birinin hata üretmesini bekler. Bkz. [SECURITY.md](SECURITY.md).
 
 ## Kendi ERP'nize bağlayın
 

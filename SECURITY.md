@@ -4,11 +4,14 @@ This project connects to production ERP databases, so security is a design pilla
 
 ## The model
 
-1. **Read-only by construction.** Every statement passes `assert_read_only()` before reaching the database: single statement, `SELECT`/`WITH` head, no comments, no write/DDL/`EXEC`/`INTO` keywords. There is exactly one code path to the database (`safe_read`) and it is guarded and audited.
-2. **Defense in depth is on you too.** Run the engine under a **read-only database login** (`db_datareader` role on MSSQL, a `SELECT`-only grant on PostgreSQL). The in-code guard is a layer, not a substitute for database-level permissions.
-3. **Secrets never live in files.** The config loader refuses to run when `connection.url` embeds a password. Use `connection.url_env` and put the URL in an environment variable.
-4. **Everything is visible.** Every executed statement, its parameters, row count and duration ship inside the report's SQL audit trail.
-5. **Bounded blast radius.** Row caps and per-dialect statement timeouts stop runaway queries.
+Read-only is enforced in three independent layers, so no single mistake makes the engine capable of writing:
+
+1. **Lexical guard.** Every statement passes `assert_read_only()` before reaching the database: single statement, `SELECT`/`WITH` head, no comments (`--`, `/*`, `#`), no write/DDL/`EXEC`/`INTO` keyword, no write-escalating lock hint (`TABLOCKX`, `UPDLOCK`, `XLOCK`). There is exactly one code path to the database (`safe_read`) and it is guarded and audited.
+2. **Parse-tree guard.** The statement is parsed with `sqlglot`; it must resolve to a single read query whose AST contains no `INSERT`/`UPDATE`/`DELETE`/`CREATE`/`DROP`/`ALTER`/`MERGE`/`EXEC`/`INTO` node. This catches writes hidden inside CTEs or subqueries that a keyword scan alone could miss. If a statement cannot be parsed in the target dialect, the lexical guard still governs.
+3. **Read-only session — and this is on you too.** The engine puts the session in read-only mode where the driver allows it (PostgreSQL `default_transaction_read_only=on`, SQLite `PRAGMA query_only=ON`). A regex or parser cannot know whether a `SELECT some_function()` writes — so run the engine under a **read-only database login** (`db_datareader` on MSSQL, a `SELECT`-only grant on PostgreSQL). The in-code guards are layers, not a substitute for database-level permissions.
+4. **Secrets never live in files.** The config loader refuses to run when the connection URL embeds a credential. Use `connection.url_env` and put the URL in an environment variable.
+5. **Everything is visible.** Every executed statement, its parameters, row count and duration ship inside the report's SQL audit trail.
+6. **Bounded blast radius.** A row cap (default 500k) and query timeouts (PostgreSQL now; MSSQL via the driver) stop runaway queries.
 
 ## Reporting a vulnerability
 

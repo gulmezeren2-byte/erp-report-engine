@@ -10,7 +10,7 @@
 
 🇹🇷 Türkçesi: [README.tr.md](README.tr.md)
 
-One scheduled `run` executes **6 audited SELECT statements** and delivers a self-contained HTML report: four KPIs against an 8-week baseline, findings with named drivers, a data-quality gate, and row counts reconciled against the source. No BI license, no agent installed on the ERP server, and **no writes — ever, enforced in code, not promised in docs**.
+One scheduled `run` executes **6 audited SELECT statements** and delivers a self-contained HTML report: four KPIs against an 8-week baseline, findings with named drivers, a data-quality gate, and row counts reconciled against the source. No BI license, no agent installed on the ERP server, and **no writes — enforced in three layers (a lexical + parse-tree guard and a read-only session), not promised in prose**.
 
 ![Weekly report produced by the engine from the bundled demo database](assets/erp_report_preview.png)
 
@@ -69,17 +69,17 @@ The layer that makes this portable is the **semantic profile**: a versioned YAML
 
 Pointing software at a production ERP database is a trust decision. This engine treats it that way — the guarantees are enforced in code and covered by tests:
 
-| Guarantee | Enforced by |
-|---|---|
-| Single-statement `SELECT`/`WITH` only | `assert_read_only()` — statement-head check, semicolon rejection |
-| No write/DDL keywords, no `SELECT INTO`, no `EXEC` | Forbidden-keyword scan (`insert, update, delete, drop, alter, create, truncate, merge, grant, revoke, exec, execute, call, into`) |
-| No SQL comments (`--`, `/*`) | Rejected outright — classic injection carrier |
-| Profile variables are identifier-safe | `^[A-Za-z0-9_]{1,16}$` — `"001; DROP TABLE x"` raises before any connection |
-| Secrets never in config files | Loader **refuses to run** if `connection.url` embeds a password; use `url_env` |
-| Every executed statement is visible | `Auditor` — the full trail ships inside each report |
-| Runaway queries can't hurt | Row cap (default 500k) + per-dialect statement timeouts |
+Read-only is enforced in **three layers**, so no single mistake makes the engine capable of writing:
 
-The test suite throws eight injection attempts at the guard — multi-statement, comment smuggling, `SELECT INTO`, `EXEC`, write verbs — and expects every one to raise. Defense in depth still applies: run it under a **read-only database login** (`db_datareader` on MSSQL) so the guarantee holds even if the code is wrong. See [SECURITY.md](SECURITY.md).
+| Layer | Enforced by |
+|---|---|
+| Lexical guard | Single statement, `SELECT`/`WITH` head, no comments (`--`, `/*`, `#`), no write/DDL keyword, no write-escalating lock hint (`TABLOCKX`, `UPDLOCK`, `XLOCK`) |
+| Parse-tree guard | `sqlglot` parses the statement; it must be a single read query whose AST contains no `INSERT`/`UPDATE`/`DELETE`/`CREATE`/`DROP`/`ALTER`/`MERGE`/`EXEC`/`INTO` node (catches writes hidden inside CTEs) |
+| Read-only session | PostgreSQL `default_transaction_read_only=on`, SQLite `PRAGMA query_only`, and a documented **read-only login** (`db_datareader` on MSSQL) as the backstop — so even a function that tries to write is refused by the database |
+
+Plus: profile variables are identifier-safe (`^[A-Za-z0-9_]{1,16}$`, so `"001; DROP TABLE x"` raises before any connection), secrets never live in config files (the loader refuses embedded credentials — use `url_env`), every executed statement ships in the report's audit trail, and a row cap (default 500k) bounds any single query.
+
+The test suite throws a battery of injection attempts at the guard — multi-statement, comment smuggling in three syntaxes, transaction-control splices (`ROLLBACK`/`COMMIT`), `SELECT INTO`, lock hints, and a `DELETE` hidden inside a CTE — and expects every one to raise. See [SECURITY.md](SECURITY.md).
 
 ## Connect your own ERP
 

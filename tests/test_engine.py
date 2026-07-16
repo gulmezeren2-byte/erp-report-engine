@@ -25,17 +25,26 @@ from erp_report_engine.semantic import ProfileError, load_profile  # noqa: E402
     "DROP TABLE orders",
     "SELECT 1; DELETE FROM orders",
     "SELECT * FROM t -- sneaky",
+    "SELECT * FROM t /* block */",
+    "SELECT * FROM t # mysql comment",
     "EXEC sp_who",
     "SELECT * INTO backup FROM orders",
+    "SELECT 1; ROLLBACK",                        # transaction-control splice
+    "SELECT 1;\nCOMMIT",
+    "SELECT * FROM orders WITH (TABLOCKX)",       # write-escalating lock hint
+    "SELECT * FROM orders WITH (UPDLOCK)",
+    "WITH x AS (DELETE FROM orders RETURNING 1) SELECT * FROM x",  # write hidden in a CTE
 ])
 def test_guard_blocks_writes_and_tricks(sql):
     with pytest.raises(ReadOnlyViolation):
         assert_read_only(sql)
 
 
-def test_guard_allows_selects():
+def test_guard_allows_real_read_queries():
     assert_read_only("SELECT a, b FROM t WHERE d >= :since")
     assert_read_only("WITH x AS (SELECT 1 AS a) SELECT * FROM x")
+    assert_read_only("SELECT a FROM t UNION SELECT a FROM u")
+    assert_read_only("SELECT COUNT(*) FROM ( SELECT 1 AS a ) t")
 
 
 # ---------------------------------------------------------- profiles --------
