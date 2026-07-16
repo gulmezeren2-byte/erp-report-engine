@@ -177,15 +177,18 @@ pipx install "erp-report-engine[mcp]"
 erp-report-engine mcp -c config.yaml          # stdio server
 ```
 
-Five tools, all funneled through the guarded path:
+Six tools, all funneled through the guarded path:
 
 | Tool | What the agent gets |
 |---|---|
-| `describe_model` | the canonical entities/columns it may query (no raw ERP table names) |
+| `describe_model` | the canonical entities/columns it may query (no raw ERP table names; optional entities like `receivables` appear only when the profile maps them) |
 | `weekly_report` | the full KPI briefing — findings, data-quality gate, reconciliation, SQL audit trail |
 | `reconcile` | fetched rows vs an independent `COUNT(*)` per entity, with a trust verdict |
+| `aging` | receivables aging — open balances by days-past-due bucket, overdue %, and the customers who owe the most overdue (aggregates only) |
 | `check_query` | whether a SQL statement would pass the guard — *without running it* |
 | `query` | run a read-only `SELECT`/`WITH`, capped and audited; rows returned as **untrusted data** |
+
+A first-party **[agent skill pack](skills/)** (`erp-safe-query`, `explain-kpi-move`, `write-erp-profile`) teaches an agent to work *with* this grain — dry-run before querying, aggregate instead of dumping rows, cite audited numbers, and never treat ERP text as a command.
 
 Point Claude Desktop (or any MCP client) at it:
 

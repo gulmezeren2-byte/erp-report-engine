@@ -9,6 +9,7 @@ from erp_report_engine.config import Config, load_config
 from erp_report_engine.errors import EngineError
 from erp_report_engine.mcp_server import (
     _UNTRUSTED,
+    _aging_report,
     _check_query,
     _describe_model,
     _query,
@@ -27,8 +28,21 @@ def demo_cfg(tmp_path_factory) -> Config:
 
 def test_describe_model_lists_canonical_entities(demo_cfg):
     d = _describe_model(demo_cfg)
-    assert set(d["entities"]) == {"orders", "order_lines", "inventory"}
+    assert {"orders", "order_lines", "inventory"} <= set(d["entities"])
     assert "order_id" in d["entities"]["orders"]["columns"]
+    assert d["entities"]["orders"]["required"] is True
+    # the demo profile maps the optional receivables entity, flagged not-required
+    assert "receivables" in d["entities"] and d["entities"]["receivables"]["required"] is False
+    assert "due_date" in d["entities"]["receivables"]["columns"]
+
+
+def test_aging_report_buckets_open_receivables(demo_cfg):
+    a = _aging_report(demo_cfg)
+    assert a["available"] is True
+    assert a["total_open"] > 0 and 0 <= a["overdue_pct"] <= 100
+    assert [b["bucket"] for b in a["buckets"]] == ["current", "1-30", "31-60", "61-90", "90+"]
+    assert a["top_overdue_customers"]                 # a per-customer aggregate, not raw invoice rows
+    assert a["_note"] == _UNTRUSTED
 
 
 def test_check_query_allows_select_blocks_write():

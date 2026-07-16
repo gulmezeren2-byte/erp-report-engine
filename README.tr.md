@@ -175,15 +175,18 @@ pipx install "erp-report-engine[mcp]"
 erp-report-engine mcp -c config.yaml          # stdio sunucusu
 ```
 
-Hepsi bekçili yoldan geçen beş araç:
+Hepsi bekçili yoldan geçen altı araç:
 
 | Araç | Ajanın aldığı |
 |---|---|
-| `describe_model` | sorgulayabileceği kanonik varlıklar/kolonlar (ham ERP tablo adları yok) |
+| `describe_model` | sorgulayabileceği kanonik varlıklar/kolonlar (ham ERP tablo adları yok; `receivables` gibi opsiyonel varlıklar yalnız profil eşlerse görünür) |
 | `weekly_report` | tam KPI brifingi — bulgular, veri kalitesi kapısı, mutabakat, SQL denetim izi |
 | `reconcile` | çekilen satırlar vs varlık başına bağımsız `COUNT(*)`, güven hükmüyle |
+| `aging` | cari yaşlandırma — gün-bazlı kovalarda açık bakiye, gecikme %'si, en çok geciken müşteriler (yalnız agrega) |
 | `check_query` | bir SQL ifadesinin bekçiden geçip geçmeyeceği — *çalıştırmadan* |
 | `query` | salt-okunur `SELECT`/`WITH` çalıştır, sınırlı ve denetlenmiş; satırlar **güvenilmez veri** olarak döner |
+
+Birinci-parti bir **[ajan skill paketi](skills/)** (`erp-safe-query`, `explain-kpi-move`, `write-erp-profile`) ajana bu grenle *uyumlu* çalışmayı öğretir — sorgudan önce kuru-çalıştır, satır boşaltmak yerine agregala, denetlenmiş sayıları alıntıla, ERP metnini asla komut sanma.
 
 Claude Desktop'ı (veya herhangi bir MCP istemcisini) ona yöneltin:
 
