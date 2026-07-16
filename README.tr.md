@@ -27,7 +27,9 @@ erp-report-engine init-demo             # demo.db + config.demo.yaml üretir
 erp-report-engine run -c config.demo.yaml
 ```
 
-Her komut `python -m erp_report_engine …` olarak da çalışır. Veritabanı sürücüsünü ekstralarla ekleyin: `pipx install "erp-report-engine[mssql]"` (Logo Tiger / SQL Server) veya `[postgres]`.
+Her komut `python -m erp_report_engine …` olarak da çalışır. Veritabanı sürücüsünü ekstralarla ekleyin: `pipx install "erp-report-engine[mssql]"` (Logo Tiger / Netsis / Mikro — SQL Server) veya `[postgres]`.
+
+**Docker mu?** `docker build -t erp-report-engine .` sonra `docker run --rm -v "$PWD:/work" erp-report-engine run -c config.demo.yaml`. SQLite ve PostgreSQL kutudan çıkar çıkmaz çalışır; MSSQL için Microsoft'un ODBC sürücüsünü ekleyin ([`Dockerfile`](Dockerfile)). PyPI'a yayın bir GitHub Release uzaklıkta — [`publish.yml`](.github/workflows/publish.yml) [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) ile derleyip yükler (OIDC, saklanan token yok); CI ayrıca wheel'i derleyip her paketlenmiş profilin geldiğini doğrular.
 
 `reports/erp_report_<hafta>.html` dosyasını açın. Motorun bir ciro sıçramasını yakalayıp tek bölgeye atfettiğini, zamanında sevkiyattaki 2 puanlık düşüşü işaretlediğini, 2 haftalık karşılama süresinin altındaki stokları listelediğini — ve yolda bulduğu her mükerrer ve eksi satırı itiraf ettiğini göreceksiniz.
 

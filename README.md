@@ -27,7 +27,9 @@ erp-report-engine init-demo             # builds demo.db + config.demo.yaml here
 erp-report-engine run -c config.demo.yaml
 ```
 
-Every command is also available as `python -m erp_report_engine …`. Add a database driver with the extras: `pipx install "erp-report-engine[mssql]"` (Logo Tiger / SQL Server) or `[postgres]`.
+Every command is also available as `python -m erp_report_engine …`. Add a database driver with the extras: `pipx install "erp-report-engine[mssql]"` (Logo Tiger / Netsis / Mikro — SQL Server) or `[postgres]`.
+
+**Prefer Docker?** `docker build -t erp-report-engine .` then `docker run --rm -v "$PWD:/work" erp-report-engine run -c config.demo.yaml`. SQLite and PostgreSQL work out of the box; for MSSQL add Microsoft's ODBC driver (see the [`Dockerfile`](Dockerfile)). Publishing to PyPI is a GitHub Release away — [`publish.yml`](.github/workflows/publish.yml) builds and uploads via [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) (OIDC, no stored token), and CI already builds the wheel and asserts every bundled profile ships.
 
 Open `reports/erp_report_<week>.html`. You'll see the engine catch a revenue spike and attribute it to one region, flag a two-point on-time decline, list items below two weeks of stock cover — and confess every duplicate and negative row it found on the way.
 

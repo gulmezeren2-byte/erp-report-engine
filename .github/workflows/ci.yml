@@ -33,3 +33,15 @@ jobs:
         run: |
           python "powerbi/tools/generate_report_pages.py"
           git diff --exit-code -- "powerbi/ERP Command Center.Report"
+      - name: Build the wheel and verify every bundled profile ships
+        run: |
+          python -m pip install build
+          python -m build --wheel
+          python - <<'PY'
+          import glob, zipfile
+          whl = glob.glob("dist/*.whl")[0]
+          names = zipfile.ZipFile(whl).namelist()
+          for p in ("generic", "logo_tiger", "netsis", "mikro"):
+              assert any(n.endswith(f"profiles/{p}.yaml") for n in names), f"{p}.yaml missing from the wheel"
+          print("wheel bundles all profiles:", whl)
+          PY

@@ -1,0 +1,22 @@
+.git
+.github
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+dist
+build
+*.egg-info
+# runtime + local data that must never enter the image
+reports
+*.db
+powerbi/data.local
+# not needed to run the CLI
+tests
+docs
+assets
+automation
+skills
+powerbi
+.playwright-mcp
