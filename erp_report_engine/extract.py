@@ -14,6 +14,7 @@ import pandas as pd
 
 from .config import Config
 from .connect import Auditor, safe_read, scalar
+from .errors import ContractError
 from .semantic import REQUIRED_COLUMNS, Profile
 
 
@@ -44,7 +45,7 @@ def extract_all(engine, auditor: Auditor, profile: Profile, cfg: Config) -> Extr
 
         missing = [c for c in REQUIRED_COLUMNS[entity] if c not in df.columns]
         if missing:
-            raise RuntimeError(
+            raise ContractError(
                 f"profile '{profile.name}' entity '{entity}' is missing required columns: {missing}"
             )
 

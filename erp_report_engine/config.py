@@ -29,9 +29,9 @@ from typing import Any
 
 import yaml
 
+from .errors import ConfigError  # re-exported for callers that import from .config
 
-class ConfigError(Exception):
-    pass
+__all__ = ["Config", "ConfigError", "load_config"]
 
 
 @dataclass

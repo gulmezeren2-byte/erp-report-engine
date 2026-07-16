@@ -141,6 +141,8 @@ schtasks /create /tn "erp-weekly-report" /sc weekly /d MON /st 07:00 ^
 
 Each run appends to `state.db`, which is how the report can say *"third consecutive weekly decline"* — memory across runs, without re-querying history from the ERP.
 
+**Exit codes** let the scheduler branch on *why* a run failed: `0` success · `2` config error · `3` database/connection error · `4` contract error (profile schema wrong or source counts don't reconcile) · `5` data-quality failure under `--strict` · `1` anything unexpected. The machine-readable result goes to stdout (`… run -c config.yaml | jq`); logs go to stderr, optionally also to a JSON-lines file with `--log-file run.jsonl`. Run `validate --strict` in CI to fail the pipeline when the numbers don't reconcile.
+
 ## The Power BI Command Center
 
 The engine also feeds an interactive Power BI layer — and there is no `.pbix` binary in this repo. The entire artifact is a **PBIP project authored as code**: the semantic model in TMDL (star schema, 20+ documented DAX measures, a *Time Shift* calculation group on a gapless week ordinal, a field parameter), the report in PBIR (4 pages / 24 visuals, generated from compact specs by a script), and a custom theme.

@@ -15,6 +15,7 @@ import datetime as dt
 import pandas as pd
 
 from . import week_calendar as wc
+from .errors import EngineError
 
 
 def _week(s: pd.Series) -> pd.Series:
@@ -28,7 +29,7 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
     o["net_total"] = pd.to_numeric(o.net_total, errors="coerce").fillna(0.0)
     o["week"] = _week(o.order_date)
     if o.empty:
-        raise RuntimeError("no orders with a valid order_date in the window")
+        raise EngineError("no orders with a valid order_date in the window")
 
     # "This week" is the last COMPLETED ISO week by the calendar (never the last
     # week that happens to have data). Build a continuous, gap-filled week axis
@@ -39,7 +40,7 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
     first_monday = min(wc.monday_of(o.order_date.min().date()), last_full_monday)
     axis = wc.week_axis(first_monday, last_full_monday)
     if len(axis) < 2:
-        raise RuntimeError("need at least 2 completed weeks in the window")
+        raise EngineError("need at least 2 completed weeks in the window")
 
     baseline_weeks = axis[-9:-1]   # the 8 completed weeks before this_w
     demand_weeks = axis[-8:]       # the last 8 completed weeks (incl. this_w)

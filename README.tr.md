@@ -141,6 +141,8 @@ schtasks /create /tn "erp-haftalik-rapor" /sc weekly /d MON /st 07:00 ^
 
 Her çalışma `state.db` dosyasına eklenir; raporun *"üçüncü ardışık haftalık düşüş"* diyebilmesi buradan gelir — geçmişi ERP'den yeniden sorgulamadan, çalışmalar arası hafıza.
 
+**Çıkış kodları** zamanlayıcının *neden* başarısız olduğuna göre dallanmasını sağlar: `0` başarı · `2` config hatası · `3` veritabanı/bağlantı hatası · `4` sözleşme hatası (profil şeması yanlış veya kaynak sayıları mutabık değil) · `5` `--strict` altında veri kalitesi hatası · `1` beklenmeyen. Makine-okunur sonuç stdout'a gider (`… run -c config.yaml | jq`); loglar stderr'e, istenirse `--log-file run.jsonl` ile bir JSON-satır dosyasına da yazılır. Sayılar mutabık değilse CI hattını düşürmek için `validate --strict` çalıştırın.
+
 ## Power BI Command Center
 
 Motor, etkileşimli bir Power BI katmanını da besler — ve bu depoda `.pbix` ikilisi yoktur. Ürünün tamamı **kod olarak yazılmış bir PBIP projesi**: semantik model TMDL'de (yıldız şema, açıklamalı 20+ DAX ölçüsü, boşluksuz hafta sırası üstünde çalışan *Time Shift* hesaplama grubu, alan parametresi), rapor PBIR'de (4 sayfa / 24 görsel, bir betikle kompakt spec'lerden üretiliyor), artı özel tema.

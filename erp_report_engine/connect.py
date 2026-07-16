@@ -15,6 +15,8 @@ audit trail ships inside the report.
 
 from __future__ import annotations
 
+import contextlib
+import logging
 import re
 import time
 from dataclasses import dataclass, field
@@ -23,11 +25,16 @@ import pandas as pd
 import sqlglot
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlglot import exp
 
+from .errors import DatabaseError, EngineError
 
-class ReadOnlyViolation(Exception):
-    pass
+_log = logging.getLogger("erp_report_engine")
+
+
+class ReadOnlyViolation(EngineError):
+    """A statement failed the read-only guard - it should never reach the DB."""
 
 
 _FORBIDDEN = re.compile(
@@ -112,6 +119,13 @@ def make_engine(db_url: str, timeout_s: int) -> Engine:
             cur = dbapi_conn.cursor()
             cur.execute("PRAGMA query_only = ON")
             cur.close()
+    elif db_url.startswith("mssql"):
+        @event.listens_for(engine, "connect")
+        def _mssql_query_timeout(dbapi_conn, _record):  # pragma: no cover - needs a real server
+            # connect_args timeout is the *login* timeout; this sets the
+            # per-execute *query* timeout so a runaway SELECT can't run for hours.
+            with contextlib.suppress(Exception):
+                dbapi_conn.timeout = timeout_s
     return engine
 
 
@@ -122,13 +136,29 @@ def safe_read(
     sql: str,
     params: dict | None = None,
     row_cap: int = 500_000,
+    retries: int = 2,
+    backoff_s: float = 0.5,
 ) -> pd.DataFrame:
-    """The only path to the database. Guards, executes, audits."""
+    """The only path to the database. Guards, executes (with bounded retries on
+    transient errors), audits."""
     assert_read_only(sql, dialect=_SQLGLOT_DIALECT.get(engine.dialect.name))
     params = params or {}
-    t0 = time.perf_counter()
-    with engine.connect() as conn:
-        df = pd.read_sql(text(sql), conn, params=params)
+    attempt = 0
+    while True:
+        t0 = time.perf_counter()
+        try:
+            with engine.connect() as conn:
+                df = pd.read_sql(text(sql), conn, params=params)
+            break
+        except OperationalError as e:
+            attempt += 1
+            if attempt > retries:
+                raise DatabaseError(f"{label}: {type(e).__name__} after {retries} retries: {str(e)[:200]}") from e
+            wait = backoff_s * (2 ** (attempt - 1))
+            _log.warning("safe_read %s transient DB error, retry %d/%d in %.1fs", label, attempt, retries, wait)
+            time.sleep(wait)
+        except SQLAlchemyError as e:
+            raise DatabaseError(f"{label}: {type(e).__name__}: {str(e)[:200]}") from e
     dt = time.perf_counter() - t0
     if len(df) > row_cap:
         raise ReadOnlyViolation(

@@ -36,6 +36,7 @@ from pathlib import Path
 import yaml
 
 from .connect import assert_read_only
+from .errors import ContractError
 
 _BUNDLED = "erp_report_engine.profiles"
 
@@ -51,8 +52,8 @@ REQUIRED_COLUMNS: dict[str, list[str]] = {
 _SAFE_VAR = re.compile(r"^[A-Za-z0-9_]{1,16}$")
 
 
-class ProfileError(Exception):
-    pass
+class ProfileError(ContractError):
+    """A profile is malformed or breaks the canonical-entity contract."""
 
 
 class Profile:
