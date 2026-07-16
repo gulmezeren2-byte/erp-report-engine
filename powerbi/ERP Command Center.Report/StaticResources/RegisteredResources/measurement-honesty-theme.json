@@ -74,7 +74,7 @@
           }
         ],
         "padding": [
-          { "top": 12, "bottom": 12, "left": 12, "right": 12 }
+          { "top": 8, "bottom": 8, "left": 10, "right": 10 }
         ]
       }
     },
@@ -91,7 +91,7 @@
     "cardVisual": {
       "*": {
         "value": [
-          { "fontColor": { "solid": { "color": "#f4f7fb" } }, "fontFamily": "Segoe UI Semibold", "fontSize": 34 }
+          { "fontColor": { "solid": { "color": "#f4f7fb" } }, "fontFamily": "Segoe UI Semibold", "labelDisplayUnits": 0 }
         ],
         "label": [
           { "fontColor": { "solid": { "color": "#a9b4c4" } }, "fontFamily": "Segoe UI", "fontSize": 11 }

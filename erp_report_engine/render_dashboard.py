@@ -112,6 +112,28 @@ def _pct(v: float) -> str:
     return f"{v:.1f}%" if v == v else "n/a"
 
 
+def _bullet(now: float, ref: float, color: str, *, width: int = 200, height: int = 10,
+            tick: bool = True) -> str:
+    """A tiny bullet bar: the value as a filled track with a marker at the
+    reference (the 8-week baseline). Grows on entrance. Mirrors the Power BI
+    Cover Bar so both surfaces speak the same visual language."""
+    if now != now:
+        return ""
+    hi = max(now, ref, 1e-9) * 1.35
+    fill = max(3.0, min(width, now / hi * width))
+    tx = min(width, ref / hi * width)
+    y = height / 2 - 2
+    tick_svg = (f'<line x1="{tx:.1f}" y1="1" x2="{tx:.1f}" y2="{height - 1}" '
+                f'stroke="{INK2}" stroke-width="1.5" opacity="0.75"/>') if tick and ref else ""
+    return (
+        f'<svg class="mbar" viewBox="0 0 {width} {height}" width="100%" height="{height}" '
+        f'preserveAspectRatio="none" style="display:block;margin-top:9px;overflow:visible">'
+        f'<rect x="0" y="{y:.0f}" width="{width}" height="4" rx="2" fill="rgba(255,255,255,.09)"/>'
+        f'<rect class="grow" x="0" y="{y:.0f}" width="{fill:.1f}" height="4" rx="2" fill="{color}"/>'
+        f'{tick_svg}</svg>'
+    )
+
+
 def _delta(d: dict, pct: bool = False) -> tuple[str, str]:
     """(text, tone) for a KPI delta vs the previous week."""
     if d.get("prev") != d.get("prev") or not d.get("prev"):
@@ -161,10 +183,16 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
  .kpi{grid-column:span 3;position:relative;overflow:hidden}
  .kpi::after{content:"";position:absolute;top:0;left:0;right:0;height:2px;
-   background:linear-gradient(90deg,transparent,var(--accent,var(--blue)),transparent);opacity:.7}
- .kpi .lbl{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
- .kpi .val{font-size:33px;font-weight:680;margin:8px 0 2px;font-variant-numeric:tabular-nums;line-height:1}
- .kpi .base{font-size:11.5px;color:var(--muted);margin-top:6px}
+   background:linear-gradient(90deg,transparent,var(--accent,var(--blue)),transparent);
+   background-size:220% 100%;opacity:.8;animation:sweep 5s ease-in-out infinite}
+ @keyframes sweep{0%,100%{background-position:220% 0}50%{background-position:-20% 0}}
+ .kpi .lbl{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;
+   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .kpi .val{font-size:31px;font-weight:680;margin:7px 0 2px;font-variant-numeric:tabular-nums;line-height:1.05;
+   letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .kpi .base{font-size:11px;color:var(--muted);margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .mbar .grow{transform-origin:left center;animation:barIn 1.1s .35s cubic-bezier(.2,.7,.2,1) both}
+ @keyframes barIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
  .delta{font-size:13px;font-weight:600}
  .verdict{grid-column:span 12;display:flex;gap:16px;align-items:center;
    background:linear-gradient(120deg,rgba(63,142,245,.16),rgba(154,140,240,.12),rgba(34,193,151,.10));
@@ -211,6 +239,7 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
     <div class="lbl">{{ k.label }}</div>
     <div class="val"{% if k.count is not none %} data-count="{{ k.count }}" data-kind="{{ k.kind }}"{% endif %}>{{ k.value }}</div>
     <div class="delta" style="color:{{ k.color }}">{{ k.delta }}</div>
+    {{ k.bar }}
     <div class="base">{{ k.base }}</div>
   </div>
   {% endfor %}
@@ -281,19 +310,24 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
 
     kpi_ctx = [
         {"label": "Revenue (last full week)", "value": f"{r['now']:,.0f}", "count": r["now"], "kind": "int",
-         "delta": rd, "color": TONE[rt], "base": f"baseline {r['baseline8']:,.0f}"},
+         "delta": rd, "color": TONE[rt], "base": f"vs 8-wk baseline {r['baseline8']:,.0f}",
+         "bar": Markup(_bullet(r["now"], r["baseline8"], TONE[rt]))},
         {"label": "Orders", "value": f"{o['now']:,.0f}", "count": o["now"], "kind": "int",
-         "delta": od, "color": TONE[ot], "base": f"baseline {o['baseline8']:,.0f}"},
+         "delta": od, "color": TONE[ot], "base": f"vs 8-wk baseline {o['baseline8']:,.0f}",
+         "bar": Markup(_bullet(o["now"], o["baseline8"], TONE[ot]))},
         {"label": "On-time shipping", "value": _pct(s["now"]),
          "count": (s["now"] if s["now"] == s["now"] else None), "kind": "pct",
          "delta": sd, "color": TONE[st],
-         "base": (f"{s.get('scored', 0)}/{s.get('delivered', 0)} scored"
-                  if s.get("delivered") and s.get("scored", 0) < s["delivered"] else "order-level OTIF-lite")},
+         "base": (f"{s.get('scored', 0)}/{s.get('delivered', 0)} scored · baseline {_pct(s['baseline8'])}"
+                  if s.get("delivered") and s.get("scored", 0) < s["delivered"]
+                  else f"vs 8-wk baseline {_pct(s['baseline8'])}"),
+         "bar": Markup(_bullet(s["now"], s["baseline8"], TONE[st]))},
         {"label": "Items low on stock", "value": f"{kpis['n_low_cover']}",
          "count": kpis["n_low_cover"], "kind": "int",
          "delta": ("clear" if kpis["n_low_cover"] == 0 else "action"),
          "color": GOOD if kpis["n_low_cover"] == 0 else WARN,
-         "base": f"< {cfg.low_cover_weeks:g} weeks cover"},
+         "base": f"< {cfg.low_cover_weeks:g} weeks cover",
+         "bar": Markup(_bullet(kpis["n_low_cover"], 0, GOOD if kpis["n_low_cover"] == 0 else WARN, tick=False))},
     ]
 
     band_rev = spc._limits(_nums(kpis["trend"]["revenue"])[:-1]) if len(_nums(kpis["trend"]["revenue"])) >= 6 else None
