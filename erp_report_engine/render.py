@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import datetime as dt
 import io
+import json
 
 import matplotlib
 
@@ -72,11 +73,20 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
  td.sql{font-family:Consolas,monospace;font-size:11px;color:#52514e;white-space:pre-wrap}
  .dim{color:#898781;font-size:12px}
  details{margin-top:8px} summary{cursor:pointer;color:#52514e;font-size:13px}
+ .narrative{background:#f3f7ff;border:1px solid #d6e0f5;border-left:4px solid #2a78d6;border-radius:10px;padding:15px 18px;margin:20px 0}
+ .narrative .ntag{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#2a78d6;font-weight:700}
+ .narrative .ntext{font-size:15px;line-height:1.55;margin:8px 0 0}
+ .narrative .ndisc{font-size:12px;color:#898781;margin-top:10px}
+ .narrative pre{font-family:Consolas,monospace;font-size:11px;background:#fcfcfb;border:1px solid #e1e0d9;border-radius:6px;padding:10px;white-space:pre-wrap;color:#52514e;max-height:300px;overflow:auto;margin-top:8px}
  footer{margin-top:28px;color:#898781;font-size:12px}
 </style></head><body><div class="wrap">
 <h1>{{ company_alias }} — Weekly ERP Report</h1>
 <div class="sub">Week {{ this_week }} · generated {{ generated }} · profile: {{ profile_name }} · read-only · fully automated</div>
 {% if streak >= 2 %}<p class="streak">⚠ Revenue has declined {{ streak }} consecutive weeks (run-state memory).</p>{% endif %}
+{% if narr %}<div class="narrative"><div class="ntag">AI executive summary</div>
+<div class="ntext">{{ narr.summary }}</div>
+<div class="ndisc">Written by <b>{{ narr.model }}</b> from the aggregates below — <b>never raw data</b>. This is unverified model text; check it against the figures in the report.</div>
+<details><summary>What the model saw — the exact payload (aggregates only)</summary><pre>{{ narr.payload_json }}</pre></details></div>{% endif %}
 <div class="cards">{% for c in cards %}<div class="card"><div class="lbl">{{ c.label }}</div><div class="val">{{ c.value }}</div><div class="delta" style="color:{{ c.color }}">{{ c.delta }}</div></div>{% endfor %}</div>
 <h2>What changed, and where to look</h2>
 <ul class="f">{% for f in findings %}<li style="border-left:3px solid {{ f.color }}"><b style="color:{{ f.color }}">{{ f.icon }}</b> {{ f.text }}</li>{% endfor %}</ul>
@@ -103,8 +113,13 @@ _ENV = Environment(autoescape=select_autoescape(default=True, default_for_string
 _REPORT = _ENV.from_string(_TEMPLATE)
 
 
-def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
+def render(cfg, profile, kpis, findings, extraction, auditor, streak, narrative=None) -> str:
     r, c, s = kpis["revenue"], kpis["orders"], kpis["on_time_pct"]
+
+    narr = None
+    if narrative:
+        narr = {"summary": narrative["summary"], "model": narrative["model"],
+                "payload_json": json.dumps(narrative["payload"], ensure_ascii=False, indent=2)}
 
     def fmt_delta(d, unit=""):
         if d["prev"] != d["prev"] or not d["prev"]:
@@ -183,6 +198,7 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
         profile_name=profile.name,
         streak=streak,
         cards=cards,
+        narr=narr,
         findings=find_ctx,
         chart_rev=Markup(chart_rev),
         chart_otp=Markup(chart_otp),

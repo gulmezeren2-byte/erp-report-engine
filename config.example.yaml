@@ -51,3 +51,13 @@ limits:
 #     include_report: true          # send the HTML report (base64) so the flow can archive it
 #   healthcheck:                    # healthchecks.io dead-man's-switch
 #     ping_url_env: ERP_HEALTHCHECK_URL
+
+# Optional. `run --narrate` adds an LLM executive summary built from AGGREGATES
+# ONLY (never raw rows); the report prints the exact payload the model saw, so it
+# can't hide what it was fed. Any OpenAI-compatible endpoint works, including a
+# local, keyless server (Ollama / LM Studio). Without this block, --narrate no-ops.
+# narrative:
+#   api_base: https://api.openai.com/v1   # or http://localhost:11434/v1 (Ollama)
+#   model: gpt-4o-mini
+#   api_key_env: OPENAI_API_KEY           # omit for a local, keyless endpoint
+#   timeout_s: 30

@@ -33,6 +33,7 @@ class RunResult:
     streak: int = 0
     html: str = ""
     report_path: str | None = None
+    narrative: dict | None = None
 
     @property
     def mismatches(self) -> list[str]:
@@ -52,12 +53,17 @@ def validate(cfg: Config) -> RunResult:
     return RunResult(cfg=cfg, profile=profile, extraction=ex, auditor=auditor)
 
 
-def build_report(cfg: Config, *, write: bool = True) -> RunResult:
+def build_report(cfg: Config, *, write: bool = True, narrate: bool = False) -> RunResult:
     """Produce the weekly report (and optionally write it to out_dir)."""
     profile, engine, auditor = _prepare(cfg)
     ex = extract_all(engine, auditor, profile, cfg)
     kpis = compute(ex.frames, cfg.low_cover_weeks, ex.as_of)
     findings = build_insights(kpis, ex.frames, cfg.low_cover_weeks)
+
+    narrative = None
+    if narrate:
+        from .narrate import narrate as _narrate
+        narrative = _narrate(cfg, kpis, findings, ex)  # aggregates-only; None if unconfigured
 
     path = os.path.join(cfg.out_dir, f"erp_report_{kpis['this_week']}.html")
     state = State(cfg.state_db)
@@ -66,7 +72,7 @@ def build_report(cfg: Config, *, write: bool = True) -> RunResult:
     streak = state.streak("revenue")
     state.close()
 
-    html = render(cfg, profile, kpis, findings, ex, auditor, streak)
+    html = render(cfg, profile, kpis, findings, ex, auditor, streak, narrative=narrative)
     if write:
         os.makedirs(cfg.out_dir, exist_ok=True)
         tmp = path + ".tmp"
@@ -76,7 +82,7 @@ def build_report(cfg: Config, *, write: bool = True) -> RunResult:
 
     return RunResult(cfg=cfg, profile=profile, extraction=ex, kpis=kpis,
                      findings=findings, auditor=auditor, streak=streak, html=html,
-                     report_path=path if write else None)
+                     report_path=path if write else None, narrative=narrative)
 
 
 def guarded_query(cfg: Config, sql: str, params: dict | None = None,

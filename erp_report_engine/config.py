@@ -73,6 +73,7 @@ class Config:
     row_cap: int = 500_000
     query_timeout_s: int = 60
     delivery: dict[str, Any] | None = None
+    narrative: dict[str, Any] | None = None
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -116,5 +117,6 @@ def load_config(path: str) -> Config:
         row_cap=int(lim.get("row_cap", 500_000)),
         query_timeout_s=int(lim.get("query_timeout_s", 60)),
         delivery=raw.get("delivery"),
+        narrative=raw.get("narrative"),
         raw=raw,
     )

@@ -40,7 +40,7 @@ def cmd_validate(args) -> None:
 
 def cmd_run(args) -> None:
     cfg = load_config(args.config)
-    rr = runner.build_report(cfg, write=True)
+    rr = runner.build_report(cfg, write=True, narrate=args.narrate)
     _log.info("wrote %s (week %s, %d queries, %d DQ issue(s))",
               rr.report_path, rr.kpis["this_week"], len(rr.auditor.entries), len(rr.extraction.issues))
     out = {
@@ -50,6 +50,10 @@ def cmd_run(args) -> None:
         "data_quality_issues": rr.extraction.issues,
         "queries_executed": len(rr.auditor.entries),
     }
+    if rr.narrative:
+        out["narrative"] = rr.narrative["summary"]
+    elif args.narrate:
+        out["narrative"] = "skipped: no narrative endpoint/key configured"
     if args.dashboard:
         from . import render_dashboard
         dash = render_dashboard.render(cfg, rr.profile, rr.kpis, rr.findings,
@@ -143,6 +147,8 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--send", action="store_true", help="deliver the report via the config's delivery: channels")
     s.add_argument("--dashboard", action="store_true",
                    help="also write the premium dark 'command center' dashboard HTML")
+    s.add_argument("--narrate", action="store_true",
+                   help="add an LLM executive summary from aggregates only (needs a narrative: config block)")
     s.set_defaults(fn=cmd_run)
 
     s = sub.add_parser("export-powerbi",
