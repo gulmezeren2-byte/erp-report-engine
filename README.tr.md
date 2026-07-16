@@ -129,8 +129,9 @@ Profiller paketin içinde gelir ve adla referans verilir (`generic`, `logo_tiger
 - **`generic`** — kanonik şema; kendi profilinizi yazmak için de şablon.
 - **`logo_tiger`** — MSSQL üzerinde Logo Tiger / GO: `LG_{firma}_{dönem}_ORFICHE` sipariş başlıkları `CLCARD` cari kartlarına bağlı, `ORFLINE` satırları, `STINVTOT` stok toplamları, `TRCODE = 2` satış filtresi ve **opsiyonel cari yaşlandırma** `PAYTRANS`'tan (taksit `TOTAL − PAID`, `MODULENR = 4`). Logo şemaları sürüme göre değişir — profil, güvenmeden önce **kendi** sürümünüzde neyi doğrulamanız gerektiğini not düşer.
 - **`netsis`** — MSSQL üzerinde Logo Netsis 3 (şirket-başına-veritabanı): `TBLSIPAMAS`/`TBLSIPATRA` satış siparişleri (`FTIRSIP = '6'`), `TBLCASABIT` cariler, `TBLSTOKPH` stok toplamları ve **opsiyonel cari yaşlandırma** `TBLCAHAR`'dan (açık-kalem vs. yürüyen-bakiye uyarısı satır-içi belirtilmiş — dürüst zayıf nokta). Gerçek üretim entegrasyonlarından saha-eşlemeli; zayıf noktaları (sipariş durumu, teslim tarihleri, cari kapatma yöntemi) kendi kurulumunuzda doğrulamanız için satır-içi işaretli.
+- **`mikro`** — MSSQL üzerinde Mikro ERP (Mikro Yazılım, Fly/Jump/V16–V17): `SIPARISLER` (`sip_` önek, satır-düzeyi) satış siparişleri, `CARI_HESAPLAR` cariler, `STOK_HAREKETLERI` eldeki stok (`sth_tip` giriş/çıkış) ve **opsiyonel cari yaşlandırma** `CARI_HESAP_HAREKETLERI`'nden (`cha_vade` vade). Dürüst zayıf noktalar — `sip_tip` satış filtresi, tutarın KDV-dahilliği, siparişte sevk tarihi olmaması ve açık-kalem işareti olmayan saf yürüyen-bakiye cari defteri — kendi sürümünüzde doğrulamanız için satır-içi işaretli.
 
-Logo Tiger ve Netsis birlikte Türkiye KOBİ ERP pazarının çoğunu kapsar (ikisi de MSSQL). Başka bir ERP için profil yazmak (Mikro, SAP B1, Odoo, özel sistem) kanonik kolonları üreten **üç SELECT ifadesi** yazmak demektir — ya `profile:` ile gösterdiğiniz bağımsız bir YAML, ya da gömülü gelmesi için `erp_report_engine/profiles/` içine bırakılan bir dosya. Sözleşmenin tamamı bu — ve `validate` doğru yazıp yazmadığınızı anında söyler.
+Logo Tiger, Netsis ve Mikro birlikte Türkiye KOBİ ERP pazarının çoğunu kapsar (hepsi MSSQL). Başka bir ERP için profil yazmak (SAP B1, Odoo, özel sistem) kanonik kolonları üreten **üç SELECT ifadesi** yazmak demektir — ya `profile:` ile gösterdiğiniz bağımsız bir YAML, ya da gömülü gelmesi için `erp_report_engine/profiles/` içine bırakılan bir dosya. Sözleşmenin tamamı bu — ve `validate` doğru yazıp yazmadığınızı anında söyler.
 
 ## Otonom hale getirin
 
@@ -224,12 +225,11 @@ pip install pytest && python -m pytest tests/ -v
 
 ## Yol haritası
 
-Tamamlananlar: bekçili MCP sunucusu, SPC/XmR anomali katmanı, yerel teslimat (SMTP/Slack/Teams/healthchecks), deklaratif profil kontratları, Netsis profili, ciro yoğunlaşma analizi (top-3 payı + HHI), opsiyonel kanonik varlık olarak **cari yaşlandırma (receivables aging)**, DAX SVG mikro-grafikleri ve şema-doğrulanmış koyu Power BI teması. Sıradaki:
+Tamamlananlar: bekçili MCP sunucusu + birinci-parti ajan skill paketi, opsiyonel **LLM anlatı katmanı** (yalnız-agrega, inşa gereği dürüst), SPC/XmR anomali katmanı, yerel teslimat (SMTP/Slack/Teams/healthchecks) + Power Automate hattı, deklaratif profil kontratları, **üç gerçek Türk-ERP profili** (Logo Tiger, Netsis, Mikro) — her biri opsiyonel **cari yaşlandırma** ile — ciro yoğunlaşma analizi (top-3 payı + HHI), DAX SVG mikro-grafikleri ve şema-doğrulanmış koyu Power BI teması. Sıradaki:
 
-- `profiles/mikro.yaml` — üçüncü Türk ERP eşlemesi
-- Gerçek ERP cari eşlemeleri (Logo/Netsis cari defterleri) — generic profilin zaten gösterdiği aynı opsiyonel `receivables` varlığının arkasında
-- LLM-opsiyonel anlatı katmanı: yalnız agregalardan üretilen yönetici özeti (asla ham satır değil), "modelin gördüğü" ekiyle
-- Birinci-parti ajan skill paketi (`erp-safe-query`, `explain-kpi-move`, `write-erp-profile`)
+- PyPI'da `pip install erp-report-engine` + bir Docker imajı
+- Daha fazla ERP profili (SAP Business One, Odoo, genel ODBC şablonu)
+- Yürüyen-bakiye defterleri (Netsis / Mikro) için tam FIFO açık-kalem yaşlandırması — açık-kalem eşleme kurulmadan da yaşlandırma kesin olsun
 
 ## Ölçüm dürüstlüğü serisinin parçası
 

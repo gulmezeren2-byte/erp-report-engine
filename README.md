@@ -129,8 +129,9 @@ Profiles ship inside the package and are referenced by name (`generic`, `logo_ti
 - **`generic`** — the canonical schema; also the template for writing your own.
 - **`logo_tiger`** — Logo Tiger / GO on MSSQL: `LG_{firm}_{period}_ORFICHE` order headers joined to `CLCARD` customers, `ORFLINE` lines, `STINVTOT` stock totals, `TRCODE = 2` sales filter, and **optional receivables aging** from `PAYTRANS` (installment `TOTAL − PAID`, `MODULENR = 4`). Logo schemas vary by release — the profile carries field notes on exactly what to verify against **your** version before trusting it.
 - **`netsis`** — Logo Netsis 3 on MSSQL (database-per-company): `TBLSIPAMAS`/`TBLSIPATRA` sales orders (`FTIRSIP = '6'`), `TBLCASABIT` customers, `TBLSTOKPH` stock totals, and **optional receivables aging** from `TBLCAHAR` (with the open-item vs. running-balance caveat called out inline — the honest weak point). Field-mapped from real production integrations, with the weak points (order status, delivery dates, AR closing method) flagged inline to verify against your install.
+- **`mikro`** — Mikro ERP (Mikro Yazılım, Fly/Jump/V16–V17) on MSSQL: `SIPARISLER` (`sip_` prefix, line-level) sales orders, `CARI_HESAPLAR` customers, `STOK_HAREKETLERI` on-hand (`sth_tip` in/out), and **optional receivables aging** from `CARI_HESAP_HAREKETLERI` (`cha_vade` due date). The honest weak points — the `sip_tip` sales filter, VAT-inclusiveness of the total, no ship date on the order, and a pure running-balance AR ledger with no open-item flag — are flagged inline to verify against your version.
 
-Together, Logo Tiger and Netsis cover most of the Turkish SME ERP market (both MSSQL). Writing a profile for another ERP (Mikro, SAP B1, Odoo, a custom system) means writing **three SELECT statements** that output the canonical columns — either a standalone YAML you point `profile:` at, or a file dropped into `erp_report_engine/profiles/` to ship it bundled. That's the whole contract — and `validate` tells you immediately whether you got it right.
+Together, Logo Tiger, Netsis, and Mikro cover most of the Turkish SME ERP market (all MSSQL). Writing a profile for another ERP (SAP B1, Odoo, a custom system) means writing **three SELECT statements** that output the canonical columns — either a standalone YAML you point `profile:` at, or a file dropped into `erp_report_engine/profiles/` to ship it bundled. That's the whole contract — and `validate` tells you immediately whether you got it right.
 
 ## Make it autonomous
 
@@ -226,12 +227,11 @@ The suite covers the read-only guard (a battery of injection attempts), profile 
 
 ## Roadmap
 
-Shipped: the guarded MCP server, the SPC/XmR anomaly layer, native delivery (SMTP/Slack/Teams/healthchecks), declarative profile contracts, the Netsis profile, revenue-concentration analysis (top-3 share + HHI), **receivables aging (cari yaşlandırma)** as an optional canonical entity, DAX SVG micro-charts, and a schema-validated dark Power BI theme. Next:
+Shipped: the guarded MCP server + a first-party agent skill pack, an optional **LLM narrative layer** (aggregates-only, honest by construction), the SPC/XmR anomaly layer, native delivery (SMTP/Slack/Teams/healthchecks) + a Power Automate pipeline, declarative profile contracts, **three real Turkish-ERP profiles** (Logo Tiger, Netsis, Mikro) — each with optional **receivables aging (cari yaşlandırma)** — revenue-concentration analysis (top-3 share + HHI), DAX SVG micro-charts, and a schema-validated dark Power BI theme. Next:
 
-- `profiles/mikro.yaml` — a third Turkish ERP mapping
-- Real-ERP receivables mappings (Logo/Netsis cari ledgers) behind the same optional `receivables` entity the generic profile already demos
-- LLM-optional narrative layer: an executive summary generated from aggregates only (never raw rows), with a "what the model saw" appendix
-- A first-party agent skill pack (`erp-safe-query`, `explain-kpi-move`, `write-erp-profile`)
+- `pip install erp-report-engine` on PyPI + a Docker image
+- More ERP profiles (SAP Business One, Odoo, a generic ODBC template)
+- Exact FIFO open-item aging for the running-balance ledgers (Netsis / Mikro), so receivables aging is precise without open-item matching configured
 
 ## Part of the measurement-honesty series
 

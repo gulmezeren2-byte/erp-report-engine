@@ -50,22 +50,22 @@ def test_guard_allows_real_read_queries():
 # ---------------------------------------------------------- profiles --------
 def test_profiles_load_and_are_read_only():
     from erp_report_engine.semantic import OPTIONAL_COLUMNS
-    for name in ("generic", "logo_tiger", "netsis"):   # bundled by name, no path
+    for name in ("generic", "logo_tiger", "netsis", "mikro"):   # bundled by name, no path
         prof = load_profile(name)
         # the three required entities are always mapped; extras are optional ones
         assert {"orders", "order_lines", "inventory"} <= set(prof.entities)
         assert set(prof.entities) <= {"orders", "order_lines", "inventory", *OPTIONAL_COLUMNS}
         assert prof.optional_entities <= set(OPTIONAL_COLUMNS)
 
-    # all three bundled profiles now map the optional receivables entity (aging);
+    # every bundled profile now maps the optional receivables entity (aging);
     # loading above already ran the read-only guard over each receivables query
-    for name in ("generic", "logo_tiger", "netsis"):
+    for name in ("generic", "logo_tiger", "netsis", "mikro"):
         assert "receivables" in load_profile(name).optional_entities
 
 
 def test_bundled_profiles_discoverable():
     from erp_report_engine.semantic import bundled_profiles
-    assert {"generic", "logo_tiger", "netsis"} <= set(bundled_profiles())
+    assert {"generic", "logo_tiger", "netsis", "mikro"} <= set(bundled_profiles())
 
 
 def test_unknown_profile_is_rejected():

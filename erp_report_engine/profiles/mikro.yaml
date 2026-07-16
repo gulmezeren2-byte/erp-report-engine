@@ -1,0 +1,120 @@
+profile: mikro
+dialect: mssql
+description: >
+  Mikro ERP (Mikro Yazilim - Fly / Jump / V16-V17) on MSSQL. Mikro keeps each
+  firm-and-working-year in its OWN database with constant table names (no
+  firm/period suffixes like Logo Tiger, and - unlike an early assumption - no
+  year-suffixed movement tables): point connection.url at the target company's
+  current working-year database and this profile needs no profile_vars. For
+  multi-year reporting, UNION across the yearly databases.
+
+  Core mapping (from the published Mikro schema + real community SQL):
+  - Sales orders: SIPARISLER (sip_ prefix) is LINE-level, so an order is the
+    group (sip_evrakno_seri, sip_evrakno_sira). Customer via sip_musteri_kod =
+    CARI_HESAPLAR.cari_kod; name = cari_unvan1. net_total = SUM(sip_tutar).
+  - Order lines: same SIPARISLER table; sip_stok_kod = item, sip_miktar = qty.
+  - Stock on hand: computed from STOK_HAREKETLERI (sth_ prefix) as
+    SUM(in) - SUM(out) over sth_tip (0 = Giris/in, 1 = Cikis/out, 2 = transfer).
+    There is NO sth_giris_cikis column - direction is sth_tip.
+
+  VERIFY AGAINST YOUR VERSION - Mikro schemas drift by release and these are the
+  honest weak points, so confirm before trusting the numbers:
+  - THE sales filter is sip_tip = 0. Docs gloss sip_tip as 0:Talep (demand) /
+    1:Temin (supply); by the MRP framing a customer order is demand, and a real
+    community query filters sip_tip = 0 for customer orders - but the English
+    labels disagreed across sources, so verify against a KNOWN sales order first.
+  - net_total = sip_tutar ("Siparis Tutari"); whether it is pre/post line
+    discount and VAT-inclusive varies - check against a known order total.
+  - actual_ship_date is NOT stored on the order in Mikro; shipments post to
+    STOK_HAREKETLERI (irsaliye rows). This profile leaves it NULL, so on-time %
+    is unscored until you wire an order->shipment link (the report confesses how
+    many delivered orders lack a ship date).
+  - status maps sip_kapat_fl (0/1); a richer sip_durumu (0-3) also exists.
+  - region uses CARI_HESAPLAR.cari_bolge_kodu, which is frequently EMPTY; the
+    province (il) lives in the separate CARI_HESAP_ADRESLERI table (column name
+    unverified) - so region is best-effort.
+  - Inventory: for a total that also handles warehouse transfers correctly,
+    Mikro's own function dbo.fn_EldekiMiktar(sto_kod) is safer than the hand-
+    rolled SUM below (transfers net to zero only for a company-wide total).
+
+  Optional receivables (cari yaslandirma) map from CARI_HESAP_HAREKETLERI
+  (cha_ prefix) + CARI_HESAPLAR. cha_vade = due date (NOT cha_vade_tarihi),
+  cha_tip = Borc/Alacak sign (0 = debit/receivable). open_amount is THE weak
+  point, worse than Logo/Netsis:
+  - Mikro is a pure running-balance ledger with NO open-item / matching flag
+    (payment "kapatma" posts offsetting counter-entries, it does not flag the
+    invoice). So there is no per-invoice residual column. This mapping returns
+    each receivable-generating (debit) movement at its ORIGINAL amount
+    (cha_meblag), which OVERSTATES the open balance by any payments already made.
+  - For true open receivables you must FIFO-net credits (payments) against the
+    oldest debits per cari, bucketed by cha_vade; reconcile the customer totals
+    against dbo.fn_CariHesapAnaDovizBakiye(0, cari_kod, '', 0).
+  - cha_meblag is ORIGINAL currency; for TL in a multi-currency shop use the
+    fn_CariHesapAnaDovizBakiye (ana doviz) figure instead.
+  This is an honest field mapping to build from, not a certified integration.
+
+contract:
+  orders:
+    severity: warn
+    not_null: [order_id, order_date]
+    min_rows: 1
+  receivables:
+    severity: warn
+    not_null: [due_date, open_amount]
+
+entities:
+  orders:
+    query: |
+      SELECT
+        s.sip_evrakno_seri + '-' + CAST(s.sip_evrakno_sira AS varchar(12)) AS order_id,
+        MIN(s.sip_tarih)                                    AS order_date,
+        MAX(COALESCE(c.cari_bolge_kodu, 'UNKNOWN'))         AS region,
+        MAX(c.cari_unvan1)                                  AS customer,
+        CASE WHEN MIN(CAST(s.sip_kapat_fl AS int)) = 1
+             THEN 'closed' ELSE 'open' END                  AS status,
+        MAX(s.sip_teslim_tarih)                             AS promised_date,
+        CAST(NULL AS datetime)                              AS actual_ship_date,
+        SUM(s.sip_tutar)                                    AS net_total
+      FROM SIPARISLER s
+      LEFT JOIN CARI_HESAPLAR c ON c.cari_kod = s.sip_musteri_kod
+      WHERE s.sip_tip = 0
+        AND s.sip_iptal = 0
+        AND s.sip_tarih >= :since
+      GROUP BY s.sip_evrakno_seri, s.sip_evrakno_sira
+
+  order_lines:
+    query: |
+      SELECT
+        s.sip_evrakno_seri + '-' + CAST(s.sip_evrakno_sira AS varchar(12)) AS order_id,
+        s.sip_stok_kod                                      AS item_code,
+        s.sip_miktar                                        AS qty
+      FROM SIPARISLER s
+      WHERE s.sip_tip = 0
+        AND s.sip_iptal = 0
+        AND s.sip_tarih >= :since
+
+  inventory:
+    query: |
+      SELECT
+        h.sth_stok_kod AS item_code,
+        SUM(CASE h.sth_tip WHEN 0 THEN h.sth_miktar
+                           WHEN 1 THEN -h.sth_miktar
+                           ELSE 0 END) AS stock_qty
+      FROM STOK_HAREKETLERI h
+      WHERE h.sth_iptal = 0
+      GROUP BY h.sth_stok_kod
+
+  # Optional: open customer receivables for aging (cari yaslandirma). See the
+  # description - open_amount is GROSS here (Mikro has no per-invoice open flag).
+  receivables:
+    query: |
+      SELECT
+        h.cha_evrakno_seri + '-' + CAST(h.cha_evrakno_sira AS varchar(12)) AS invoice_id,
+        c.cari_unvan1                                       AS customer,
+        h.cha_vade                                          AS due_date,
+        h.cha_meblag                                        AS open_amount
+      FROM CARI_HESAP_HAREKETLERI h
+      LEFT JOIN CARI_HESAPLAR c ON c.cari_kod = h.cha_kod
+      WHERE h.cha_tip = 0
+        AND h.cha_iptal = 0
+        AND h.cha_vade IS NOT NULL
