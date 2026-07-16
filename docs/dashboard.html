@@ -56,6 +56,11 @@
  .chart{grid-column:span 6}
  .chart h3,.panel h3{margin:0 0 12px;font-size:13px;color:var(--ink2);font-weight:600;letter-spacing:.3px}
  .panel{grid-column:span 6}
+ .panel.wide{grid-column:span 12}
+ .conc-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+ .conc-big{font-size:27px;font-weight:680;font-variant-numeric:tabular-nums;line-height:1}
+ .conc-sub{font-size:12px;color:var(--muted)}
+ .conc td.b{width:52%}
  .sig{display:flex;gap:11px;padding:11px 0;border-top:1px solid rgba(255,255,255,.06);font-size:13.5px;line-height:1.5}
  .sig:first-of-type{border-top:0}
  .sig .ic{font-size:13px;line-height:1.5}
@@ -82,7 +87,7 @@
 <div class="wrap">
 <header>
   <div><h1>Demo Dagitim A.S. · Command Center</h1>
-  <div class="sub">Week 2026-W28 · generated 2026-07-16 14:13 · profile generic</div></div>
+  <div class="sub">Week 2026-W28 · generated 2026-07-16 14:30 · profile generic</div></div>
   <div class="pills"><span class="pill live">autonomous</span><span class="pill">read-only</span>
   <span class="pill">every query audited</span></div>
 </header>
@@ -126,10 +131,10 @@
     <div><div class="tag">weekly verdict</div><div class="txt">Week 2026-W28: revenue +26.7% week-over-week, on-time 93.5%, 5 item(s) below cover, 3 data-quality note(s).</div></div>
   </div>
 
-  <div class="card chart" style="animation-delay:360ms"><h3>Revenue · with SPC control band</h3><svg viewBox="0 0 520 150" width="100%" preserveAspectRatio="none" style="display:block;overflow:visible"><defs><linearGradient id="g41540" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f8ef5" stop-opacity="0.42"/><stop offset="1" stop-color="#3f8ef5" stop-opacity="0"/></linearGradient><filter id="g41540g" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect x="8" y="30.1" width="504" height="90.4" fill="#3f8ef5" opacity="0.05" rx="4"/><line x1="8" y1="30.1" x2="512" y2="30.1" stroke="#3f8ef5" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/><line x1="8" y1="120.6" x2="512" y2="120.6" stroke="#3f8ef5" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/><line x1="8" y1="75.4" x2="512" y2="75.4" stroke="#7d8590" stroke-opacity="0.4" stroke-width="1"/><path d="M 8.0,132.0 L 8.0,99.0 L 50.0,81.1 L 92.0,73.7 L 134.0,72.5 L 176.0,75.8 L 218.0,70.0 L 260.0,61.5 L 302.0,95.6 L 344.0,58.8 L 386.0,70.4 L 428.0,92.1 L 470.0,53.7 L 512.0,25.4 L 512.0,132.0 Z" fill="url(#g41540)"/><polyline points="8.0,99.0 50.0,81.1 92.0,73.7 134.0,72.5 176.0,75.8 218.0,70.0 260.0,61.5 302.0,95.6 344.0,58.8 386.0,70.4 428.0,92.1 470.0,53.7 512.0,25.4" fill="none" stroke="#3f8ef5" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" filter="url(#g41540g)"/><circle cx="512.0" cy="25.4" r="4.5" fill="#f0524d" filter="url(#g41540g)"/><circle cx="512.0" cy="25.4" r="2.2" fill="#f4f6f8"/><text x="8.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W16</text><text x="92.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W18</text><text x="176.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W20</text><text x="260.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W22</text><text x="344.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W24</text><text x="428.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W26</text><text x="512.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W28</text></svg></div>
-  <div class="card chart" style="animation-delay:420ms"><h3>On-time shipping % · with SPC control band</h3><svg viewBox="0 0 520 150" width="100%" preserveAspectRatio="none" style="display:block;overflow:visible"><defs><linearGradient id="g17683" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22c197" stop-opacity="0.42"/><stop offset="1" stop-color="#22c197" stop-opacity="0"/></linearGradient><filter id="g17683g" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect x="8" y="25.4" width="504" height="95.2" fill="#22c197" opacity="0.05" rx="4"/><line x1="8" y1="25.4" x2="512" y2="25.4" stroke="#22c197" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/><line x1="8" y1="120.6" x2="512" y2="120.6" stroke="#22c197" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/><line x1="8" y1="73.0" x2="512" y2="73.0" stroke="#7d8590" stroke-opacity="0.4" stroke-width="1"/><path d="M 8.0,132.0 L 8.0,70.5 L 50.0,71.9 L 92.0,75.2 L 134.0,87.9 L 176.0,53.6 L 218.0,96.2 L 260.0,71.2 L 302.0,69.5 L 344.0,44.8 L 386.0,78.2 L 428.0,72.6 L 470.0,84.6 L 512.0,66.6 L 512.0,132.0 Z" fill="url(#g17683)"/><polyline points="8.0,70.5 50.0,71.9 92.0,75.2 134.0,87.9 176.0,53.6 218.0,96.2 260.0,71.2 302.0,69.5 344.0,44.8 386.0,78.2 428.0,72.6 470.0,84.6 512.0,66.6" fill="none" stroke="#22c197" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" filter="url(#g17683g)"/><circle cx="512.0" cy="66.6" r="4.5" fill="#22c197" filter="url(#g17683g)"/><circle cx="512.0" cy="66.6" r="2.2" fill="#f4f6f8"/><text x="8.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W16</text><text x="92.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W18</text><text x="176.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W20</text><text x="260.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W22</text><text x="344.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W24</text><text x="428.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W26</text><text x="512.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W28</text></svg></div>
+  <div class="card chart" style="animation-delay:360ms"><h3>Revenue · with SPC control band</h3><svg viewBox="0 0 520 150" width="100%" preserveAspectRatio="none" style="display:block;overflow:visible"><defs><linearGradient id="g63866" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f8ef5" stop-opacity="0.42"/><stop offset="1" stop-color="#3f8ef5" stop-opacity="0"/></linearGradient><filter id="g63866g" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect x="8" y="30.1" width="504" height="90.4" fill="#3f8ef5" opacity="0.05" rx="4"/><line x1="8" y1="30.1" x2="512" y2="30.1" stroke="#3f8ef5" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/><line x1="8" y1="120.6" x2="512" y2="120.6" stroke="#3f8ef5" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/><line x1="8" y1="75.4" x2="512" y2="75.4" stroke="#7d8590" stroke-opacity="0.4" stroke-width="1"/><path d="M 8.0,132.0 L 8.0,99.0 L 50.0,81.1 L 92.0,73.7 L 134.0,72.5 L 176.0,75.8 L 218.0,70.0 L 260.0,61.5 L 302.0,95.6 L 344.0,58.8 L 386.0,70.4 L 428.0,92.1 L 470.0,53.7 L 512.0,25.4 L 512.0,132.0 Z" fill="url(#g63866)"/><polyline points="8.0,99.0 50.0,81.1 92.0,73.7 134.0,72.5 176.0,75.8 218.0,70.0 260.0,61.5 302.0,95.6 344.0,58.8 386.0,70.4 428.0,92.1 470.0,53.7 512.0,25.4" fill="none" stroke="#3f8ef5" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" filter="url(#g63866g)"/><circle cx="512.0" cy="25.4" r="4.5" fill="#f0524d" filter="url(#g63866g)"/><circle cx="512.0" cy="25.4" r="2.2" fill="#f4f6f8"/><text x="8.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W16</text><text x="92.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W18</text><text x="176.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W20</text><text x="260.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W22</text><text x="344.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W24</text><text x="428.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W26</text><text x="512.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W28</text></svg></div>
+  <div class="card chart" style="animation-delay:420ms"><h3>On-time shipping % · with SPC control band</h3><svg viewBox="0 0 520 150" width="100%" preserveAspectRatio="none" style="display:block;overflow:visible"><defs><linearGradient id="g22074" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22c197" stop-opacity="0.42"/><stop offset="1" stop-color="#22c197" stop-opacity="0"/></linearGradient><filter id="g22074g" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect x="8" y="25.4" width="504" height="95.2" fill="#22c197" opacity="0.05" rx="4"/><line x1="8" y1="25.4" x2="512" y2="25.4" stroke="#22c197" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/><line x1="8" y1="120.6" x2="512" y2="120.6" stroke="#22c197" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/><line x1="8" y1="73.0" x2="512" y2="73.0" stroke="#7d8590" stroke-opacity="0.4" stroke-width="1"/><path d="M 8.0,132.0 L 8.0,70.5 L 50.0,71.9 L 92.0,75.2 L 134.0,87.9 L 176.0,53.6 L 218.0,96.2 L 260.0,71.2 L 302.0,69.5 L 344.0,44.8 L 386.0,78.2 L 428.0,72.6 L 470.0,84.6 L 512.0,66.6 L 512.0,132.0 Z" fill="url(#g22074)"/><polyline points="8.0,70.5 50.0,71.9 92.0,75.2 134.0,87.9 176.0,53.6 218.0,96.2 260.0,71.2 302.0,69.5 344.0,44.8 386.0,78.2 428.0,72.6 470.0,84.6 512.0,66.6" fill="none" stroke="#22c197" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" filter="url(#g22074g)"/><circle cx="512.0" cy="66.6" r="4.5" fill="#22c197" filter="url(#g22074g)"/><circle cx="512.0" cy="66.6" r="2.2" fill="#f4f6f8"/><text x="8.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W16</text><text x="92.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W18</text><text x="176.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W20</text><text x="260.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W22</text><text x="344.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W24</text><text x="428.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W26</text><text x="512.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W28</text></svg></div>
 
-  <div class="card panel" style="animation-delay:480ms"><h3>Signals &amp; what to look at</h3>
+  <div class="card panel wide" style="animation-delay:480ms"><h3>Signals &amp; what to look at</h3>
     
     <div class="sig"><span class="ic" style="color:#28c76f">▲</span><span>Revenue +26.7% week-over-week — main driver: region &#39;Ege&#39; (157% of the move). Confirm whether this is demand or a one-off before reacting.</span></div>
     
@@ -141,7 +146,35 @@
     
   </div>
 
-  <div class="card panel" style="animation-delay:540ms"><h3>Stock attention</h3>
+  
+  <div class="card panel conc" style="animation-delay:540ms"><h3>Revenue concentration · last 13 weeks</h3>
+    <div class="conc-head"><span class="conc-big" style="color:#3f8ef5">22%</span>
+      <span class="conc-sub">top 3 of 20 customers · HHI 538 · well-diversified</span></div>
+    <table class="rows">
+    
+    <tr><td>Musteri-15</td><td class="n">8.6%</td>
+    <td class="b"><div class="bar"><i style="width:100%;background:#3f8ef5"></i></div></td></tr>
+    
+    <tr><td>Musteri-13</td><td class="n">7.2%</td>
+    <td class="b"><div class="bar"><i style="width:83.72093023255815%;background:#3f8ef5"></i></div></td></tr>
+    
+    <tr><td>Musteri-07</td><td class="n">6.2%</td>
+    <td class="b"><div class="bar"><i style="width:72.09302325581396%;background:#3f8ef5"></i></div></td></tr>
+    
+    <tr><td>Musteri-09</td><td class="n">6.0%</td>
+    <td class="b"><div class="bar"><i style="width:69.76744186046511%;background:#3f8ef5"></i></div></td></tr>
+    
+    <tr><td>Musteri-03</td><td class="n">6.0%</td>
+    <td class="b"><div class="bar"><i style="width:69.76744186046511%;background:#3f8ef5"></i></div></td></tr>
+    
+    <tr><td>Musteri-11</td><td class="n">5.6%</td>
+    <td class="b"><div class="bar"><i style="width:65.11627906976743%;background:#3f8ef5"></i></div></td></tr>
+    
+    </table>
+  </div>
+  
+
+  <div class="card panel" style="animation-delay:600ms"><h3>Stock attention</h3>
     <table class="rows"><tr><th>Item</th><th class="n">Stock</th><th class="n">Cover (wk)</th></tr>
     
     <tr><td>ITM-003</td><td class="n">50</td>
@@ -167,7 +200,7 @@
     </table>
   </div>
 
-  <div class="card trust" style="animation-delay:600ms">
+  <div class="card trust" style="animation-delay:660ms">
     <div class="item"><span class="k ok">✓</span>
       <span class="t">source reconciliation</span></div>
     <div class="item"><span class="k warnc">3</span><span class="t">data-quality notes</span></div>

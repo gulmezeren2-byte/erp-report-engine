@@ -329,6 +329,17 @@ table _Measures
 		displayFolder: 4. Micro-charts
 		lineageTag: 67a9115c-0023-4000-8000-000000000023
 
+	/// Each customer's share of this week's revenue - the per-row lens on the
+	/// concentration analysis the engine also computes as top-3 share and HHI.
+	measure 'Customer Revenue Share' =
+			DIVIDE (
+			    [Revenue (This Week)],
+			    CALCULATE ( [Revenue (This Week)], ALL ( FactOrders[Customer] ) )
+			)
+		formatString: 0.0%
+		displayFolder: 2. This Week
+		lineageTag: 67a9115c-0024-4000-8000-000000000024
+
 	column Value
 		isHidden
 		lineageTag: 67a9115c-0013-4000-8000-000000000013

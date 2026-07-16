@@ -12,6 +12,7 @@ import datetime as dt
 
 import pandas as pd
 
+from erp_report_engine import insights
 from erp_report_engine.kpi import compute
 
 
@@ -81,3 +82,55 @@ def test_year_boundary_week_keys_are_ordered_and_padded():
     # keys are zero-padded YYYY-Www and sort chronologically as strings
     assert all(len(w) == 8 and w[4:6] == "-W" for w in kpis["trend"]["weeks"])
     assert kpis["trend"]["weeks"] == sorted(kpis["trend"]["weeks"])
+
+
+def _multi_customer_frames(year: int = 2026):
+    """Orders across weeks 24-28 with one dominant customer and three small ones."""
+    rows, lines, oid = [], [], 0
+    for week in range(24, 29):
+        wed = dt.date.fromisocalendar(year, week, 3)
+        for cust, rev in [("Big", 800.0), ("Small-1", 60.0), ("Small-2", 50.0), ("Small-3", 40.0)]:
+            oid += 1
+            oidk = f"SO-{oid:04d}"
+            rows.append((oidk, pd.Timestamp(wed), "Ege", cust, "delivered",
+                         pd.Timestamp(wed + dt.timedelta(days=2)),
+                         pd.Timestamp(wed + dt.timedelta(days=1)), rev))
+            lines.append((oidk, "ITM-001", 10.0))
+    o = pd.DataFrame(rows, columns=[
+        "order_id", "order_date", "region", "customer", "status",
+        "promised_date", "actual_ship_date", "net_total"])
+    ol = pd.DataFrame(lines, columns=["order_id", "item_code", "qty"])
+    inv = pd.DataFrame([("ITM-001", 5.0)], columns=["item_code", "stock_qty"])
+    return {"orders": o, "order_lines": ol, "inventory": inv}
+
+
+def test_revenue_concentration_analysis():
+    kpis = compute(_multi_customer_frames(), low_cover_weeks=2.0, as_of=dt.date(2026, 7, 16))
+    c = kpis["concentration"]
+    assert c["n_customers"] == 4
+    assert c["top"][0]["customer"] == "Big"                 # ranked, dominant first
+    assert c["top1_pct"] > 80 and c["top3_pct"] > 90        # heavily concentrated
+    assert c["hhi"] > 2500                                  # HHI in the "concentrated" band
+    # shares are a descending ranking
+    pcts = [t["pct"] for t in c["top"]]
+    assert pcts == sorted(pcts, reverse=True)
+
+
+def test_concentration_finding_fires_on_risk_and_is_silent_when_diversified():
+    base = {
+        "revenue": {"now": 100.0, "prev": 100.0}, "on_time_pct": {"now": 90.0, "prev": 90.0},
+        "n_low_cover": 0, "low_cover": [], "trend": {"weeks": [], "revenue": [], "on_time": []},
+        "_dims": {"orders_frame": pd.DataFrame({"week": [], "customer": [], "net_total": []}),
+                  "this_w": "2026-W28", "prev_w": "2026-W27"},
+    }
+    risky = {**base, "concentration": {"window_weeks": 13, "n_customers": 5,
+                                       "top1_pct": 72.0, "top3_pct": 88.0, "hhi": 5400, "top": []}}
+    findings = insights.build(risky, {}, low_cover_weeks=2.0)
+    conc = [f for f in findings if "concentration" in f["text"].lower()]
+    assert len(conc) == 1 and conc[0]["tone"] == "warn"
+    assert "88%" in conc[0]["text"] and "HHI 5400" in conc[0]["text"]
+
+    diversified = {**base, "concentration": {"window_weeks": 13, "n_customers": 20,
+                                             "top1_pct": 9.0, "top3_pct": 24.0, "hhi": 620, "top": []}}
+    assert not any("concentration" in f["text"].lower()
+                   for f in insights.build(diversified, {}, low_cover_weeks=2.0))

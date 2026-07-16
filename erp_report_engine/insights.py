@@ -53,6 +53,20 @@ def build(kpis: dict, frames: dict, low_cover_weeks: float,
             ),
         })
 
+    conc = kpis.get("concentration")
+    if conc and conc["top3_pct"] >= 50.0:
+        risk = conc["top3_pct"] >= 65.0 or conc["hhi"] >= 2500
+        out.append({
+            "tone": "warn" if risk else "good",
+            "text": (
+                f"Revenue concentration: the top 3 of {conc['n_customers']} customers are "
+                f"{conc['top3_pct']:.0f}% of the last {conc['window_weeks']} weeks' revenue "
+                f"(HHI {conc['hhi']}). "
+                + ("Concentration risk — one account swings the number; widen the base or protect the key relationships."
+                   if risk else "Moderately concentrated; keep an eye on the top accounts.")
+            ),
+        })
+
     # SPC: separate genuine signals from week-to-week noise, each with its arithmetic.
     out += spc.signals(kpis)
 

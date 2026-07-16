@@ -23,6 +23,30 @@ def _week(s: pd.Series) -> pd.Series:
     return iso.year.astype(str) + "-W" + iso.week.astype(str).str.zfill(2)
 
 
+def _concentration(o: pd.DataFrame, weeks: list[str], value_col: str = "net_total") -> dict | None:
+    """Revenue concentration over a window: top-customer shares plus the
+    Herfindahl-Hirschman Index (sum of squared shares x 10 000). A factual,
+    current-state analysis - concentration is risk (one account swings the
+    number), not a forecast."""
+    if "customer" not in o.columns:
+        return None
+    wk = o[o.week.isin(weeks)]
+    total = float(wk[value_col].sum())
+    if total <= 0:
+        return None
+    by = wk.groupby("customer")[value_col].sum().sort_values(ascending=False)
+    shares = by / total
+    return {
+        "window_weeks": len(weeks),
+        "n_customers": int(by.size),
+        "top1_pct": round(float(shares.iloc[0] * 100), 1),
+        "top3_pct": round(float(shares.iloc[:3].sum() * 100), 1),
+        "hhi": int(round(float((shares**2).sum() * 10000))),
+        "top": [{"customer": str(k), "revenue": round(float(v)), "pct": round(float(v / total * 100), 1)}
+                for k, v in by.head(6).items()],
+    }
+
+
 def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.date) -> dict:
     o = frames["orders"].copy()
     o = o[o.order_date.notna()]
@@ -96,5 +120,6 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
             for i, c in low.head(10).items()
         ],
         "n_low_cover": int(len(low)),
+        "concentration": _concentration(o, trend_weeks),
         "_dims": {"orders_frame": o, "this_w": this_w, "prev_w": prev_w},
     }

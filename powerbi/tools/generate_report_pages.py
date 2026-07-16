@@ -194,8 +194,9 @@ def main() -> None:
                                   table([("column", "FactOrders", "Customer"),
                                          ("measure", MEASURES, "Revenue (This Week)"),
                                          ("measure", MEASURES, "Revenue WoW %"),
+                                         ("measure", MEASURES, "Customer Revenue Share"),
                                          ("measure", MEASURES, "Revenue Sparkline")],
-                                        "Customers — this week, WoW and 13-week trend")),
+                                        "Customers — share, WoW and 13-week trend")),
     })
 
     page("stock", "Stock", {

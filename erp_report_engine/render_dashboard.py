@@ -203,6 +203,11 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
  .chart{grid-column:span 6}
  .chart h3,.panel h3{margin:0 0 12px;font-size:13px;color:var(--ink2);font-weight:600;letter-spacing:.3px}
  .panel{grid-column:span 6}
+ .panel.wide{grid-column:span 12}
+ .conc-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+ .conc-big{font-size:27px;font-weight:680;font-variant-numeric:tabular-nums;line-height:1}
+ .conc-sub{font-size:12px;color:var(--muted)}
+ .conc td.b{width:52%}
  .sig{display:flex;gap:11px;padding:11px 0;border-top:1px solid rgba(255,255,255,.06);font-size:13.5px;line-height:1.5}
  .sig:first-of-type{border-top:0}
  .sig .ic{font-size:13px;line-height:1.5}
@@ -252,13 +257,26 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
   <div class="card chart" style="animation-delay:360ms"><h3>Revenue · with SPC control band</h3>{{ chart_rev }}</div>
   <div class="card chart" style="animation-delay:420ms"><h3>On-time shipping % · with SPC control band</h3>{{ chart_otp }}</div>
 
-  <div class="card panel" style="animation-delay:480ms"><h3>Signals &amp; what to look at</h3>
+  <div class="card panel wide" style="animation-delay:480ms"><h3>Signals &amp; what to look at</h3>
     {% for f in findings %}
     <div class="sig"><span class="ic" style="color:{{ f.color }}">{{ f.icon }}</span><span>{{ f.text }}</span></div>
     {% endfor %}
   </div>
 
-  <div class="card panel" style="animation-delay:540ms"><h3>Stock attention</h3>
+  {% if conc %}
+  <div class="card panel conc" style="animation-delay:540ms"><h3>Revenue concentration · last {{ conc.window_weeks }} weeks</h3>
+    <div class="conc-head"><span class="conc-big" style="color:{{ conc.color }}">{{ conc.top3_pct }}%</span>
+      <span class="conc-sub">top 3 of {{ conc.n_customers }} customers · HHI {{ conc.hhi }} · {{ conc.verdict }}</span></div>
+    <table class="rows">
+    {% for t in conc.top %}
+    <tr><td>{{ t.customer }}</td><td class="n">{{ t.pct }}%</td>
+    <td class="b"><div class="bar"><i style="width:{{ t.pct_bar }}%;background:{{ conc.color }}"></i></div></td></tr>
+    {% endfor %}
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="card panel" style="animation-delay:600ms"><h3>Stock attention</h3>
     <table class="rows"><tr><th>Item</th><th class="n">Stock</th><th class="n">Cover (wk)</th></tr>
     {% for s in stock %}
     <tr><td>{{ s.item }}</td><td class="n">{{ s.qty }}</td>
@@ -268,7 +286,7 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
     </table>
   </div>
 
-  <div class="card trust" style="animation-delay:600ms">
+  <div class="card trust" style="animation-delay:660ms">
     <div class="item"><span class="k {{ 'ok' if recon_ok else 'crit' }}">{{ '✓' if recon_ok else '✗' }}</span>
       <span class="t">source reconciliation</span></div>
     <div class="item"><span class="k {{ 'warnc' if dq else 'ok' }}">{{ dq }}</span><span class="t">data-quality notes</span></div>
@@ -352,6 +370,22 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
                f"{_pct(s['now'])}, {kpis['n_low_cover']} item(s) below cover, "
                f"{len(extraction.issues)} data-quality note(s).")
 
+    conc = kpis.get("concentration")
+    conc_ctx = None
+    if conc and conc.get("top"):
+        top1 = conc["top1_pct"] or 1.0
+        hhi = conc["hhi"]
+        risk = conc["top3_pct"] >= 65 or hhi >= 2500
+        conc_ctx = {
+            "window_weeks": conc["window_weeks"], "n_customers": conc["n_customers"],
+            "top3_pct": f"{conc['top3_pct']:.0f}", "hhi": hhi,
+            "verdict": ("concentrated" if hhi >= 2500 else
+                        "moderately concentrated" if hhi >= 1500 else "well-diversified"),
+            "color": WARN if risk else BLUE,
+            "top": [{"customer": t["customer"], "pct": f"{t['pct']:.1f}",
+                     "pct_bar": max(4, min(100, t["pct"] / top1 * 100))} for t in conc["top"]],
+        }
+
     return _TPL.render(
         company=cfg.company_alias, week=kpis["this_week"], profile=profile.name,
         generated=f"{dt.datetime.now():%Y-%m-%d %H:%M}",
@@ -361,6 +395,7 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
         chart_otp=Markup(_area_chart(kpis["trend"]["weeks"], kpis["trend"]["on_time"], AQUA, pct=True, band=band_otp)),
         findings=[{"icon": ICON[f["tone"]], "color": TONE[f["tone"]], "text": f["text"]} for f in findings],
         stock=stock,
+        conc=conc_ctx,
         recon_ok=recon_ok, dq=len(extraction.issues), audited=len(auditor.entries),
         rows_total=f"{rows_total:,}",
         trust_line=("All entities reconcile with source counts."

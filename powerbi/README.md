@@ -25,7 +25,7 @@ A committed demo export ships in [`data/`](data/), so the report renders meaning
 
 | Piece | Technology | What it does |
 |---|---|---|
-| `ERP Command Center.SemanticModel/` | **TMDL** | Star schema (2 facts, 2 dimensions), 4 meta tables, 23 DAX measures with descriptions and display folders, `discourageImplicitMeasures` |
+| `ERP Command Center.SemanticModel/` | **TMDL** | Star schema (2 facts, 2 dimensions), 4 meta tables, 24 DAX measures with descriptions and display folders, `discourageImplicitMeasures` |
 | `Time Shift` table | **Calculation group** | Apply *Previous Week / WoW Change / WoW % / 8-Week Baseline / vs Baseline %* to ANY measure — week arithmetic runs on a gapless ordinal, so it never breaks at year boundaries |
 | `Selected KPI` table | **Field parameter** | One chart, four KPIs — the viewer switches instead of four near-duplicate visuals |
 | `Revenue/On-Time Sparkline`, `Cover Bar` | **DAX SVG micro-charts** | Measures that return `data:image/svg+xml` and are tagged `dataCategory: ImageUrl`, so a table draws a **per-row sparkline** (one 13-week trend per customer) or a **cover bar** (red below the threshold, amber tick at it) — a real chart in every cell, no custom visual |
@@ -37,7 +37,7 @@ A committed demo export ships in [`data/`](data/), so the report renders meaning
 ## The four pages
 
 1. **Overview** — headline cards anchored to the **last completed ISO week** (a two-day week can never masquerade as a crash), weekly revenue and on-time trends, and a plain-language *Weekly Verdict* card computed live by DAX.
-2. **Drivers** — a decomposition tree over revenue (region → customer → status) plus a WoW driver table where **each customer carries its own 13-week revenue sparkline** (an SVG micro-chart, drawn by DAX): where the move concentrates *and* how each account got there.
+2. **Drivers** — a decomposition tree over revenue (region → customer → status) plus a WoW driver table where each customer shows its **share of this week's revenue** and carries its own **13-week revenue sparkline** (an SVG micro-chart, drawn by DAX): where the move concentrates *and* how each account got there. The engine surfaces the same concentration as a top-3 share + Herfindahl index (HHI).
 3. **Stock** — cover-weeks table with a **per-item cover bar** (SVG, red below the threshold) and an ordered-quantity ranking; the low-cover threshold comes from the engine's config via `MetaRunInfo`, not hardcoded in DAX.
 4. **Trust** — the signature page: **source reconciliation counts, every data-quality finding, and the full SQL audit trail** rendered as visuals. The dashboard shows its receipts.
 

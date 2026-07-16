@@ -155,7 +155,7 @@ Each run appends to `state.db`, which is how the report can say *"third consecut
 
 ## The Power BI Command Center
 
-The engine also feeds an interactive Power BI layer — and there is no `.pbix` binary in this repo. The entire artifact is a **PBIP project authored as code**: the semantic model in TMDL (star schema, 23 documented DAX measures — including **SVG micro-chart measures** that draw a per-customer sparkline and a per-item cover bar straight from DAX — a *Time Shift* calculation group on a gapless week ordinal, and a field parameter), the report in PBIR (4 pages / 24 visuals, generated from compact specs by a script), and a **dark futuristic theme validated against Microsoft's official theme schema**.
+The engine also feeds an interactive Power BI layer — and there is no `.pbix` binary in this repo. The entire artifact is a **PBIP project authored as code**: the semantic model in TMDL (star schema, 24 documented DAX measures — including **SVG micro-chart measures** that draw a per-customer sparkline and a per-item cover bar straight from DAX — a *Time Shift* calculation group on a gapless week ordinal, and a field parameter), the report in PBIR (4 pages / 24 visuals, generated from compact specs by a script), and a **dark futuristic theme validated against Microsoft's official theme schema**.
 
 ```bash
 # a demo export already ships in powerbi/data — just open the project:

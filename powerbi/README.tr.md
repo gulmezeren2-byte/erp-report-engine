@@ -25,7 +25,7 @@ Hazır bir demo ihracı [`data/`](data/) içinde geliyor; rapor daha ilk yenilem
 
 | Parça | Teknoloji | Ne yapıyor |
 |---|---|---|
-| `ERP Command Center.SemanticModel/` | **TMDL** | Yıldız şema (2 fact, 2 boyut), 4 meta tablo, açıklamalı ve klasörlü 23 DAX ölçüsü, `discourageImplicitMeasures` |
+| `ERP Command Center.SemanticModel/` | **TMDL** | Yıldız şema (2 fact, 2 boyut), 4 meta tablo, açıklamalı ve klasörlü 24 DAX ölçüsü, `discourageImplicitMeasures` |
 | `Time Shift` tablosu | **Hesaplama grubu** | *Önceki Hafta / Haftalık Değişim / Haftalık % / 8 Haftalık Taban / Tabana Göre %* dönüşümlerini HERHANGİ bir ölçüye uygula — hafta aritmetiği boşluksuz sıra numarasında koşar, yıl sınırında asla kırılmaz |
 | `Selected KPI` tablosu | **Alan parametresi** | Tek grafik, dört KPI — dört kopya görsel yerine izleyici kendisi değiştirir |
 | `Revenue/On-Time Sparkline`, `Cover Bar` | **DAX SVG mikro-grafikleri** | `data:image/svg+xml` döndürüp `dataCategory: ImageUrl` etiketlenen ölçüler — tablo her satıra bir grafik çizer: **müşteri başına 13 haftalık sparkline** ve **ürün başına karşılama çubuğu** (eşiğin altında kırmızı, eşikte amber işaret). Özel görsel yok |
@@ -37,7 +37,7 @@ Hazır bir demo ihracı [`data/`](data/) içinde geliyor; rapor daha ilk yenilem
 ## Dört sayfa
 
 1. **Overview** — **son tamamlanmış ISO haftasına** çapalı başlık kartları (iki günlük bir hafta asla çöküş gibi görünemez), haftalık ciro ve zamanında sevkiyat trendleri, DAX'in canlı hesapladığı sade dilli *Weekly Verdict* kartı.
-2. **Drivers** — ciro üstünde ayrıştırma ağacı (bölge → müşteri → durum) + haftalık değişim tablosu; burada **her müşteri kendi 13 haftalık ciro sparkline'ını taşır** (DAX'in çizdiği SVG mikro-grafik): hareket nerede yoğunlaşıyor *ve* her hesap oraya nasıl geldi.
+2. **Drivers** — ciro üstünde ayrıştırma ağacı (bölge → müşteri → durum) + haftalık değişim tablosu; burada her müşteri **bu haftaki cirodaki payını** gösterir ve kendi **13 haftalık ciro sparkline'ını** taşır (DAX'in çizdiği SVG mikro-grafik): hareket nerede yoğunlaşıyor *ve* her hesap oraya nasıl geldi. Motor aynı yoğunlaşmayı top-3 payı + Herfindahl endeksi (HHI) olarak da hesaplar.
 3. **Stock** — **ürün başına karşılama çubuğu** (SVG, eşiğin altında kırmızı) içeren karşılama haftası tablosu ve sipariş miktarı sıralaması; düşük-karşılama eşiği DAX'e gömülü değil, motorun config'inden `MetaRunInfo` üzerinden gelir.
 4. **Trust** — imza sayfa: **kaynak mutabakat sayıları, her veri kalitesi bulgusu ve SQL denetim izinin tamamı** görsel olarak. Pano makbuzlarını gösterir.
 
