@@ -33,6 +33,32 @@ from .errors import ConfigError  # re-exported for callers that import from .con
 
 __all__ = ["Config", "ConfigError", "load_config"]
 
+_CRED_MSG = (
+    "connection.url embeds a credential - refuse to run. Put the full URL in an "
+    "environment variable and reference it with connection.url_env instead."
+)
+
+
+def _reject_embedded_credential(url: str) -> None:
+    """Refuse a connection URL that carries a password in any common shape.
+
+    Catches user:pass@host, `?password=`/`?pwd=` query parameters, and the
+    pyodbc `odbc_connect=...PWD=...` form (which has no `@` at all).
+    """
+    from sqlalchemy.engine import make_url
+
+    try:
+        u = make_url(url)
+    except Exception:
+        low = url.lower()
+        if "pwd=" in low or "password=" in low:
+            raise ConfigError(_CRED_MSG) from None
+        return
+    q = {k.lower(): str(v) for k, v in u.query.items()}
+    odbc = q.get("odbc_connect", "").lower()
+    if u.password or "password" in q or "pwd" in q or "pwd=" in odbc or "password=" in odbc:
+        raise ConfigError(_CRED_MSG)
+
 
 @dataclass
 class Config:
@@ -67,11 +93,7 @@ def load_config(path: str) -> Config:
             )
     elif conn.get("url"):
         url = conn["url"]
-        if "://" in url and "@" in url and ":" in url.split("@")[0].split("://")[-1]:
-            raise ConfigError(
-                "connection.url appears to embed a password - refuse to run. "
-                "Use connection.url_env and put the full URL in an environment variable."
-            )
+        _reject_embedded_credential(url)
     if not url:
         raise ConfigError("connection.url_env (preferred) or connection.url is required")
 

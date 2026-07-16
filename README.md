@@ -148,8 +148,10 @@ Each run appends to `state.db`, which is how the report can say *"third consecut
 The engine also feeds an interactive Power BI layer — and there is no `.pbix` binary in this repo. The entire artifact is a **PBIP project authored as code**: the semantic model in TMDL (star schema, 20+ documented DAX measures, a *Time Shift* calculation group on a gapless week ordinal, a field parameter), the report in PBIR (4 pages / 24 visuals, generated from compact specs by a script), and a custom theme.
 
 ```bash
-python -m erp_report_engine export-powerbi -c config.demo.yaml
-# then open powerbi/ERP Command Center.pbip in Power BI Desktop
+# a demo export already ships in powerbi/data — just open the project:
+#   powerbi/ERP Command Center.pbip   (Power BI Desktop)
+# to feed it your own ERP (writes to gitignored powerbi/data.local by default):
+erp-report-engine export-powerbi -c config.yaml
 ```
 
 The signature is the **Trust page**: source reconciliation, the data-quality gate and the full SQL audit trail rendered as visuals — the dashboard shows its receipts. Alert thresholds are the same ones as `insights.py`, re-derived in DAX: one definition, two surfaces. Field bindings are validated against the TMDL model by `pbir-cli` before the project ever meets Desktop. Full guide: [powerbi/README.md](powerbi/README.md).

@@ -19,7 +19,7 @@ python -m erp_report_engine export-powerbi -c config.demo.yaml
 
 On first open: **Transform data → Edit parameters → set `DataFolder`** to this repo's `powerbi\data` folder (absolute path), then **Refresh**. That's the whole setup — the parameter exists precisely so no absolute path is baked into the model.
 
-A committed demo export ships in [`data/`](data/), so the report renders meaningful numbers on the very first refresh. If you export from a **real** ERP, keep that folder out of version control or export elsewhere with `-o`.
+A committed demo export ships in [`data/`](data/), so the report renders meaningful numbers on the very first refresh. **A real ERP export goes somewhere safe by default:** `export-powerbi` writes to `powerbi/data.local/` (gitignored) unless you pass `-o`, so a later `git commit` can never publish your order values, customer names, or SQL. Point `DataFolder` at `powerbi\data.local` when you work with real data; the committed `data/` folder stays the demo snapshot.
 
 ## What's inside
 

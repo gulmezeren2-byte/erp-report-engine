@@ -159,7 +159,10 @@ def main(argv: list[str] | None = None) -> None:
     s = sub.add_parser("export-powerbi",
                        help="export the star schema + honesty tables for the Power BI Command Center")
     s.add_argument("-c", "--config", required=True)
-    s.add_argument("-o", "--out", default=os.path.join("powerbi", "data"))
+    # default to a gitignored folder: exporting real ERP data must not land in a
+    # git-tracked path where a later `git commit -am` would publish it (S4).
+    s.add_argument("-o", "--out", default=os.path.join("powerbi", "data.local"),
+                   help="output folder (default: powerbi/data.local, gitignored)")
     s.set_defaults(fn=cmd_export_powerbi)
 
     s = sub.add_parser("init-demo", help="build the bundled demo database and config")

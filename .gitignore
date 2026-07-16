@@ -11,6 +11,9 @@ powerbi/**/.pbi/localSettings.json
 powerbi/**/.pbi/cache.abf
 powerbi/**/.pbi/unappliedChanges.json
 
+# real ERP exports land here by default - NEVER commit real business data
+powerbi/data.local/
+
 # python
 __pycache__/
 *.py[cod]

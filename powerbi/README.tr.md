@@ -19,7 +19,7 @@ python -m erp_report_engine export-powerbi -c config.demo.yaml
 
 İlk açılışta: **Verileri dönüştür → Parametreleri düzenle → `DataFolder`** parametresini bu deponun `powerbi\data` klasörüne (mutlak yol) ayarlayın, sonra **Yenile**. Kurulumun tamamı bu — parametre, modele hiçbir mutlak yol gömülmesin diye var.
 
-Hazır bir demo ihracı [`data/`](data/) içinde geliyor; rapor daha ilk yenilemede anlamlı sayılar gösterir. **Gerçek** bir ERP'den ihraç ederseniz o klasörü sürüm kontrolü dışında tutun veya `-o` ile başka yere yazın.
+Hazır bir demo ihracı [`data/`](data/) içinde geliyor; rapor daha ilk yenilemede anlamlı sayılar gösterir. **Gerçek ERP ihracı varsayılan olarak güvenli bir yere gider:** `export-powerbi`, `-o` vermezseniz `powerbi/data.local/` (gitignore'lu) klasörüne yazar; böylece sonraki bir `git commit` sipariş tutarlarınızı, cari adlarınızı veya SQL'inizi asla yayınlayamaz. Gerçek veriyle çalışırken `DataFolder`'ı `powerbi\data.local`'e yöneltin; commit'li `data/` klasörü demo anlık görüntüsü olarak kalır.
 
 ## İçinde ne var?
 
