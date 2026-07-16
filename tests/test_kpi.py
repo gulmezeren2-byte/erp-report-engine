@@ -19,9 +19,7 @@ def _frames(week_revenue: dict[int, float], year: int = 2026):
     """Build minimal canonical frames with one order per (ISO week -> revenue)."""
     orders = []
     lines = []
-    oid = 0
-    for week, rev in week_revenue.items():
-        oid += 1
+    for oid, (week, rev) in enumerate(week_revenue.items(), start=1):
         monday = dt.date.fromisocalendar(year, week, 3)  # Wednesday of that ISO week
         oidk = f"SO-{oid:04d}"
         orders.append((

@@ -1,5 +1,13 @@
 """Self-contained HTML report: KPI cards, findings, trends, stock list,
-data-quality gate, source reconciliation and the full SQL audit trail."""
+data-quality gate, source reconciliation and the full SQL audit trail.
+
+Rendered through Jinja2 with autoescape on, so every value that originates in
+the ERP (customer and region names, item codes, the profile's SQL, data-quality
+text) is HTML-escaped by default. A customer literally named ``<script>...``
+cannot execute in the manager's browser, and a query containing ``a < b`` no
+longer breaks the audit table. Only our own matplotlib SVG charts - which carry
+no ERP-sourced text - are marked safe.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +17,9 @@ import io
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # noqa: E402
+from jinja2 import Environment, select_autoescape  # noqa: E402
+from markupsafe import Markup  # noqa: E402
 
 SURFACE, INK, INK2, MUTED, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#898781", "#e1e0d9"
 BLUE, AQUA, GOOD, RED = "#2a78d6", "#1baf7a", "#006300", "#d03b3b"
@@ -40,16 +50,56 @@ def _svg_line(weeks, values, title, color, pct=False) -> str:
     return buf.getvalue()
 
 
-def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
-    tw = kpis["this_week"]
-    r, c, s = kpis["revenue"], kpis["orders"], kpis["on_time_pct"]
+_TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ company_alias }} — Weekly ERP Report {{ this_week }}</title>
+<style>
+ body{margin:0;background:#f9f9f7;color:#0b0b0b;font-family:'Segoe UI',system-ui,sans-serif}
+ .wrap{max-width:920px;margin:0 auto;padding:28px 20px 40px}
+ h1{font-size:22px;margin:0} .sub{color:#52514e;font-size:13px;margin-top:4px}
+ .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:20px 0}
+ .card{background:#fcfcfb;border:1px solid rgba(11,11,11,.08);border-radius:10px;padding:14px 16px}
+ .lbl{font-size:12px;color:#898781} .val{font-size:24px;font-weight:650;margin:2px 0} .delta{font-size:12px}
+ .streak{color:#d03b3b;font-weight:600}
+ h2{font-size:15px;margin:24px 0 10px}
+ ul.f{list-style:none;padding:0;margin:0}
+ ul.f li{background:#fcfcfb;border:1px solid rgba(11,11,11,.06);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:14px;line-height:1.45}
+ .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+ .chart{background:#fcfcfb;border:1px solid rgba(11,11,11,.06);border-radius:10px;padding:8px;overflow-x:auto}
+ svg{max-width:100%;height:auto}
+ table{border-collapse:collapse;font-size:12.5px;background:#fcfcfb;border-radius:8px;width:100%}
+ th,td{padding:6px 12px;border-bottom:1px solid #e1e0d9;text-align:left} th{color:#52514e}
+ td.sql{font-family:Consolas,monospace;font-size:11px;color:#52514e;white-space:pre-wrap}
+ .dim{color:#898781;font-size:12px}
+ details{margin-top:8px} summary{cursor:pointer;color:#52514e;font-size:13px}
+ footer{margin-top:28px;color:#898781;font-size:12px}
+</style></head><body><div class="wrap">
+<h1>{{ company_alias }} — Weekly ERP Report</h1>
+<div class="sub">Week {{ this_week }} · generated {{ generated }} · profile: {{ profile_name }} · read-only · fully automated</div>
+{% if streak >= 2 %}<p class="streak">⚠ Revenue has declined {{ streak }} consecutive weeks (run-state memory).</p>{% endif %}
+<div class="cards">{% for c in cards %}<div class="card"><div class="lbl">{{ c.label }}</div><div class="val">{{ c.value }}</div><div class="delta" style="color:{{ c.color }}">{{ c.delta }}</div></div>{% endfor %}</div>
+<h2>What changed, and where to look</h2>
+<ul class="f">{% for f in findings %}<li style="border-left:3px solid {{ f.color }}"><b style="color:{{ f.color }}">{{ f.icon }}</b> {{ f.text }}</li>{% endfor %}</ul>
+<h2>Trends</h2>
+<div class="charts"><div class="chart">{{ chart_rev }}</div><div class="chart">{{ chart_otp }}</div></div>
+<h2>Stock attention list</h2>
+<table><tr><th>Item</th><th>Stock</th><th>Cover (weeks)</th></tr>{% for x in low_cover %}<tr><td>{{ x.item_code }}</td><td>{{ x.stock_qty }}</td><td>{{ x.cover_weeks }}</td></tr>{% else %}<tr><td colspan="3">none</td></tr>{% endfor %}</table>
+<h2 class="dim">Data quality gate</h2>
+<ul class="dim">{% for i in dq %}<li>{{ i }}</li>{% else %}<li>All input checks passed.</li>{% endfor %}</ul>
+<h2 class="dim">Source reconciliation</h2>
+<table><tr><th>Entity</th><th>Fetched</th><th>Source count</th><th></th></tr>{% for e in recon %}<tr><td>{{ e.entity }}</td><td>{{ e.fetched }}</td><td>{{ e.source_count }}</td><td>{{ "✓" if e.ok else "✗ MISMATCH" }}</td></tr>{% endfor %}</table>
+<details><summary>SQL audit trail ({{ audit|length }} statements, all read-only)</summary>
+<table><tr><th>Label</th><th>Statement</th><th>Rows</th><th>Time</th></tr>{% for a in audit %}<tr><td>{{ a.label }}</td><td class="sql">{{ a.sql }}</td><td>{{ a.rows }}</td><td>{{ a.seconds }}s</td></tr>{% endfor %}</table></details>
+<footer>erp-report-engine · designed by Eren Gülmez · definitions: revenue = sum(net_total) by ISO week of order date;
+on-time = shipped ≤ promised (order level; completeness not asserted — see README); cover = stock / 8-week avg weekly demand.</footer>
+</div></body></html>"""
 
-    def card(label, value, delta, good):
-        color = GOOD if good else RED
-        return (
-            f'<div class="card"><div class="lbl">{label}</div><div class="val">{value}</div>'
-            f'<div class="delta" style="color:{color}">{delta}</div></div>'
-        )
+_ENV = Environment(autoescape=select_autoescape(default=True, default_for_string=True))
+_REPORT = _ENV.from_string(_TEMPLATE)
+
+
+def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
+    r, c, s = kpis["revenue"], kpis["orders"], kpis["on_time_pct"]
 
     def fmt_delta(d, unit=""):
         if d["prev"] != d["prev"] or not d["prev"]:
@@ -57,86 +107,59 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
         pct = (d["now"] / d["prev"] - 1) * 100
         return f"{pct:+.1f}% vs prev · baseline {d['baseline8']:,.0f}{unit}"
 
-    cards = "".join([
-        card("Revenue", f"{r['now']:,.0f}", fmt_delta(r), r["now"] >= (r["prev"] or 0)),
-        card("Orders", f"{c['now']:,.0f}", fmt_delta(c), c["now"] >= (c["prev"] or 0)),
-        card("On-time shipping", f"{s['now']:.1f}%" if s["now"] == s["now"] else "n/a",
-             f"{(s['now'] - s['prev']):+.1f} pts vs prev" if s["prev"] == s["prev"] else "—",
-             (s["now"] or 0) >= (s["prev"] or 0)),
-        card("Items low on stock", f"{kpis['n_low_cover']}",
-             f"< {cfg.low_cover_weeks:.0f} weeks cover", kpis["n_low_cover"] == 0),
-    ])
+    cards = [
+        {"label": "Revenue", "value": f"{r['now']:,.0f}", "delta": fmt_delta(r),
+         "color": GOOD if r["now"] >= (r["prev"] or 0) else RED},
+        {"label": "Orders", "value": f"{c['now']:,.0f}", "delta": fmt_delta(c),
+         "color": GOOD if c["now"] >= (c["prev"] or 0) else RED},
+        {"label": "On-time shipping",
+         "value": f"{s['now']:.1f}%" if s["now"] == s["now"] else "n/a",
+         "delta": f"{(s['now'] - s['prev']):+.1f} pts vs prev" if s["prev"] == s["prev"] else "—",
+         "color": GOOD if (s["now"] or 0) >= (s["prev"] or 0) else RED},
+        {"label": "Items low on stock", "value": f"{kpis['n_low_cover']}",
+         "delta": f"< {cfg.low_cover_weeks:g} weeks cover",
+         "color": GOOD if kpis["n_low_cover"] == 0 else RED},
+    ]
 
-    streak_html = (
-        f'<p class="streak">⚠ Revenue has declined {streak} consecutive weeks (run-state memory).</p>'
-        if streak >= 2 else ""
-    )
-
-    bullets = "".join(
-        f'<li style="border-left:3px solid {TONE[f["tone"]]}">'
-        f'<b style="color:{TONE[f["tone"]]}">{ICON[f["tone"]]}</b> {f["text"]}</li>'
+    find_ctx = [
+        {"tone": f["tone"], "icon": ICON[f["tone"]], "color": TONE[f["tone"]], "text": f["text"]}
         for f in findings
-    )
+    ]
 
-    low_rows = "".join(
-        f'<tr><td>{x["item_code"]}</td><td>{x["stock_qty"]:,.0f}</td><td>{x["cover_weeks"]}</td></tr>'
+    low_cover = [
+        {"item_code": x["item_code"], "stock_qty": f"{x['stock_qty']:,.0f}", "cover_weeks": x["cover_weeks"]}
         for x in kpis["low_cover"]
-    ) or '<tr><td colspan="3">none</td></tr>'
+    ]
 
-    dq = "".join(f"<li>{i}</li>" for i in extraction.issues) or "<li>All input checks passed.</li>"
-    recon = "".join(
-        f'<tr><td>{e}</td><td>{v["fetched"]:,}</td><td>{v["source_count"]:,}</td>'
-        f'<td>{"✓" if v["fetched"] == v["source_count"] else "✗ MISMATCH"}</td></tr>'
+    recon = [
+        {"entity": e, "fetched": f"{v['fetched']:,}", "source_count": f"{v['source_count']:,}",
+         "ok": v["fetched"] == v["source_count"]}
         for e, v in extraction.reconciliation.items()
-    )
-    audit = "".join(
-        f'<tr><td>{a.label}</td><td class="sql">{a.sql[:180]}</td><td>{a.rows:,}</td><td>{a.seconds}s</td></tr>'
+    ]
+
+    audit = [
+        {"label": a.label, "sql": a.sql[:180], "rows": f"{a.rows:,}", "seconds": a.seconds}
         for a in auditor.entries
+    ]
+
+    n_weeks = len(kpis["trend"]["weeks"])
+    chart_rev = _svg_line(kpis["trend"]["weeks"], kpis["trend"]["revenue"],
+                          f"Weekly revenue (last {n_weeks} weeks)", BLUE)
+    chart_otp = _svg_line(kpis["trend"]["weeks"], kpis["trend"]["on_time"],
+                          f"On-time shipping % (last {n_weeks} weeks)", AQUA, pct=True)
+
+    return _REPORT.render(
+        company_alias=cfg.company_alias,
+        this_week=kpis["this_week"],
+        generated=f"{dt.datetime.now():%Y-%m-%d %H:%M}",
+        profile_name=profile.name,
+        streak=streak,
+        cards=cards,
+        findings=find_ctx,
+        chart_rev=Markup(chart_rev),
+        chart_otp=Markup(chart_otp),
+        low_cover=low_cover,
+        dq=list(extraction.issues),
+        recon=recon,
+        audit=audit,
     )
-
-    chart_rev = _svg_line(kpis["trend"]["weeks"], kpis["trend"]["revenue"], "Weekly revenue (last 13 weeks)", BLUE)
-    chart_otp = _svg_line(kpis["trend"]["weeks"], kpis["trend"]["on_time"], "On-time shipping % (last 13 weeks)", AQUA, pct=True)
-
-    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{cfg.company_alias} — Weekly ERP Report {tw}</title>
-<style>
- body{{margin:0;background:#f9f9f7;color:{INK};font-family:'Segoe UI',system-ui,sans-serif}}
- .wrap{{max-width:920px;margin:0 auto;padding:28px 20px 40px}}
- h1{{font-size:22px;margin:0}} .sub{{color:{INK2};font-size:13px;margin-top:4px}}
- .cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:20px 0}}
- .card{{background:{SURFACE};border:1px solid rgba(11,11,11,.08);border-radius:10px;padding:14px 16px}}
- .lbl{{font-size:12px;color:{MUTED}}} .val{{font-size:24px;font-weight:650;margin:2px 0}} .delta{{font-size:12px}}
- .streak{{color:{RED};font-weight:600}}
- h2{{font-size:15px;margin:24px 0 10px}}
- ul.f{{list-style:none;padding:0;margin:0}}
- ul.f li{{background:{SURFACE};border:1px solid rgba(11,11,11,.06);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:14px;line-height:1.45}}
- .charts{{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}}
- .chart{{background:{SURFACE};border:1px solid rgba(11,11,11,.06);border-radius:10px;padding:8px;overflow-x:auto}}
- svg{{max-width:100%;height:auto}}
- table{{border-collapse:collapse;font-size:12.5px;background:{SURFACE};border-radius:8px;width:100%}}
- th,td{{padding:6px 12px;border-bottom:1px solid {GRID};text-align:left}} th{{color:{INK2}}}
- td.sql{{font-family:Consolas,monospace;font-size:11px;color:{INK2}}}
- .dim{{color:{MUTED};font-size:12px}}
- details{{margin-top:8px}} summary{{cursor:pointer;color:{INK2};font-size:13px}}
- footer{{margin-top:28px;color:{MUTED};font-size:12px}}
-</style></head><body><div class="wrap">
-<h1>{cfg.company_alias} — Weekly ERP Report</h1>
-<div class="sub">Week {tw} · generated {dt.datetime.now():%Y-%m-%d %H:%M} · profile: {profile.name} · read-only · fully automated</div>
-{streak_html}
-<div class="cards">{cards}</div>
-<h2>What changed, and where to look</h2>
-<ul class="f">{bullets}</ul>
-<h2>Trends</h2>
-<div class="charts"><div class="chart">{chart_rev}</div><div class="chart">{chart_otp}</div></div>
-<h2>Stock attention list</h2>
-<table><tr><th>Item</th><th>Stock</th><th>Cover (weeks)</th></tr>{low_rows}</table>
-<h2 class="dim">Data quality gate</h2>
-<ul class="dim">{dq}</ul>
-<h2 class="dim">Source reconciliation</h2>
-<table><tr><th>Entity</th><th>Fetched</th><th>Source count</th><th></th></tr>{recon}</table>
-<details><summary>SQL audit trail ({len(auditor.entries)} statements, all read-only)</summary>
-<table><tr><th>Label</th><th>Statement</th><th>Rows</th><th>Time</th></tr>{audit}</table></details>
-<footer>erp-report-engine · designed by Eren Gülmez · definitions: revenue = sum(net_total) by ISO week of order date;
-on-time = shipped ≤ promised (order level; completeness not asserted — see README); cover = stock / 8-week avg weekly demand.</footer>
-</div></body></html>"""
