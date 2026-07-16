@@ -208,6 +208,11 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
  .conc-big{font-size:27px;font-weight:680;font-variant-numeric:tabular-nums;line-height:1}
  .conc-sub{font-size:12px;color:var(--muted)}
  .conc td.b{width:52%}
+ .agebar{display:flex;height:16px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.06);margin-bottom:11px}
+ .agebar>span{display:block;height:100%;transform-origin:left center;animation:barIn 1.1s .35s cubic-bezier(.2,.7,.2,1) both}
+ .agelegend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:11.5px;color:var(--ink2);margin-bottom:6px}
+ .agelegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
+ .aging-cols{display:flex;gap:26px;flex-wrap:wrap}.aging-cols>div{flex:1;min-width:260px}
  .sig{display:flex;gap:11px;padding:11px 0;border-top:1px solid rgba(255,255,255,.06);font-size:13.5px;line-height:1.5}
  .sig:first-of-type{border-top:0}
  .sig .ic{font-size:13px;line-height:1.5}
@@ -286,7 +291,24 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
     </table>
   </div>
 
-  <div class="card trust" style="animation-delay:660ms">
+  {% if aging %}
+  <div class="card panel wide" style="animation-delay:660ms"><h3>Receivables aging · {{ aging.total }} open · {{ aging.n_invoices }} invoices</h3>
+    <div class="conc-head"><span class="conc-big" style="color:{{ aging.color }}">{{ aging.overdue_pct }}%</span>
+      <span class="conc-sub">overdue · {{ aging.over90_pct }}% is 90+ days past due</span></div>
+    <div class="aging-cols">
+      <div>
+        <div class="agebar">{% for b in aging.buckets %}{% if b.pct > 0 %}<span style="width:{{ b.pct }}%;background:{{ b.color }}"></span>{% endif %}{% endfor %}</div>
+        <div class="agelegend">{% for b in aging.buckets %}<span><i style="background:{{ b.color }}"></i>{{ b.label }} · {{ b.amount }} ({{ b.pct }}%)</span>{% endfor %}</div>
+      </div>
+      {% if aging.top_overdue %}
+      <div><table class="rows"><tr><th>Top overdue customer</th><th class="n">Balance</th></tr>
+      {% for t in aging.top_overdue %}<tr><td>{{ t.customer }}</td><td class="n">{{ t.amount }}</td></tr>{% endfor %}</table></div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card trust" style="animation-delay:720ms">
     <div class="item"><span class="k {{ 'ok' if recon_ok else 'crit' }}">{{ '✓' if recon_ok else '✗' }}</span>
       <span class="t">source reconciliation</span></div>
     <div class="item"><span class="k {{ 'warnc' if dq else 'ok' }}">{{ dq }}</span><span class="t">data-quality notes</span></div>
@@ -386,6 +408,20 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
                      "pct_bar": max(4, min(100, t["pct"] / top1 * 100))} for t in conc["top"]],
         }
 
+    aging = kpis.get("aging")
+    aging_ctx = None
+    if aging:
+        seg = {"current": GOOD, "1-30": BLUE, "31-60": WARN, "61-90": SERIOUS, "90+": CRIT}
+        aging_ctx = {
+            "total": f"{aging['total']:,.0f}", "n_invoices": aging["n_invoices"],
+            "overdue_pct": aging["overdue_pct"], "over90_pct": aging["over90_pct"],
+            "color": CRIT if aging["overdue_pct"] >= 40 else (WARN if aging["overdue_pct"] >= 20 else GOOD),
+            "buckets": [{"label": b["bucket"], "amount": f"{b['amount']:,.0f}", "pct": b["pct"],
+                         "color": seg.get(b["bucket"], MUTED)} for b in aging["buckets"]],
+            "top_overdue": [{"customer": t["customer"], "amount": f"{t['amount']:,.0f}"}
+                            for t in aging["top_overdue"][:5]],
+        }
+
     return _TPL.render(
         company=cfg.company_alias, week=kpis["this_week"], profile=profile.name,
         generated=f"{dt.datetime.now():%Y-%m-%d %H:%M}",
@@ -396,6 +432,7 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
         findings=[{"icon": ICON[f["tone"]], "color": TONE[f["tone"]], "text": f["text"]} for f in findings],
         stock=stock,
         conc=conc_ctx,
+        aging=aging_ctx,
         recon_ok=recon_ok, dq=len(extraction.issues), audited=len(auditor.entries),
         rows_total=f"{rows_total:,}",
         trust_line=("All entities reconcile with source counts."

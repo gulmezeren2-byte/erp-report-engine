@@ -62,7 +62,9 @@ def test_weekly_report_carries_the_honesty_payload(demo_cfg):
 def test_reconcile_reports_a_verdict(demo_cfg):
     r = _reconcile(demo_cfg)
     assert r["verdict"] in ("OK", "MISMATCH - do not trust the numbers")
-    assert set(r["reconciliation"]) == {"orders", "order_lines", "inventory"}
+    # required entities always reconcile; the demo profile also maps receivables
+    assert {"orders", "order_lines", "inventory"} <= set(r["reconciliation"])
+    assert "receivables" in r["reconciliation"]
 
 
 def test_build_server_registers_tools(demo_cfg):

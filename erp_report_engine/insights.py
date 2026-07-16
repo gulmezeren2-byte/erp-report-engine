@@ -67,6 +67,20 @@ def build(kpis: dict, frames: dict, low_cover_weeks: float,
             ),
         })
 
+    aging = kpis.get("aging")
+    if aging and (aging["overdue_pct"] >= 25.0 or aging["over90_pct"] >= 10.0):
+        worst = aging["top_overdue"][0] if aging["top_overdue"] else None
+        worst_txt = f" Largest overdue: {worst['customer']} ({worst['amount']:,.0f})." if worst else ""
+        out.append({
+            "tone": "warn",
+            "text": (
+                f"Receivables: {aging['overdue_pct']:.0f}% of open AR is overdue "
+                f"({aging['overdue']:,.0f} of {aging['total']:,.0f}), "
+                f"{aging['over90_pct']:.0f}% is 90+ days.{worst_txt} "
+                f"Chase the oldest balances before they age further."
+            ),
+        })
+
     # SPC: separate genuine signals from week-to-week noise, each with its arithmetic.
     out += spc.signals(kpis)
 

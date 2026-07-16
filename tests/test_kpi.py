@@ -13,7 +13,7 @@ import datetime as dt
 import pandas as pd
 
 from erp_report_engine import insights
-from erp_report_engine.kpi import compute
+from erp_report_engine.kpi import _aging, compute
 
 
 def _frames(week_revenue: dict[int, float], year: int = 2026):
@@ -134,3 +134,34 @@ def test_concentration_finding_fires_on_risk_and_is_silent_when_diversified():
                                              "top1_pct": 9.0, "top3_pct": 24.0, "hhi": 620, "top": []}}
     assert not any("concentration" in f["text"].lower()
                    for f in insights.build(diversified, {}, low_cover_weeks=2.0))
+
+
+def test_receivables_aging_buckets_are_inclusive_at_the_edges():
+    as_of = dt.date(2026, 7, 16)
+
+    def due(days_overdue: int) -> str:            # due_date giving exactly this overdue
+        return (as_of - dt.timedelta(days=days_overdue)).isoformat()
+
+    rec = pd.DataFrame([
+        ("A", "C1", due(-5), 100.0), ("B", "C1", due(0), 100.0),    # current (<= 0)
+        ("C", "C2", due(1), 100.0), ("D", "C2", due(30), 100.0),    # 1-30
+        ("E", "C3", due(31), 100.0), ("F", "C3", due(60), 100.0),   # 31-60
+        ("G", "C4", due(61), 100.0), ("H", "C4", due(90), 100.0),   # 61-90
+        ("I", "C5", due(91), 100.0), ("J", "C5", due(200), 300.0),  # 90+
+    ], columns=["invoice_id", "customer", "due_date", "open_amount"])
+
+    a = _aging(rec, as_of)
+    b = {x["bucket"]: x["amount"] for x in a["buckets"]}
+    assert b == {"current": 200.0, "1-30": 200.0, "31-60": 200.0, "61-90": 200.0, "90+": 400.0}
+    assert a["total"] == 1200.0 and a["overdue"] == 1000.0 and a["over90"] == 400.0
+    assert a["top_overdue"][0] == {"customer": "C5", "amount": 400.0}   # worst overdue first
+
+
+def test_aging_is_none_without_usable_receivables():
+    assert _aging(None, dt.date(2026, 7, 16)) is None
+    empty = pd.DataFrame(columns=["invoice_id", "customer", "due_date", "open_amount"])
+    assert _aging(empty, dt.date(2026, 7, 16)) is None
+    # a frame with only unusable rows (no due date / non-positive) also yields None
+    junk = pd.DataFrame([("X", "C", None, 100.0), ("Y", "C", "2026-01-01", -5.0)],
+                        columns=["invoice_id", "customer", "due_date", "open_amount"])
+    assert _aging(junk, dt.date(2026, 7, 16)) is None

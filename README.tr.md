@@ -219,10 +219,10 @@ pip install pytest && python -m pytest tests/ -v
 
 ## Yol haritası
 
-Tamamlananlar: bekçili MCP sunucusu, SPC/XmR anomali katmanı, yerel teslimat (SMTP/Slack/Teams/healthchecks), deklaratif profil kontratları ve Netsis profili. Sıradaki:
+Tamamlananlar: bekçili MCP sunucusu, SPC/XmR anomali katmanı, yerel teslimat (SMTP/Slack/Teams/healthchecks), deklaratif profil kontratları, Netsis profili, ciro yoğunlaşma analizi (top-3 payı + HHI), opsiyonel kanonik varlık olarak **cari yaşlandırma (receivables aging)**, DAX SVG mikro-grafikleri ve şema-doğrulanmış koyu Power BI teması. Sıradaki:
 
 - `profiles/mikro.yaml` — üçüncü Türk ERP eşlemesi
-- Cari yaşlandırma varlıkları — Türkiye'de #1 talep edilen rapor (sipariş/stok kanonundan öte)
+- Gerçek ERP cari eşlemeleri (Logo/Netsis cari defterleri) — generic profilin zaten gösterdiği aynı opsiyonel `receivables` varlığının arkasında
 - LLM-opsiyonel anlatı katmanı: yalnız agregalardan üretilen yönetici özeti (asla ham satır değil), "modelin gördüğü" ekiyle
 - Birinci-parti ajan skill paketi (`erp-safe-query`, `explain-kpi-move`, `write-erp-profile`)
 

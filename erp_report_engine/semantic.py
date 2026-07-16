@@ -12,6 +12,11 @@ Canonical entities and their required output columns:
     order_lines:  order_id, item_code, qty
     inventory:    item_code, stock_qty
 
+Optional entities (mapped only if the profile defines them; everything
+downstream degrades gracefully when they are absent):
+
+    receivables:  invoice_id, customer, due_date, open_amount
+
 Profile YAML shape:
 
     profile: logo_tiger
@@ -49,6 +54,13 @@ REQUIRED_COLUMNS: dict[str, list[str]] = {
     "inventory": ["item_code", "stock_qty"],
 }
 
+# Entities a profile MAY map; extracted only when present, and every consumer
+# (aging analysis, report sections, Power BI export) is written to no-op without
+# them - so an ERP with no accessible AR ledger still produces the full report.
+OPTIONAL_COLUMNS: dict[str, list[str]] = {
+    "receivables": ["invoice_id", "customer", "due_date", "open_amount"],
+}
+
 _SAFE_VAR = re.compile(r"^[A-Za-z0-9_]{1,16}$")
 
 
@@ -64,12 +76,18 @@ class Profile:
         self.description = raw.get("description", "")
         self.contract: dict = raw.get("contract") or {}   # optional declarative checks
         self.entities: dict[str, str] = {}
+        self.optional_entities: set[str] = set()
         ents = raw.get("entities") or {}
         for entity in REQUIRED_COLUMNS:
             spec = ents.get(entity)
             if not spec or not spec.get("query"):
                 raise ProfileError(f"{path}: entity '{entity}' with a query is required")
             self.entities[entity] = spec["query"]
+        for entity in OPTIONAL_COLUMNS:
+            spec = ents.get(entity)
+            if spec and spec.get("query"):
+                self.entities[entity] = spec["query"]
+                self.optional_entities.add(entity)
 
     def render(self, entity: str, profile_vars: dict[str, str]) -> str:
         sql = self.entities[entity]

@@ -15,7 +15,7 @@ import pandas as pd
 from .config import Config
 from .connect import Auditor, safe_read, scalar
 from .errors import ContractError
-from .semantic import REQUIRED_COLUMNS, Profile
+from .semantic import OPTIONAL_COLUMNS, REQUIRED_COLUMNS, Profile
 
 
 @dataclass
@@ -39,12 +39,14 @@ def extract_all(engine, auditor: Auditor, profile: Profile, cfg: Config) -> Extr
     ex.since = wc.monday_of(ex.as_of) - dt.timedelta(weeks=cfg.lookback_weeks + 1)
     since = ex.since.isoformat()
 
-    for entity in ("orders", "order_lines", "inventory"):
+    all_columns = {**REQUIRED_COLUMNS, **OPTIONAL_COLUMNS}
+    # required entities first, then any optional ones the profile actually maps
+    for entity in ("orders", "order_lines", "inventory", *sorted(profile.optional_entities)):
         sql = profile.render(entity, cfg.profile_vars)
         params = {"since": since} if ":since" in sql else {}
         df = safe_read(engine, auditor, entity, sql, params, cfg.row_cap)
 
-        missing = [c for c in REQUIRED_COLUMNS[entity] if c not in df.columns]
+        missing = [c for c in all_columns[entity] if c not in df.columns]
         if missing:
             raise ContractError(
                 f"profile '{profile.name}' entity '{entity}' is missing required columns: {missing}"
@@ -62,6 +64,8 @@ def extract_all(engine, auditor: Auditor, profile: Profile, cfg: Config) -> Extr
         ex.frames[entity] = df
 
     _quality_gate(ex)
+    if "receivables" in ex.frames:
+        _receivables_gate(ex)
 
     # declarative profile contracts (optional `contract:` block), reported in
     # the same gate; `fail`-severity violations trip --strict.
@@ -120,3 +124,26 @@ def _quality_gate(ex: Extraction) -> None:
         ex.issues.append(f"order_lines: {orphan} lines reference orders outside the window (ignored)")
 
     ex.frames["orders"] = o
+
+
+def _receivables_gate(ex: Extraction) -> None:
+    """Clean and audit the optional receivables frame the same way as orders:
+    dedupe invoices, flag unparseable due dates and negative (credit) balances.
+    The aging analysis then scores only positive, dated open balances."""
+    r = ex.frames["receivables"].copy()
+    r["due_date"] = pd.to_datetime(r["due_date"], errors="coerce")
+    r["open_amount"] = pd.to_numeric(r["open_amount"], errors="coerce")
+
+    dupes = int(r.duplicated(subset=["invoice_id"]).sum())
+    if dupes:
+        r = r.drop_duplicates(subset=["invoice_id"], keep="first")
+        ex.issues.append(f"receivables: {dupes} duplicated invoice_id rows collapsed to one")
+    bad_due = int(r.due_date.isna().sum())
+    if bad_due:
+        ex.issues.append(f"receivables: {bad_due} rows with unparseable due_date (excluded from aging)")
+    neg = int((r.open_amount < 0).sum())
+    if neg:
+        ex.issues.append(
+            f"receivables: {neg} rows with negative open_amount (credit balances? excluded from aging)")
+
+    ex.frames["receivables"] = r

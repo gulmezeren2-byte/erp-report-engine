@@ -46,6 +46,8 @@ def build(target_dir: str | Path | None = None, today: dt.date | None = None) ->
           status TEXT, promised_date TEXT, actual_ship_date TEXT, net_total REAL);
         CREATE TABLE order_lines (order_id TEXT, item_code TEXT, qty REAL);
         CREATE TABLE inventory (item_code TEXT, stock_qty REAL);
+        CREATE TABLE receivables (
+          invoice_id TEXT, customer TEXT, due_date TEXT, open_amount REAL);
         """
     )
 
@@ -107,6 +109,35 @@ def build(target_dir: str | Path | None = None, today: dt.date | None = None) ->
         cover = rng.uniform(0.8, 2.0) if i < 5 else rng.uniform(2.5, 10)
         inv.append((it, round(wk * cover, 1)))
     cur.executemany("INSERT INTO inventory VALUES (?,?)", inv)
+
+    # Open receivables with a realistic aging spread (mostly current, a tail of
+    # long-overdue), so the aging analysis has all buckets. A few are dirty on
+    # purpose (missing due date, a credit balance, a duplicate) - honest work for
+    # the receivables quality gate, same as the orders dirt above.
+    receivables = []
+    inv_id = 0
+    for cust in CUSTOMERS:
+        for _ in range(int(rng.integers(2, 7))):
+            inv_id += 1
+            u = rng.random()
+            if u < 0.55:
+                overdue = int(rng.integers(-30, 10))     # not yet due / just due
+            elif u < 0.78:
+                overdue = int(rng.integers(10, 40))      # 1-30
+            elif u < 0.90:
+                overdue = int(rng.integers(40, 70))      # 31-60
+            elif u < 0.97:
+                overdue = int(rng.integers(70, 100))     # 61-90
+            else:
+                overdue = int(rng.integers(100, 190))    # 90+
+            due = today - dt.timedelta(days=overdue)
+            receivables.append((f"INV-{inv_id:05d}", cust, due.isoformat(),
+                                round(float(rng.uniform(500, 12000)), 2)))
+    receivables.append(("INV-NULLDUE", "Musteri-05", None, 3400.0))          # missing due date
+    receivables.append(("INV-CREDIT-1", "Musteri-08", today.isoformat(), -1500.0))  # credit balance
+    receivables.append(receivables[0])                                        # duplicate invoice_id
+    cur.executemany("INSERT INTO receivables VALUES (?,?,?,?)", receivables)
+
     conn.commit()
     conn.close()
 
@@ -126,7 +157,8 @@ limits:
 """
     cfg_path = target / "config.demo.yaml"
     cfg_path.write_text(cfg, encoding="utf-8")
-    print(f"demo.db: {len(orders):,} orders, {len(lines):,} lines, {len(inv)} items -> {cfg_path}")
+    print(f"demo.db: {len(orders):,} orders, {len(lines):,} lines, {len(inv)} items, "
+          f"{len(receivables):,} receivables -> {cfg_path}")
     return cfg_path
 
 

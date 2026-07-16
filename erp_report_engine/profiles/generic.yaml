@@ -15,6 +15,10 @@ contract:
   order_lines:
     severity: warn
     relationships: {order_id: orders}   # every line must belong to an order in the window
+  receivables:                          # only checked when the profile maps receivables
+    severity: warn
+    unique: invoice_id
+    not_null: [invoice_id, due_date, open_amount]
 
 entities:
   orders:
@@ -47,3 +51,15 @@ entities:
         i.item_code,
         i.stock_qty
       FROM inventory i
+
+  # Optional: open receivables (accounts-receivable ledger). Present here so the
+  # demo shows the aging analysis; a profile that can't reach AR simply omits it.
+  receivables:
+    query: |
+      SELECT
+        r.invoice_id,
+        r.customer,
+        r.due_date,
+        r.open_amount
+      FROM receivables r
+      WHERE r.open_amount <> 0

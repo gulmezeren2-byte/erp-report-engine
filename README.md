@@ -221,10 +221,10 @@ The suite covers the read-only guard (a battery of injection attempts), profile 
 
 ## Roadmap
 
-Shipped: the guarded MCP server, the SPC/XmR anomaly layer, native delivery (SMTP/Slack/Teams/healthchecks), declarative profile contracts, and the Netsis profile. Next:
+Shipped: the guarded MCP server, the SPC/XmR anomaly layer, native delivery (SMTP/Slack/Teams/healthchecks), declarative profile contracts, the Netsis profile, revenue-concentration analysis (top-3 share + HHI), **receivables aging (cari yaşlandırma)** as an optional canonical entity, DAX SVG micro-charts, and a schema-validated dark Power BI theme. Next:
 
 - `profiles/mikro.yaml` — a third Turkish ERP mapping
-- Receivables/aging entities (cari yaşlandırma) — the #1 requested Turkish report, beyond the orders/inventory canon
+- Real-ERP receivables mappings (Logo/Netsis cari ledgers) behind the same optional `receivables` entity the generic profile already demos
 - LLM-optional narrative layer: an executive summary generated from aggregates only (never raw rows), with a "what the model saw" appendix
 - A first-party agent skill pack (`erp-safe-query`, `explain-kpi-move`, `write-erp-profile`)
 

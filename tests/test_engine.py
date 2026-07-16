@@ -49,9 +49,16 @@ def test_guard_allows_real_read_queries():
 
 # ---------------------------------------------------------- profiles --------
 def test_profiles_load_and_are_read_only():
+    from erp_report_engine.semantic import OPTIONAL_COLUMNS
     for name in ("generic", "logo_tiger", "netsis"):   # bundled by name, no path
         prof = load_profile(name)
-        assert set(prof.entities) == {"orders", "order_lines", "inventory"}
+        # the three required entities are always mapped; extras are optional ones
+        assert {"orders", "order_lines", "inventory"} <= set(prof.entities)
+        assert set(prof.entities) <= {"orders", "order_lines", "inventory", *OPTIONAL_COLUMNS}
+        assert prof.optional_entities <= set(OPTIONAL_COLUMNS)
+
+    # the generic (demo) profile maps the optional receivables entity
+    assert "receivables" in load_profile("generic").optional_entities
 
 
 def test_bundled_profiles_discoverable():

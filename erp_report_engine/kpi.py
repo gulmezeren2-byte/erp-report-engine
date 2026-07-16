@@ -47,6 +47,59 @@ def _concentration(o: pd.DataFrame, weeks: list[str], value_col: str = "net_tota
     }
 
 
+_AGING_BUCKETS = ("current", "1-30", "31-60", "61-90", "90+")
+
+
+def _bucket(days: int) -> str:
+    if days <= 0:
+        return "current"
+    if days <= 30:
+        return "1-30"
+    if days <= 60:
+        return "31-60"
+    if days <= 90:
+        return "61-90"
+    return "90+"
+
+
+def _aging(rec: pd.DataFrame | None, as_of: dt.date) -> dict | None:
+    """Receivables aging as of the report date: open balances bucketed by days
+    past due (current / 1-30 / 31-60 / 61-90 / 90+), the overdue share, and the
+    customers who owe the most overdue. Scores only positive, dated balances -
+    the extraction gate already flagged the rest."""
+    if rec is None or len(rec) == 0:
+        return None
+    r = rec.copy()
+    r["due_date"] = pd.to_datetime(r["due_date"], errors="coerce")
+    r["open_amount"] = pd.to_numeric(r["open_amount"], errors="coerce")
+    r = r[r["due_date"].notna() & (r["open_amount"] > 0)]
+    if r.empty:
+        return None
+
+    r["overdue_days"] = (pd.Timestamp(as_of) - r["due_date"]).dt.days
+    r["bucket"] = r["overdue_days"].apply(_bucket)
+    by_bucket = r.groupby("bucket")["open_amount"].sum()
+    total = float(r["open_amount"].sum())
+    overdue = float(r.loc[r["overdue_days"] > 0, "open_amount"].sum())
+    over90 = float(by_bucket.get("90+", 0.0))
+    by_cust = (r.loc[r["overdue_days"] > 0].groupby("customer")["open_amount"].sum()
+               .sort_values(ascending=False))
+    return {
+        "as_of": as_of.isoformat(),
+        "n_invoices": int(len(r)),
+        "total": round(total, 2),
+        "overdue": round(overdue, 2),
+        "overdue_pct": round(overdue / total * 100, 1) if total else 0.0,
+        "over90": round(over90, 2),
+        "over90_pct": round(over90 / total * 100, 1) if total else 0.0,
+        "buckets": [{"bucket": b, "amount": round(float(by_bucket.get(b, 0.0)), 2),
+                     "pct": round(float(by_bucket.get(b, 0.0)) / total * 100, 1) if total else 0.0}
+                    for b in _AGING_BUCKETS],
+        "top_overdue": [{"customer": str(k), "amount": round(float(v), 2)}
+                        for k, v in by_cust.head(6).items()],
+    }
+
+
 def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.date) -> dict:
     o = frames["orders"].copy()
     o = o[o.order_date.notna()]
@@ -121,5 +174,6 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
         ],
         "n_low_cover": int(len(low)),
         "concentration": _concentration(o, trend_weeks),
+        "aging": _aging(frames.get("receivables"), as_of),
         "_dims": {"orders_frame": o, "this_w": this_w, "prev_w": prev_w},
     }
