@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+from . import spc
+
 
 def build(kpis: dict, frames: dict, low_cover_weeks: float,
           rev_threshold_pct: float = 5.0, otp_threshold_pts: float = 1.5) -> list[dict]:
@@ -50,6 +52,9 @@ def build(kpis: dict, frames: dict, low_cover_weeks: float,
                 f"(worst first: {top}). Review replenishment before the weekend."
             ),
         })
+
+    # SPC: separate genuine signals from week-to-week noise, each with its arithmetic.
+    out += spc.signals(kpis)
 
     if not out:
         out.append({"tone": "good", "text": "No significant week-over-week movements — steady week."})

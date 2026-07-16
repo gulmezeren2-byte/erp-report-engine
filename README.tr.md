@@ -37,6 +37,7 @@ Her komut `python -m erp_report_engine …` olarak da çalışır. Veritabanı s
 |---|---|
 | KPI kartları | Ciro, sipariş, zamanında sevkiyat %, düşük stok sayısı — hem geçen haftaya **hem** 8 haftalık taban çizgisine karşı |
 | Bulgular | *"Ciro +%25,4 — ana sürücü: 'Ege' bölgesi (hareketin %111'i)"* — sürücü isimli, aksiyon önerili |
+| Sinyaller (SPC) | *"Ciro sinyali: 148.291 kontrol limitlerinin ÜSTÜNDE (UCL 143.078 = ortalama 93.168 ± 2,66 × ort. hareketli menzil 18.763)"* — gerçek bir kayma, haftalık gürültüden ayrılmış, aritmetiğiyle |
 | Trendler | 13 tam haftalık ciro ve zamanında sevkiyat, satır-içi SVG (harici varlık yok) |
 | Stok dikkat listesi | Karşılama eşiğinin altındaki kalemler, en kötüsü başta |
 | Veri kalitesi kapısı | Mükerrer ID, okunamayan tarih, eksi tutar, siparişten önce sevkiyat |

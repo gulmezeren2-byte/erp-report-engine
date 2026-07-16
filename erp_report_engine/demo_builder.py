@@ -62,7 +62,7 @@ def build(target_dir: str | Path | None = None, today: dt.date | None = None) ->
         weekday_factor = 0.3 if d.weekday() == 6 else (0.6 if d.weekday() == 5 else 1.0)
         for region, w in zip(REGIONS, REGION_W, strict=True):
             spike = region == "Ege" and d >= last_week_start
-            lam = 6 * w * weekday_factor * (1.6 if spike else 1.0)
+            lam = 6 * w * weekday_factor * (2.6 if spike else 1.0)
             for _ in range(rng.poisson(lam)):
                 oid += 1
                 order_id = f"SO-{oid:06d}"

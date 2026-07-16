@@ -37,6 +37,7 @@ Open `reports/erp_report_<week>.html`. You'll see the engine catch a revenue spi
 |---|---|
 | KPI cards | Revenue, orders, on-time %, low-stock count — each vs last week **and** vs an 8-week baseline |
 | Findings | *"Revenue +25.4% — main driver: region 'Ege' (111% of the move)"* — driver named, action suggested |
+| Signals (SPC) | *"Revenue signal: 148,291 is ABOVE the control limits (UCL 143,078 = mean 93,168 ± 2.66 × avg moving range 18,763)"* — a genuine shift, separated from week-to-week noise, with the arithmetic shown |
 | Trends | 13 full weeks of revenue and on-time %, inline SVG (no external assets) |
 | Stock attention list | Items below the cover threshold, worst first |
 | Data-quality gate | Duplicate IDs, unparseable dates, negative totals, ship-before-order rows |
