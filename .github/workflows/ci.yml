@@ -27,5 +27,9 @@ jobs:
           pip install -e ".[dev]"
       - name: Lint (ruff)
         run: python -m ruff check erp_report_engine demo tests
-      - name: Test (guard, contracts, calendar, render, end-to-end on demo DB)
+      - name: Test (guard, contracts, calendar, render, MCP, end-to-end on demo DB)
         run: python -m pytest tests/ -q
+      - name: PBIR is generated, not hand-edited (no drift)
+        run: |
+          python "powerbi/tools/generate_report_pages.py"
+          git diff --exit-code -- "powerbi/ERP Command Center.Report"
