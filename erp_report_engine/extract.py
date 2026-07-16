@@ -25,6 +25,7 @@ class Extraction:
     reconciliation: dict[str, dict] = field(default_factory=dict)
     since: dt.date | None = None
     as_of: dt.date | None = None
+    contract_failures: list[str] = field(default_factory=list)
 
 
 def extract_all(engine, auditor: Auditor, profile: Profile, cfg: Config) -> Extraction:
@@ -61,6 +62,14 @@ def extract_all(engine, auditor: Auditor, profile: Profile, cfg: Config) -> Extr
         ex.frames[entity] = df
 
     _quality_gate(ex)
+
+    # declarative profile contracts (optional `contract:` block), reported in
+    # the same gate; `fail`-severity violations trip --strict.
+    from . import contracts
+    for severity, text in contracts.evaluate(profile, ex.frames):
+        ex.issues.append(text)
+        if severity == "fail":
+            ex.contract_failures.append(text)
     return ex
 
 

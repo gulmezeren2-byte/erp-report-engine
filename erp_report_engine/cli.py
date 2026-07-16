@@ -35,9 +35,7 @@ def cmd_validate(args) -> None:
         "data_quality_issues": rr.extraction.issues,
         "verdict": "OK - ready to run" if not rr.mismatches else "check issues",
     }, indent=2, ensure_ascii=False))
-    if args.strict and rr.mismatches:
-        raise DataQualityError(
-            f"--strict: {len(rr.mismatches)} reconciliation mismatch(es) - do not trust the numbers")
+    _strict_gate(args, rr)
 
 
 def cmd_run(args) -> None:
@@ -58,8 +56,7 @@ def cmd_run(args) -> None:
             cfg, week=rr.kpis["this_week"], findings=out["findings"], html=rr.html)
         _log.info("delivery: %s", out["delivery"])
     print(json.dumps(out, indent=2, ensure_ascii=False))
-    if args.strict and rr.mismatches:
-        raise DataQualityError("--strict: reconciliation mismatch - the report was written but do not trust it")
+    _strict_gate(args, rr, wrote=True)
 
 
 def cmd_export_powerbi(args) -> None:
@@ -93,6 +90,17 @@ def cmd_mcp(args) -> None:
 
     _log.info("starting MCP server (stdio) with config %s", args.config)
     serve(args.config)
+
+
+def _strict_gate(args, rr, *, wrote: bool = False) -> None:
+    """Under --strict, a reconciliation mismatch or a fail-severity contract
+    violation is a hard failure (exit 5)."""
+    if not args.strict:
+        return
+    reasons = list(rr.mismatches) + list(rr.extraction.contract_failures)
+    if reasons:
+        tail = " (the report was written but do not trust it)" if wrote else ""
+        raise DataQualityError(f"--strict: {len(reasons)} blocking issue(s){tail}: {reasons[0]}")
 
 
 def _safe_dsn(url: str) -> str:

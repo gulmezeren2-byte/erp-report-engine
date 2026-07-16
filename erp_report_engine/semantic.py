@@ -62,6 +62,7 @@ class Profile:
         self.name = raw.get("profile") or "unnamed"
         self.dialect = raw.get("dialect", "any")
         self.description = raw.get("description", "")
+        self.contract: dict = raw.get("contract") or {}   # optional declarative checks
         self.entities: dict[str, str] = {}
         ents = raw.get("entities") or {}
         for entity in REQUIRED_COLUMNS:

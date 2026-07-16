@@ -17,7 +17,8 @@ If you know the schema of Netsis, Mikro, SAP B1, Odoo, Dynamics or any other ERP
 2. Map your ERP's tables to the canonical columns in `erp_report_engine/semantic.py::REQUIRED_COLUMNS`.
 3. Use `{vars}` only for schema identifiers (firm/period numbers), `:since` for the date filter, single statement per entity, no comments.
 4. Add **field notes** in the description: which ERP versions you verified against, which fields vary, what a user must check before trusting it.
-5. `python -m pytest tests/` must pass (load-time validation covers your profile automatically).
+5. *(optional)* Add a `contract:` block — declarative expectations (`not_null`, `unique`, `accepted_values`, `relationships`, `min_rows`) checked over the extracted data and reported in the quality gate; `severity: fail` trips `run --strict`. See `erp_report_engine/profiles/generic.yaml`.
+6. `python -m pytest tests/` must pass (load-time validation covers your profile automatically).
 
 ## Bug reports and features
 

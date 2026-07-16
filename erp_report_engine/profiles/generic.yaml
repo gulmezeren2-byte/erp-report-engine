@@ -4,6 +4,18 @@ description: >
   Canonical demo schema - the shape every profile must map its ERP into.
   Used by the bundled demo database; also a template for writing new profiles.
 
+# Optional declarative contract: expectations checked over the extracted data
+# and reported in the same quality gate. severity 'fail' trips `run --strict`.
+contract:
+  orders:
+    severity: warn
+    not_null: [order_id, order_date, net_total]
+    accepted_values:
+      status: [open, shipped, delivered, closed, cancelled]
+  order_lines:
+    severity: warn
+    relationships: {order_id: orders}   # every line must belong to an order in the window
+
 entities:
   orders:
     query: |
