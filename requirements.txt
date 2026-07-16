@@ -1,5 +1,9 @@
-pandas>=2.2
+# Runtime dependencies are declared authoritatively in pyproject.toml.
+# This file mirrors them for `pip install -r requirements.txt` convenience;
+# prefer `pip install -e ".[dev]"` for development.
+pandas>=2.2,<3
 numpy>=1.26
-sqlalchemy>=2.0
+sqlalchemy>=2.0,<3
 pyyaml>=6.0
-matplotlib>=3.8
+matplotlib>=3.8,<4
+jinja2>=3.1
