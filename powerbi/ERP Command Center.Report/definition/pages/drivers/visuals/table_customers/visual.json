@@ -51,11 +51,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "Revenue (Prev Week)"
+                  "Property": "Revenue WoW %"
                 }
               },
-              "queryRef": "_Measures.Revenue (Prev Week)",
-              "nativeQueryRef": "Revenue (Prev Week)"
+              "queryRef": "_Measures.Revenue WoW %",
+              "nativeQueryRef": "Revenue WoW %"
             },
             {
               "field": {
@@ -65,11 +65,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "Revenue WoW %"
+                  "Property": "Revenue Sparkline"
                 }
               },
-              "queryRef": "_Measures.Revenue WoW %",
-              "nativeQueryRef": "Revenue WoW %"
+              "queryRef": "_Measures.Revenue Sparkline",
+              "nativeQueryRef": "Revenue Sparkline"
             }
           ]
         }
@@ -89,7 +89,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Customers \u2014 last full week vs previous'"
+                  "Value": "'Customers \u2014 this week, WoW and 13-week trend'"
                 }
               }
             }

@@ -206,6 +206,129 @@ table _Measures
 		displayFolder: 3. Alerts
 		lineageTag: 67a9115c-0012-4000-8000-000000000012
 
+	/// 13-week revenue trend drawn as an inline SVG (dataCategory ImageUrl).
+	/// Respects filter context, so in a table it draws one sparkline per row.
+	measure 'Revenue Sparkline' =
+			VAR _w = 300
+			VAR _h = 72
+			VAR _pad = 6
+			VAR _last = [_Last Full Week Ordinal]
+			VAR _data =
+			    ADDCOLUMNS (
+			        FILTER (
+			            ALL ( DimWeek ),
+			            DimWeek[Week Ordinal] > _last - 13
+			                && DimWeek[Week Ordinal] <= _last
+			                && DimWeek[Is Full Week] = 1
+			        ),
+			        "@x", DimWeek[Week Ordinal],
+			        "@y", CALCULATE ( [Revenue] )
+			    )
+			VAR _minY = MINX ( _data, [@y] )
+			VAR _maxY = MAXX ( _data, [@y] )
+			VAR _minX = MINX ( _data, [@x] )
+			VAR _maxX = MAXX ( _data, [@x] )
+			VAR _n = COUNTROWS ( _data )
+			VAR _pts =
+			    CONCATENATEX (
+			        _data,
+			        INT ( _pad + DIVIDE ( [@x] - _minX, _maxX - _minX ) * ( _w - 2 * _pad ) + 0.5 )
+			            & "," & INT ( ( _h - _pad ) - DIVIDE ( [@y] - _minY, _maxY - _minY ) * ( _h - 2 * _pad ) + 0.5 ),
+			        " ",
+			        [@x], ASC
+			    )
+			VAR _lastY = MAXX ( FILTER ( _data, [@x] = _maxX ), [@y] )
+			VAR _lastPX = _w - _pad
+			VAR _lastPY = INT ( ( _h - _pad ) - DIVIDE ( _lastY - _minY, _maxY - _minY ) * ( _h - 2 * _pad ) + 0.5 )
+			RETURN
+			    IF (
+			        OR ( _n < 2, _maxY = _minY ),
+			        BLANK (),
+			        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 " & _w & " " & _h & "' preserveAspectRatio='none'>"
+			            & "<polyline points='" & _pad & "," & _h & " " & _pts & " " & _lastPX & "," & _h & "' fill='%233987e5' fill-opacity='0.13' stroke='none'/>"
+			            & "<polyline points='" & _pts & "' fill='none' stroke='%233987e5' stroke-width='3' stroke-linejoin='round' stroke-linecap='round'/>"
+			            & "<circle cx='" & _lastPX & "' cy='" & _lastPY & "' r='4' fill='%23eef2f8'/>"
+			            & "</svg>"
+			    )
+		formatString: 0
+		dataCategory: ImageUrl
+		displayFolder: 4. Micro-charts
+		lineageTag: 67a9115c-0021-4000-8000-000000000021
+
+	/// 13-week on-time% trend as an inline SVG - one sparkline per table row.
+	measure 'On-Time Sparkline' =
+			VAR _w = 300
+			VAR _h = 72
+			VAR _pad = 6
+			VAR _last = [_Last Full Week Ordinal]
+			VAR _data =
+			    ADDCOLUMNS (
+			        FILTER (
+			            ALL ( DimWeek ),
+			            DimWeek[Week Ordinal] > _last - 13
+			                && DimWeek[Week Ordinal] <= _last
+			                && DimWeek[Is Full Week] = 1
+			        ),
+			        "@x", DimWeek[Week Ordinal],
+			        "@y", CALCULATE ( [On-Time %] )
+			    )
+			VAR _minY = MINX ( _data, [@y] )
+			VAR _maxY = MAXX ( _data, [@y] )
+			VAR _minX = MINX ( _data, [@x] )
+			VAR _maxX = MAXX ( _data, [@x] )
+			VAR _n = COUNTROWS ( _data )
+			VAR _pts =
+			    CONCATENATEX (
+			        _data,
+			        INT ( _pad + DIVIDE ( [@x] - _minX, _maxX - _minX ) * ( _w - 2 * _pad ) + 0.5 )
+			            & "," & INT ( ( _h - _pad ) - DIVIDE ( [@y] - _minY, _maxY - _minY ) * ( _h - 2 * _pad ) + 0.5 ),
+			        " ",
+			        [@x], ASC
+			    )
+			VAR _lastY = MAXX ( FILTER ( _data, [@x] = _maxX ), [@y] )
+			VAR _lastPX = _w - _pad
+			VAR _lastPY = INT ( ( _h - _pad ) - DIVIDE ( _lastY - _minY, _maxY - _minY ) * ( _h - 2 * _pad ) + 0.5 )
+			RETURN
+			    IF (
+			        OR ( _n < 2, _maxY = _minY ),
+			        BLANK (),
+			        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 " & _w & " " & _h & "' preserveAspectRatio='none'>"
+			            & "<polyline points='" & _pad & "," & _h & " " & _pts & " " & _lastPX & "," & _h & "' fill='%23199e70' fill-opacity='0.13' stroke='none'/>"
+			            & "<polyline points='" & _pts & "' fill='none' stroke='%23199e70' stroke-width='3' stroke-linejoin='round' stroke-linecap='round'/>"
+			            & "<circle cx='" & _lastPX & "' cy='" & _lastPY & "' r='4' fill='%23eef2f8'/>"
+			            & "</svg>"
+			    )
+		formatString: 0
+		dataCategory: ImageUrl
+		displayFolder: 4. Micro-charts
+		lineageTag: 67a9115c-0022-4000-8000-000000000022
+
+	/// Per-item cover-weeks bar (SVG): red below the cover threshold, green
+	/// above, with an amber tick at the threshold itself.
+	measure 'Cover Bar' =
+			VAR _cover = SELECTEDVALUE ( DimItem[Cover Weeks] )
+			VAR _thr = MAX ( MetaRunInfo[Low Cover Threshold] )
+			VAR _w = 240
+			VAR _h = 32
+			VAR _scaleMax = IF ( _cover > _thr * 3, _cover, _thr * 3 )
+			VAR _barW = INT ( DIVIDE ( _cover, _scaleMax ) * _w + 0.5 )
+			VAR _thrX = INT ( DIVIDE ( _thr, _scaleMax ) * _w + 0.5 )
+			VAR _fill = IF ( _cover < _thr, "%23e66767", "%23199e70" )
+			RETURN
+			    IF (
+			        ISBLANK ( _cover ),
+			        BLANK (),
+			        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 " & _w & " " & _h & "'>"
+			            & "<rect x='0' y='11' width='" & _w & "' height='10' rx='5' fill='%23262e40'/>"
+			            & "<rect x='0' y='11' width='" & _barW & "' height='10' rx='5' fill='" & _fill & "'/>"
+			            & "<line x1='" & _thrX & "' y1='5' x2='" & _thrX & "' y2='27' stroke='%23fab219' stroke-width='2'/>"
+			            & "</svg>"
+			    )
+		formatString: 0
+		dataCategory: ImageUrl
+		displayFolder: 4. Micro-charts
+		lineageTag: 67a9115c-0023-4000-8000-000000000023
+
 	column Value
 		isHidden
 		lineageTag: 67a9115c-0013-4000-8000-000000000013

@@ -1,0 +1,93 @@
+{
+  "$comment": "Reference definition for the ERP Command Center automation flow. It captures the exact trigger, actions, and expressions to reproduce in the Power Automate designer (see POWER-AUTOMATE.md) — or to adapt directly into an Azure Logic App. The load-bearing parts are the request schema and the expressions (triggerBody()?['card'], base64ToBinary(...)); replace every <PLACEHOLDER> with your own team, channel, and SharePoint site.",
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "$connections": {
+        "defaultValue": {},
+        "type": "Object"
+      }
+    },
+    "triggers": {
+      "When_a_HTTP_request_is_received": {
+        "type": "Request",
+        "kind": "Http",
+        "inputs": {
+          "method": "POST",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "source": { "type": "string" },
+              "week": { "type": "string" },
+              "title": { "type": "string" },
+              "findings": { "type": "array", "items": { "type": "string" } },
+              "card": { "type": "object" },
+              "report": {
+                "type": "object",
+                "properties": {
+                  "filename": { "type": "string" },
+                  "contentType": { "type": "string" },
+                  "contentBytesBase64": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions": {
+      "Post_adaptive_card_in_a_channel": {
+        "type": "OpenApiConnection",
+        "runAfter": {},
+        "inputs": {
+          "host": {
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+            "connectionName": "shared_teams",
+            "operationId": "PostCardToConversation"
+          },
+          "parameters": {
+            "poster": "Flow bot",
+            "location": "Channel",
+            "body/recipient/groupId": "<TEAM_ID>",
+            "body/recipient/channelId": "<CHANNEL_ID>",
+            "body/messageBody": "@triggerBody()?['card']"
+          }
+        }
+      },
+      "Archive_report_to_SharePoint": {
+        "type": "OpenApiConnection",
+        "runAfter": {
+          "Post_adaptive_card_in_a_channel": ["Succeeded"]
+        },
+        "inputs": {
+          "host": {
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+            "connectionName": "shared_sharepointonline",
+            "operationId": "CreateFile"
+          },
+          "parameters": {
+            "dataset": "https://<TENANT>.sharepoint.com/sites/<SITE>",
+            "folderPath": "/Shared Documents/ERP Reports",
+            "name": "@triggerBody()?['report']?['filename']",
+            "body": "@base64ToBinary(triggerBody()?['report']?['contentBytesBase64'])"
+          }
+        }
+      },
+      "Respond_200": {
+        "type": "Response",
+        "kind": "Http",
+        "runAfter": {
+          "Archive_report_to_SharePoint": ["Succeeded", "Failed", "Skipped"]
+        },
+        "inputs": {
+          "statusCode": 200,
+          "body": {
+            "status": "ok",
+            "week": "@{triggerBody()?['week']}"
+          }
+        }
+      }
+    }
+  }
+}

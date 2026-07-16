@@ -193,9 +193,9 @@ def main() -> None:
         "table_customers": visual("table_customers", 776, 388, 480, 292, 4000,
                                   table([("column", "FactOrders", "Customer"),
                                          ("measure", MEASURES, "Revenue (This Week)"),
-                                         ("measure", MEASURES, "Revenue (Prev Week)"),
-                                         ("measure", MEASURES, "Revenue WoW %")],
-                                        "Customers — last full week vs previous")),
+                                         ("measure", MEASURES, "Revenue WoW %"),
+                                         ("measure", MEASURES, "Revenue Sparkline")],
+                                        "Customers — this week, WoW and 13-week trend")),
     })
 
     page("stock", "Stock", {
@@ -205,7 +205,8 @@ def main() -> None:
                               table([("column", "DimItem", "Item Code"),
                                      ("column", "DimItem", "Stock Qty"),
                                      ("column", "DimItem", "Avg Weekly Demand"),
-                                     ("column", "DimItem", "Cover Weeks")],
+                                     ("column", "DimItem", "Cover Weeks"),
+                                     ("measure", MEASURES, "Cover Bar")],
                                     "Items — stock, demand and cover")),
         "card_lowcover": visual("card_lowcover", 712, 92, 544, 140, 3000,
                                 card("Low Cover Items", "Items below the cover threshold")),

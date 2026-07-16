@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "properties": {
+    "source": { "type": "string" },
+    "week": { "type": "string" },
+    "title": { "type": "string" },
+    "findings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "card": { "type": "object" },
+    "report": {
+      "type": "object",
+      "properties": {
+        "filename": { "type": "string" },
+        "contentType": { "type": "string" },
+        "contentBytesBase64": { "type": "string" }
+      }
+    }
+  }
+}

@@ -16,6 +16,7 @@ For 143 services behind one URL grammar, install the optional `[notify]` extra
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -36,16 +37,44 @@ def slack_payload(week: str, findings: list[str]) -> dict:
     return {"text": f"*Weekly ERP report — {week}*\n{lines}"}
 
 
-def teams_payload(week: str, findings: list[str]) -> dict:
-    # Power Automate Workflows (the successor to the retired Office 365
-    # connectors) accepts an Adaptive Card wrapped in a message attachment.
+def _adaptive_card(week: str, findings: list[str]) -> dict:
+    """The Adaptive Card body shared by the Teams and Power Automate channels."""
     body = [{"type": "TextBlock", "text": f"Weekly ERP report — {week}",
              "weight": "Bolder", "size": "Large", "wrap": True}]
     body += [{"type": "TextBlock", "text": f, "wrap": True} for f in findings[:6]]
-    card = {"type": "AdaptiveCard", "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    return {"type": "AdaptiveCard", "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
             "version": "1.4", "body": body}
+
+
+def teams_payload(week: str, findings: list[str]) -> dict:
+    # Power Automate Workflows (the successor to the retired Office 365
+    # connectors) accepts an Adaptive Card wrapped in a message attachment.
     return {"type": "message",
-            "attachments": [{"contentType": "application/vnd.microsoft.card.adaptive", "content": card}]}
+            "attachments": [{"contentType": "application/vnd.microsoft.card.adaptive",
+                             "content": _adaptive_card(week, findings)}]}
+
+
+def automation_payload(week: str, findings: list[str], html: str | None = None,
+                       *, include_report: bool = True) -> dict:
+    """A structured payload for a custom Power Automate flow (HTTP-request
+    trigger). It carries the ready-to-post Adaptive Card, the plain findings for
+    other steps (email, logging), and — so the flow can archive to SharePoint or
+    OneDrive — the full HTML report as base64. The shape matches the flow's
+    request JSON schema in automation/POWER-AUTOMATE.md."""
+    payload: dict = {
+        "source": "erp-report-engine",
+        "week": week,
+        "title": f"Weekly ERP report — {week}",
+        "findings": list(findings[:12]),
+        "card": _adaptive_card(week, findings),
+    }
+    if include_report and html is not None:
+        payload["report"] = {
+            "filename": f"report_{week}.html",
+            "contentType": "text/html",
+            "contentBytesBase64": base64.b64encode(html.encode("utf-8")).decode("ascii"),
+        }
+    return payload
 
 
 def _post_json(url: str, payload: dict, timeout: int = 15) -> int:
@@ -113,6 +142,21 @@ def send_report(cfg, *, week: str, findings: list[str], html: str) -> dict:
             results[name] = f"error: {type(e).__name__}"
             _log.warning("%s delivery failed: %s", name, e)
             ok = False
+
+    pa = d.get("power_automate")
+    if pa:
+        url = _env(pa.get("webhook_url_env"))
+        if not url:
+            results["power_automate"] = "skipped: webhook_url_env unset"
+        else:
+            try:
+                payload = automation_payload(week, findings, html,
+                                             include_report=bool(pa.get("include_report", True)))
+                results["power_automate"] = f"posted ({_post_json(url, payload)})"
+            except Exception as e:  # noqa: BLE001
+                results["power_automate"] = f"error: {type(e).__name__}"
+                _log.warning("power_automate delivery failed: %s", e)
+                ok = False
 
     hc = d.get("healthcheck") or {}
     hc_url = _env(hc.get("ping_url_env"))

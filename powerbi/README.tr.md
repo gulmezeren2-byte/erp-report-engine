@@ -25,18 +25,20 @@ Hazır bir demo ihracı [`data/`](data/) içinde geliyor; rapor daha ilk yenilem
 
 | Parça | Teknoloji | Ne yapıyor |
 |---|---|---|
-| `ERP Command Center.SemanticModel/` | **TMDL** | Yıldız şema (2 fact, 2 boyut), 4 meta tablo, açıklamalı ve klasörlü 20+ DAX ölçüsü, `discourageImplicitMeasures` |
+| `ERP Command Center.SemanticModel/` | **TMDL** | Yıldız şema (2 fact, 2 boyut), 4 meta tablo, açıklamalı ve klasörlü 23 DAX ölçüsü, `discourageImplicitMeasures` |
 | `Time Shift` tablosu | **Hesaplama grubu** | *Önceki Hafta / Haftalık Değişim / Haftalık % / 8 Haftalık Taban / Tabana Göre %* dönüşümlerini HERHANGİ bir ölçüye uygula — hafta aritmetiği boşluksuz sıra numarasında koşar, yıl sınırında asla kırılmaz |
 | `Selected KPI` tablosu | **Alan parametresi** | Tek grafik, dört KPI — dört kopya görsel yerine izleyici kendisi değiştirir |
-| `ERP Command Center.Report/` | **PBIR** | 4 sayfa, 24 görsel, özel tema — her görsel ayrı ve incelenebilir bir JSON |
+| `Revenue/On-Time Sparkline`, `Cover Bar` | **DAX SVG mikro-grafikleri** | `data:image/svg+xml` döndürüp `dataCategory: ImageUrl` etiketlenen ölçüler — tablo her satıra bir grafik çizer: **müşteri başına 13 haftalık sparkline** ve **ürün başına karşılama çubuğu** (eşiğin altında kırmızı, eşikte amber işaret). Özel görsel yok |
+| `measurement-honesty-theme.json` | **Koyu tema** | Fütüristik koyu tema (Microsoft'un resmi tema şemasına karşı doğrulandı): yuvarlatılmış cam kartlar, yumuşak gölgeler, koyu yüzey için basamaklanmış renk-körü-güvenli kategorik palet |
+| `ERP Command Center.Report/` | **PBIR** | 4 sayfa, 24 görsel, koyu tema — her görsel ayrı ve incelenebilir bir JSON |
 | `tools/generate_report_pages.py` | **Kod-olarak-rapor** | Rapor sayfaları kompakt spec'lerden *üretilir*; yerleşim değişikliği = bir düzenleme + bir çalıştırma |
 | `data/` | CSV yıldız şema | `export-powerbi` tarafından, motorun bekçili-denetimli-salt-okunur yolundan yazılır |
 
 ## Dört sayfa
 
 1. **Overview** — **son tamamlanmış ISO haftasına** çapalı başlık kartları (iki günlük bir hafta asla çöküş gibi görünemez), haftalık ciro ve zamanında sevkiyat trendleri, DAX'in canlı hesapladığı sade dilli *Weekly Verdict* kartı.
-2. **Drivers** — ciro üstünde ayrıştırma ağacı (bölge → müşteri → durum) + haftalık değişim tabloları: hareket nerede yoğunlaşıyor.
-3. **Stock** — karşılama haftası tablosu ve sipariş miktarı sıralaması; düşük-karşılama eşiği DAX'e gömülü değil, motorun config'inden `MetaRunInfo` üzerinden gelir.
+2. **Drivers** — ciro üstünde ayrıştırma ağacı (bölge → müşteri → durum) + haftalık değişim tablosu; burada **her müşteri kendi 13 haftalık ciro sparkline'ını taşır** (DAX'in çizdiği SVG mikro-grafik): hareket nerede yoğunlaşıyor *ve* her hesap oraya nasıl geldi.
+3. **Stock** — **ürün başına karşılama çubuğu** (SVG, eşiğin altında kırmızı) içeren karşılama haftası tablosu ve sipariş miktarı sıralaması; düşük-karşılama eşiği DAX'e gömülü değil, motorun config'inden `MetaRunInfo` üzerinden gelir.
 4. **Trust** — imza sayfa: **kaynak mutabakat sayıları, her veri kalitesi bulgusu ve SQL denetim izinin tamamı** görsel olarak. Pano makbuzlarını gösterir.
 
 ## Tasarımı gereği proaktif
@@ -54,7 +56,7 @@ Model, motorun içgörü kurallarını DAX'te yeniden türetir — `insights.py`
 Proje, Power BI Desktop'ı görmeden önce üç katmanda kontrol edilir:
 
 1. `pytest tests/test_powerbi.py` — ihraç sözleşmesi (benzersiz anahtarlar, boşluksuz hafta sırası, BOM yok) + proje bütünlüğü (sayfa/görsel adlandırma kuralları, **görsel çakışma tespiti**, tema çözümleme, görsellerdeki her varlığın TMDL'de var olması).
-2. [`pbir-cli`](https://pypi.org/project/pbir-cli/): `pbir validate "ERP Command Center.Report" --fields --qa` — resmi JSON şemaları + **yüklü TMDL modele karşı alan bağlama doğrulaması** (41 alan referansı kontrol edildi).
+2. [`pbir-cli`](https://pypi.org/project/pbir-cli/): `pbir validate "ERP Command Center.Report" --fields --qa` — resmi JSON şemaları + **yüklü TMDL modele karşı alan bağlama doğrulaması** (SVG mikro-grafik ölçüleri dahil 42 alan referansı kontrol edildi).
 3. Power BI Desktop açılışta tüm PBIR dosyalarını kendisi de doğrular.
 
 ## Dürüst sınırlar

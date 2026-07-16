@@ -46,5 +46,8 @@ limits:
 #     webhook_url_env: ERP_SLACK_WEBHOOK
 #   teams:                          # Power Automate Workflows URL (connectors retired 2026)
 #     webhook_url_env: ERP_TEAMS_WEBHOOK
+#   power_automate:                 # custom flow: card + archive report (see automation/POWER-AUTOMATE.md)
+#     webhook_url_env: ERP_POWER_AUTOMATE_URL
+#     include_report: true          # send the HTML report (base64) so the flow can archive it
 #   healthcheck:                    # healthchecks.io dead-man's-switch
 #     ping_url_env: ERP_HEALTHCHECK_URL

@@ -70,6 +70,20 @@
               },
               "queryRef": "DimItem.Cover Weeks",
               "nativeQueryRef": "Cover Weeks"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Cover Bar"
+                }
+              },
+              "queryRef": "_Measures.Cover Bar",
+              "nativeQueryRef": "Cover Bar"
             }
           ]
         }
