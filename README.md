@@ -33,6 +33,10 @@ Open `reports/erp_report_<week>.html`. You'll see the engine catch a revenue spi
 
 **▶ See a live sample report: [gulmezeren2-byte.github.io/erp-report-engine](https://gulmezeren2-byte.github.io/erp-report-engine/)** (also committed at [`docs/sample-report.html`](docs/sample-report.html)).
 
+Or run `run --dashboard` for the premium **Command Center** — a dark, modern, self-contained dashboard with animated KPIs and glowing SPC control-band charts (**[live](https://gulmezeren2-byte.github.io/erp-report-engine/dashboard.html)**):
+
+![The Command Center dashboard — dark glassmorphic bento grid with SPC control-band charts](assets/dashboard_preview.png)
+
 ## What one run produces
 
 | Section | What it answers |

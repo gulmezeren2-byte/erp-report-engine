@@ -1,0 +1,188 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo Dagitim A.S. — Command Center 2026-W28</title>
+<style>
+ *{box-sizing:border-box}
+ :root{--blue:#3f8ef5;--aqua:#22c197;--violet:#9a8cf0;--ink:#f4f6f8;--ink2:#aab3bd;--muted:#7d8590}
+ body{margin:0;background:#0b0d10;color:var(--ink);position:relative;
+   font-family:system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+ /* ambient aurora - drifting orbs behind the glass */
+ .bg{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+ .orb{position:absolute;border-radius:50%;filter:blur(95px);will-change:transform}
+ .orb.a{width:540px;height:540px;background:#1d4ed8;top:-170px;left:-130px;opacity:.5;animation:drift1 22s ease-in-out infinite}
+ .orb.b{width:470px;height:470px;background:#0e7490;top:18%;right:-150px;opacity:.42;animation:drift2 26s ease-in-out infinite}
+ .orb.c{width:430px;height:430px;background:#6d28d9;bottom:-170px;left:28%;opacity:.36;animation:drift3 30s ease-in-out infinite}
+ @keyframes drift1{50%{transform:translate(60px,40px) scale(1.08)}}
+ @keyframes drift2{50%{transform:translate(-50px,30px) scale(1.1)}}
+ @keyframes drift3{50%{transform:translate(40px,-40px) scale(1.06)}}
+ .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:34px 26px 54px}
+ header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;margin-bottom:22px;
+   animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) both}
+ h1{font-size:23px;margin:0;letter-spacing:.2px;font-weight:650;
+   background:linear-gradient(90deg,#ffffff,#c7d6f0 55%,#9a8cf0);-webkit-background-clip:text;background-clip:text;
+   -webkit-text-fill-color:transparent;color:#fff}
+ .sub{color:var(--ink2);font-size:13px;margin-top:6px}
+ .pills{display:flex;gap:8px;flex-wrap:wrap}
+ .pill{font-size:11px;color:var(--ink2);border:1px solid rgba(255,255,255,.12);
+   background:rgba(255,255,255,.04);border-radius:999px;padding:5px 11px;backdrop-filter:blur(6px)}
+ .pill.live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
+   background:#28c76f;margin-right:6px;box-shadow:0 0 8px #28c76f;vertical-align:middle;animation:pulse 2.4s ease-in-out infinite}
+ @keyframes pulse{0%,100%{box-shadow:0 0 6px #28c76f;opacity:1}50%{box-shadow:0 0 14px #28c76f;opacity:.55}}
+ .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+ .card{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:18px;
+   padding:18px 20px;backdrop-filter:blur(16px);box-shadow:0 8px 40px rgba(0,0,0,.35);
+   opacity:0;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) forwards;transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease}
+ .card:hover{transform:translateY(-3px);border-color:rgba(120,150,240,.4);box-shadow:0 14px 50px rgba(40,70,160,.28)}
+ @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+ .kpi{grid-column:span 3;position:relative;overflow:hidden}
+ .kpi::after{content:"";position:absolute;top:0;left:0;right:0;height:2px;
+   background:linear-gradient(90deg,transparent,var(--accent,var(--blue)),transparent);opacity:.7}
+ .kpi .lbl{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+ .kpi .val{font-size:33px;font-weight:680;margin:8px 0 2px;font-variant-numeric:tabular-nums;line-height:1}
+ .kpi .base{font-size:11.5px;color:var(--muted);margin-top:6px}
+ .delta{font-size:13px;font-weight:600}
+ .verdict{grid-column:span 12;display:flex;gap:16px;align-items:center;
+   background:linear-gradient(120deg,rgba(63,142,245,.16),rgba(154,140,240,.12),rgba(34,193,151,.10));
+   background-size:200% 200%;border-color:rgba(120,150,240,.28);animation:fadeUp .7s both,sheen 9s ease infinite}
+ @keyframes sheen{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+ .verdict .tag{font-size:11px;letter-spacing:.6px;color:var(--violet);text-transform:uppercase}
+ .verdict .txt{font-size:16.5px;line-height:1.45;font-weight:520}
+ .chart{grid-column:span 6}
+ .chart h3,.panel h3{margin:0 0 12px;font-size:13px;color:var(--ink2);font-weight:600;letter-spacing:.3px}
+ .panel{grid-column:span 6}
+ .sig{display:flex;gap:11px;padding:11px 0;border-top:1px solid rgba(255,255,255,.06);font-size:13.5px;line-height:1.5}
+ .sig:first-of-type{border-top:0}
+ .sig .ic{font-size:13px;line-height:1.5}
+ .rows{width:100%;border-collapse:collapse;font-size:12.5px}
+ .rows td,.rows th{padding:8px 6px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06)}
+ .rows th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+ .rows td.n{text-align:right;font-variant-numeric:tabular-nums}
+ .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:5px}
+ .bar>i{display:block;height:100%;border-radius:3px;animation:grow 1s cubic-bezier(.2,.7,.2,1) both}
+ @keyframes grow{from{width:0 !important}}
+ .trust{grid-column:span 12;display:flex;gap:26px;flex-wrap:wrap;align-items:center}
+ .trust .item{display:flex;flex-direction:column;gap:2px}
+ .trust .k{font-size:22px;font-weight:680;font-variant-numeric:tabular-nums}
+ .trust .t{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+ .ok{color:#28c76f}.crit{color:#f0524d}.warnc{color:#fab219}
+ polyline.draw{stroke-dasharray:2600;stroke-dashoffset:2600;animation:draw 1.6s .3s cubic-bezier(.4,0,.2,1) forwards}
+ @keyframes draw{to{stroke-dashoffset:0}}
+ footer{margin-top:22px;color:var(--muted);font-size:11.5px;line-height:1.6;text-align:center}
+ @media(prefers-reduced-motion:reduce){*{animation:none !important}.card{opacity:1}}
+ @media(max-width:820px){.kpi{grid-column:span 6}.chart,.panel{grid-column:span 12}}
+</style></head>
+<body>
+<div class="bg"><div class="orb a"></div><div class="orb b"></div><div class="orb c"></div></div>
+<div class="wrap">
+<header>
+  <div><h1>Demo Dagitim A.S. · Command Center</h1>
+  <div class="sub">Week 2026-W28 · generated 2026-07-16 11:56 · profile generic</div></div>
+  <div class="pills"><span class="pill live">autonomous</span><span class="pill">read-only</span>
+  <span class="pill">every query audited</span></div>
+</header>
+<div class="grid">
+  
+  <div class="card kpi" style="animation-delay:0ms;--accent:#28c76f">
+    <div class="lbl">Revenue (last full week)</div>
+    <div class="val" data-count="148290.97" data-kind="int">148,291</div>
+    <div class="delta" style="color:#28c76f">+26.7%</div>
+    <div class="base">baseline 96,607</div>
+  </div>
+  
+  <div class="card kpi" style="animation-delay:70ms;--accent:#28c76f">
+    <div class="lbl">Orders</div>
+    <div class="val" data-count="57.0" data-kind="int">57</div>
+    <div class="delta" style="color:#28c76f">+35.7%</div>
+    <div class="base">baseline 35</div>
+  </div>
+  
+  <div class="card kpi" style="animation-delay:140ms;--accent:#28c76f">
+    <div class="lbl">On-time shipping</div>
+    <div class="val" data-count="93.47826086956522" data-kind="pct">93.5%</div>
+    <div class="delta" style="color:#28c76f">+5.4 pts</div>
+    <div class="base">order-level OTIF-lite</div>
+  </div>
+  
+  <div class="card kpi" style="animation-delay:210ms;--accent:#fab219">
+    <div class="lbl">Items low on stock</div>
+    <div class="val" data-count="5" data-kind="int">5</div>
+    <div class="delta" style="color:#fab219">action</div>
+    <div class="base">&lt; 2 weeks cover</div>
+  </div>
+  
+
+  <div class="card verdict" style="animation-delay:300ms">
+    <div style="font-size:30px">◉</div>
+    <div><div class="tag">weekly verdict</div><div class="txt">Week 2026-W28: revenue +26.7% week-over-week, on-time 93.5%, 5 item(s) below cover, 3 data-quality note(s).</div></div>
+  </div>
+
+  <div class="card chart" style="animation-delay:360ms"><h3>Revenue · with SPC control band</h3><svg viewBox="0 0 520 150" width="100%" preserveAspectRatio="none" style="display:block;overflow:visible"><defs><linearGradient id="g89500" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f8ef5" stop-opacity="0.42"/><stop offset="1" stop-color="#3f8ef5" stop-opacity="0"/></linearGradient><filter id="g89500g" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect x="8" y="30.1" width="504" height="90.4" fill="#3f8ef5" opacity="0.05" rx="4"/><line x1="8" y1="30.1" x2="512" y2="30.1" stroke="#3f8ef5" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/><line x1="8" y1="120.6" x2="512" y2="120.6" stroke="#3f8ef5" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/><line x1="8" y1="75.4" x2="512" y2="75.4" stroke="#7d8590" stroke-opacity="0.4" stroke-width="1"/><path d="M 8.0,132.0 L 8.0,99.0 L 50.0,81.1 L 92.0,73.7 L 134.0,72.5 L 176.0,75.8 L 218.0,70.0 L 260.0,61.5 L 302.0,95.6 L 344.0,58.8 L 386.0,70.4 L 428.0,92.1 L 470.0,53.7 L 512.0,25.4 L 512.0,132.0 Z" fill="url(#g89500)"/><polyline points="8.0,99.0 50.0,81.1 92.0,73.7 134.0,72.5 176.0,75.8 218.0,70.0 260.0,61.5 302.0,95.6 344.0,58.8 386.0,70.4 428.0,92.1 470.0,53.7 512.0,25.4" fill="none" stroke="#3f8ef5" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" filter="url(#g89500g)"/><circle cx="512.0" cy="25.4" r="4.5" fill="#f0524d" filter="url(#g89500g)"/><circle cx="512.0" cy="25.4" r="2.2" fill="#f4f6f8"/><text x="8.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W16</text><text x="92.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W18</text><text x="176.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W20</text><text x="260.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W22</text><text x="344.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W24</text><text x="428.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W26</text><text x="512.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W28</text></svg></div>
+  <div class="card chart" style="animation-delay:420ms"><h3>On-time shipping % · with SPC control band</h3><svg viewBox="0 0 520 150" width="100%" preserveAspectRatio="none" style="display:block;overflow:visible"><defs><linearGradient id="g36404" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22c197" stop-opacity="0.42"/><stop offset="1" stop-color="#22c197" stop-opacity="0"/></linearGradient><filter id="g36404g" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect x="8" y="25.4" width="504" height="95.2" fill="#22c197" opacity="0.05" rx="4"/><line x1="8" y1="25.4" x2="512" y2="25.4" stroke="#22c197" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/><line x1="8" y1="120.6" x2="512" y2="120.6" stroke="#22c197" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/><line x1="8" y1="73.0" x2="512" y2="73.0" stroke="#7d8590" stroke-opacity="0.4" stroke-width="1"/><path d="M 8.0,132.0 L 8.0,70.5 L 50.0,71.9 L 92.0,75.2 L 134.0,87.9 L 176.0,53.6 L 218.0,96.2 L 260.0,71.2 L 302.0,69.5 L 344.0,44.8 L 386.0,78.2 L 428.0,72.6 L 470.0,84.6 L 512.0,66.6 L 512.0,132.0 Z" fill="url(#g36404)"/><polyline points="8.0,70.5 50.0,71.9 92.0,75.2 134.0,87.9 176.0,53.6 218.0,96.2 260.0,71.2 302.0,69.5 344.0,44.8 386.0,78.2 428.0,72.6 470.0,84.6 512.0,66.6" fill="none" stroke="#22c197" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" filter="url(#g36404g)"/><circle cx="512.0" cy="66.6" r="4.5" fill="#22c197" filter="url(#g36404g)"/><circle cx="512.0" cy="66.6" r="2.2" fill="#f4f6f8"/><text x="8.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W16</text><text x="92.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W18</text><text x="176.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W20</text><text x="260.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W22</text><text x="344.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W24</text><text x="428.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W26</text><text x="512.0" y="146" fill="#7d8590" font-size="9" text-anchor="middle">W28</text></svg></div>
+
+  <div class="card panel" style="animation-delay:480ms"><h3>Signals &amp; what to look at</h3>
+    
+    <div class="sig"><span class="ic" style="color:#28c76f">▲</span><span>Revenue +26.7% week-over-week — main driver: region &#39;Ege&#39; (157% of the move). Confirm whether this is demand or a one-off before reacting.</span></div>
+    
+    <div class="sig"><span class="ic" style="color:#28c76f">▲</span><span>On-time shipping moved +5.4 pts to 93.5%. Acknowledge the improvement in the ops meeting.</span></div>
+    
+    <div class="sig"><span class="ic" style="color:#fab219">◆</span><span>5 items are below 2 weeks of stock cover (worst first: ITM-003, ITM-001, ITM-005). Review replenishment before the weekend.</span></div>
+    
+    <div class="sig"><span class="ic" style="color:#28c76f">▲</span><span>Revenue signal: 148,291 is ABOVE the control limits (UCL 143,078 / LCL 43,258 = mean 93,168 ± 2.66 × avg moving range 18,763) — a real shift beyond week-to-week noise, worth a specific cause. [limits provisional: baseline n=12, stabilize at n&gt;=15]</span></div>
+    
+  </div>
+
+  <div class="card panel" style="animation-delay:540ms"><h3>Stock attention</h3>
+    <table class="rows"><tr><th>Item</th><th class="n">Stock</th><th class="n">Cover (wk)</th></tr>
+    
+    <tr><td>ITM-003</td><td class="n">50</td>
+    <td class="n"><span style="color:#fab219">1.2</span>
+    <div class="bar"><i style="width:30.0%;background:#fab219"></i></div></td></tr>
+    
+    <tr><td>ITM-001</td><td class="n">45</td>
+    <td class="n"><span style="color:#fab219">1.3</span>
+    <div class="bar"><i style="width:32.5%;background:#fab219"></i></div></td></tr>
+    
+    <tr><td>ITM-005</td><td class="n">44</td>
+    <td class="n"><span style="color:#fab219">1.4</span>
+    <div class="bar"><i style="width:35.0%;background:#fab219"></i></div></td></tr>
+    
+    <tr><td>ITM-004</td><td class="n">29</td>
+    <td class="n"><span style="color:#fab219">1.8</span>
+    <div class="bar"><i style="width:45.0%;background:#fab219"></i></div></td></tr>
+    
+    <tr><td>ITM-002</td><td class="n">58</td>
+    <td class="n"><span style="color:#fab219">1.8</span>
+    <div class="bar"><i style="width:45.0%;background:#fab219"></i></div></td></tr>
+    
+    </table>
+  </div>
+
+  <div class="card trust" style="animation-delay:600ms">
+    <div class="item"><span class="k ok">✓</span>
+      <span class="t">source reconciliation</span></div>
+    <div class="item"><span class="k warnc">3</span><span class="t">data-quality notes</span></div>
+    <div class="item"><span class="k">7</span><span class="t">SQL statements audited</span></div>
+    <div class="item"><span class="k">1,897</span><span class="t">rows reconciled</span></div>
+    <div class="item" style="margin-left:auto;max-width:340px"><span class="t" style="text-transform:none;font-size:12px;color:var(--ink2)">All entities reconcile with source counts.</span></div>
+  </div>
+</div>
+<footer>erp-report-engine · designed by Eren Gülmez · the report that shows its receipts —
+every number traces to an audited, read-only SQL statement.</footer>
+</div>
+<script>
+(function(){
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('polyline').forEach(function(p){ p.classList.add('draw'); });
+  if (reduce) return;
+  document.querySelectorAll('.val[data-count]').forEach(function(el){
+    var target = parseFloat(el.getAttribute('data-count')), kind = el.getAttribute('data-kind');
+    if (isNaN(target)) return;
+    var final = el.textContent, t0 = null, dur = 1100;
+    function fmt(v){ return kind==='pct' ? v.toFixed(1)+'%' : Math.round(v).toLocaleString('en-US'); }
+    function step(ts){ if(!t0)t0=ts; var k=Math.min(1,(ts-t0)/dur), e=1-Math.pow(1-k,3);
+      el.textContent = k<1 ? fmt(target*e) : final; if(k<1) requestAnimationFrame(step); }
+    el.textContent = fmt(0); requestAnimationFrame(step);
+  });
+})();
+</script>
+</body></html>

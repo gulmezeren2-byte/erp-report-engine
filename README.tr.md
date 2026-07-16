@@ -33,6 +33,10 @@ Her komut `python -m erp_report_engine …` olarak da çalışır. Veritabanı s
 
 **▶ Canlı örnek raporu görün: [gulmezeren2-byte.github.io/erp-report-engine](https://gulmezeren2-byte.github.io/erp-report-engine/)** (ayrıca [`docs/sample-report.html`](docs/sample-report.html) içinde commit'li).
 
+Ya da premium **Command Center** için `run --dashboard`: koyu, modern, kendi kendine yeten; animasyonlu KPI'lar ve parlayan SPC kontrol-bantlı grafiklerle (**[canlı](https://gulmezeren2-byte.github.io/erp-report-engine/dashboard.html)**):
+
+![Command Center dashboard — SPC kontrol-bantlı grafiklerle koyu glassmorphic bento grid](assets/dashboard_preview.png)
+
 ## Tek çalıştırma ne üretir?
 
 | Bölüm | Neyi cevaplar |

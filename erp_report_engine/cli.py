@@ -50,6 +50,16 @@ def cmd_run(args) -> None:
         "data_quality_issues": rr.extraction.issues,
         "queries_executed": len(rr.auditor.entries),
     }
+    if args.dashboard:
+        from . import render_dashboard
+        dash = render_dashboard.render(cfg, rr.profile, rr.kpis, rr.findings,
+                                       rr.extraction, rr.auditor, rr.streak)
+        dpath = os.path.join(cfg.out_dir, f"dashboard_{rr.kpis['this_week']}.html")
+        tmp = dpath + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(dash)
+        os.replace(tmp, dpath)
+        out["dashboard"] = dpath
     if args.send:
         from . import delivery
         out["delivery"] = delivery.send_report(
@@ -131,6 +141,8 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("-c", "--config", required=True)
     s.add_argument("--strict", action="store_true", help="exit non-zero on a reconciliation mismatch")
     s.add_argument("--send", action="store_true", help="deliver the report via the config's delivery: channels")
+    s.add_argument("--dashboard", action="store_true",
+                   help="also write the premium dark 'command center' dashboard HTML")
     s.set_defaults(fn=cmd_run)
 
     s = sub.add_parser("export-powerbi",
