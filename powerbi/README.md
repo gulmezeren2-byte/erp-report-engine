@@ -43,6 +43,8 @@ A committed demo export ships in [`data/`](data/), so the report renders meaning
 4. **Aging** *(when receivables are mapped)* — total AR, overdue %, and 90+ cards, the open balance by age bucket, and overdue ranked by customer: chase the oldest money first.
 5. **Trust** — the signature page: **source reconciliation counts, every data-quality finding, and the full SQL audit trail** rendered as visuals. The dashboard shows its receipts.
 
+📸 **[`preview/`](preview/)** has a rendered preview of every page (from the report's own theme + the demo data) — a look at the pages without opening Desktop.
+
 ## Proactive by design
 
 The model re-derives the engine's insight rules in DAX — same thresholds as `insights.py` (revenue alert at |5%| WoW, on-time alert at 1.5 pts), one definition on two surfaces:
