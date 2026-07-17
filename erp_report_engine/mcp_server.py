@@ -2,7 +2,7 @@
 
 This is the piece nothing else in the ecosystem ships: an agent-facing server
 that exposes an ERP's data through the engine's *semantic profiles* (the agent
-sees `orders`, never `LG_001_01_ORFICHE`) and the same three-layer read-only
+sees `orders`, never `LG_001_01_ORFICHE`) and the same four-layer read-only
 guard + audit trail as the report - not a REST wrapper that trusts the ERP's
 own permissions.
 

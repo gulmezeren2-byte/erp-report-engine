@@ -21,7 +21,8 @@ A read-only autonomous reporting engine that runs SQL against the database behin
 erp_report_engine/
   errors.py          # exception taxonomy with stable exit codes (2/3/4/5)
   config.py          # YAML config; refuses embedded credentials (make_url parse)
-  connect.py         # THE security layer: 3-layer guard, engine, safe_read, Auditor, retries
+  guard.py           # THE security layer: 4-layer read-only guard (standalone: re + sqlglot only)
+  connect.py         # engine, safe_read (the only DB path), read-only session, Auditor, retries
   semantic.py        # profile contracts (canonical entities, REQUIRED_COLUMNS); bundled resolver
   week_calendar.py   # ISO-week anchor + continuous axis (shared by report and Power BI)
   extract.py         # extraction + quality gate (dedup once) + COUNT(*) reconciliation
@@ -49,7 +50,7 @@ Power BI layer rules: keep DAX alert thresholds identical to `insights.py` (5% r
 
 ```bash
 pip install -e ".[dev]"                         # editable install with dev tools
-python -m pytest tests/ -q                       # must stay green (134 tests)
+python -m pytest tests/ -q                       # must stay green (172 tests)
 python -m ruff check erp_report_engine demo tests
 erp-report-engine init-demo                      # rebuild demo.db + config.demo.yaml
 erp-report-engine run -c config.demo.yaml
@@ -62,7 +63,7 @@ The e2e test rebuilds the demo DB itself; running pytest from a clean clone work
 
 ## Adding an ERP profile (most valuable contribution)
 
-Write three `SELECT`s in a new `erp_report_engine/profiles/<erp>.yaml` producing the canonical columns listed in `semantic.REQUIRED_COLUMNS`; it ships bundled and becomes referenceable as `profile: <erp>`. Rules: `{vars}` for schema identifiers only, `:since` for the date filter, no comments, single statement each. Load-time validation and `validate -c` will tell you immediately if the contract is broken. Include field notes about version differences — profiles here are honest field mappings, not certified integrations.
+Write a few `SELECT`s in a new `erp_report_engine/profiles/<erp>.yaml` producing the canonical entities defined in `semantic.CANONICAL_SCHEMA` (each column's type + meaning); it ships bundled and becomes referenceable as `profile: <erp>`. Rules: `{vars}` for schema identifiers only, `:since` for the date filter, no comments, single statement each. Load-time validation and `validate -c` will tell you immediately if the contract is broken. Include field notes about version differences — profiles here are honest field mappings, not certified integrations.
 
 ## Style
 
