@@ -278,20 +278,17 @@ table _Measures
 		displayFolder: 4. SPC
 		lineageTag: 67a9115c-0057-4000-8000-000000000057
 
-	/// The receipt, in full, for whichever metric is in context - the arithmetic
-	/// a reader can check with a pocket calculator, plus the baseline it rests on.
+	/// The receipt, in full, for whichever metric is in context - the exact
+	/// arithmetic the engine computed, so this quotes the same string the HTML
+	/// report does. Built in Python (per method: XmR for revenue, p-chart for
+	/// on-time), never reconstructed here - a second implementation is a second
+	/// answer, and the XmR formula would be wrong for the on-time proportion.
 	measure 'SPC Receipt' =
 			IF (
 			    HASONEVALUE ( MetaSpc[Metric] ),
-			    VAR n = MAX ( MetaSpc[Baseline N] )
-			    RETURN
-			        MAX ( MetaSpc[Label] ) & ": " & MAX ( MetaSpc[Verdict] )
-			            & "  ·  UCL " & FORMAT ( MAX ( MetaSpc[UCL] ), "#,##0.0" )
-			            & " / LCL " & FORMAT ( MAX ( MetaSpc[LCL] ), "#,##0.0" )
-			            & " = mean " & FORMAT ( MAX ( MetaSpc[CL] ), "#,##0.0" )
-			            & " ± 2.66 × avg moving range " & FORMAT ( MAX ( MetaSpc[MR Bar] ), "#,##0.0" )
-			            & "  ·  baseline n=" & n & " weeks"
-			            & IF ( MAX ( MetaSpc[Provisional] ) = 1, "  [provisional]", "" ),
+			    MAX ( MetaSpc[Label] ) & " (" & MAX ( MetaSpc[Method] ) & "): "
+			        & MAX ( MetaSpc[Verdict] ) & "  ·  " & MAX ( MetaSpc[Receipt] )
+			        & IF ( MAX ( MetaSpc[Provisional] ) = 1, "  [provisional]", "" ),
 			    "Select a metric to see its control limits."
 			)
 		displayFolder: 4. SPC

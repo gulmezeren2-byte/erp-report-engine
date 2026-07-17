@@ -106,6 +106,28 @@ table MetaSpc
 
 		annotation SummarizationSetBy = Automatic
 
+	/// Which control chart this row used: XmR for revenue (a continuous
+	/// individual), p-chart for on-time % (a proportion whose limits widen when
+	/// the week's denominator is thin).
+	column Method
+		dataType: string
+		lineageTag: 67a9115c-004b-4000-8000-00000000004b
+		summarizeBy: none
+		sourceColumn: method
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The full arithmetic, built once by the engine so this surface quotes the
+	/// same receipt the HTML report does - never a reconstruction that could
+	/// drift, and never an XmR formula pasted onto the p-chart metric.
+	column Receipt
+		dataType: string
+		lineageTag: 67a9115c-004c-4000-8000-00000000004c
+		summarizeBy: none
+		sourceColumn: receipt
+
+		annotation SummarizationSetBy = Automatic
+
 	partition MetaSpc = m
 		mode: import
 		source =
@@ -124,6 +146,8 @@ table MetaSpc
 							{"baseline_n", Int64.Type},
 							{"current", type number},
 							{"provisional", Int64.Type},
+							{"method", type text},
+							{"receipt", type text},
 							{"verdict", type text}
 						},
 						"en-US"

@@ -76,7 +76,7 @@ def _export_spc(cfg: Config, ex: Extraction, out_dir: str, as_of: dt.date) -> in
     report already publishes, and a second implementation is a second answer.
     """
     header = ["metric", "label", "cl", "ucl", "lcl", "mr_bar", "baseline_n",
-              "current", "provisional", "verdict"]
+              "current", "provisional", "method", "receipt", "verdict"]
     rows: list[list] = []
     try:
         kpis = compute(ex.frames, cfg.low_cover_weeks, as_of)
@@ -100,7 +100,12 @@ def _export_spc(cfg: Config, ex: Extraction, out_dir: str, as_of: dt.date) -> in
             round(lim["cl"], 4 if pct else 2), round(lim["ucl"], 4 if pct else 2),
             round(lim["lcl"], 4 if pct else 2), round(lim["mr_bar"], 4 if pct else 2),
             int(lim["n"]), round(current, 4 if pct else 2),
-            int(lim["n"] < spc._STABLE_N), verdict,
+            int(lim["n"] < spc._STABLE_N),
+            # the method and the ready-made arithmetic, so Power BI shows the same
+            # receipt the report does instead of reconstructing an XmR string that
+            # would be wrong for the on-time p-chart
+            "p-chart" if lim.get("method") == "p" else "XmR",
+            lim.get("receipt", ""), verdict,
         ])
     return _write(os.path.join(out_dir, "meta_spc.csv"), header, rows)
 

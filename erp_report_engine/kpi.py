@@ -151,6 +151,12 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
     delivered = all_delivered[all_delivered.actual_ship_date.notna() & all_delivered.promised_date.notna()].copy()
     delivered["on_time"] = delivered.actual_ship_date <= delivered.promised_date
     otp = (delivered.groupby("week").on_time.mean() * 100).reindex(axis)  # NaN where no scored deliveries
+    # Per-week numerator (on-time count) and denominator (scored count): the inputs
+    # a p-chart needs. On-time % is a PROPORTION over a varying denominator, so its
+    # control limits must widen when the week is thin - an XmR chart weights a
+    # 2-delivery week like a 200-delivery week, which is the wrong tool (spc.py).
+    otp_num = delivered.groupby("week").on_time.sum().reindex(axis)
+    otp_den = delivered.groupby("week").on_time.size().reindex(axis)
     # how much of this week's on-time % is actually backed by data (K3 honesty)
     scored_this = int(len(delivered[delivered.week == this_w]))
     delivered_this = int(len(all_delivered[all_delivered.week == this_w]))
@@ -188,11 +194,17 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
     cover.loc[inv.stock_qty == 0] = 0.0
     low = cover[cover < low_cover_weeks].sort_values()
 
+    def _num(s, w):
+        v = s.get(w, float("nan"))
+        return float(v) if v == v else float("nan")
+
     def series_over(weeks: list[str]) -> dict:
         return {
             "weeks": weeks,
             "revenue": [float(rev.get(w, 0.0)) for w in weeks],
             "on_time": [float(otp.get(w, float("nan"))) for w in weeks],
+            "on_time_num": [_num(otp_num, w) for w in weeks],   # on-time count per week
+            "on_time_den": [_num(otp_den, w) for w in weeks],   # scored count per week (the p-chart's n)
         }
 
     def wow(series: pd.Series) -> dict:
