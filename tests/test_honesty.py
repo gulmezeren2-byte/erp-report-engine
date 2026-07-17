@@ -205,3 +205,55 @@ def test_streak_counts_consecutive_revenue_declines(tmp_path):
         st.record(wk, {"revenue": {"now": rev, "prev": 0, "baseline8": 0}}, "r.html")
     assert st.streak("revenue") == 2  # W27<W26<W25 -> two consecutive declines
     st.close()
+
+
+def test_streak_stops_at_a_gap_in_the_record(tmp_path):
+    """"Consecutive" means what the calendar means.
+
+    A run in W25 and the next in W29 is a month apart with nothing recorded
+    between. That is missing information, not a continuation - the engine has no
+    idea what W26-W28 did, and saying "declining consecutively" about weeks it
+    never saw is exactly the kind of confident-and-wrong the report exists to
+    avoid.
+    """
+    st = State(str(tmp_path / "state.db"))
+    for wk, rev in [("2026-W25", 300.0), ("2026-W29", 100.0)]:      # a four-week hole
+        st.record(wk, {"revenue": {"now": rev, "prev": 0, "baseline8": 0}}, "r.html")
+    assert st.streak("revenue") == 0
+    st.close()
+
+
+def test_streak_survives_a_real_w53_year_boundary(tmp_path):
+    # 2015 is one of the ISO years that genuinely HAS a week 53, and 2016-W01
+    # follows it. Only the calendar knows that: subtracting week numbers says
+    # W53 -> W01 is a 52-week jump backwards.
+    st = State(str(tmp_path / "state.db"))
+    for wk, rev in [("2015-W52", 300.0), ("2015-W53", 200.0), ("2016-W01", 100.0)]:
+        st.record(wk, {"revenue": {"now": rev, "prev": 0, "baseline8": 0}}, "r.html")
+    assert st.streak("revenue") == 2
+    st.close()
+
+
+def test_streak_ignores_a_week_that_does_not_exist(tmp_path):
+    # 2025 has no W53 - ISO 2025 is a 52-week year. A row claiming one is
+    # corrupt, and corrupt is not adjacent to anything.
+    st = State(str(tmp_path / "state.db"))
+    for wk, rev in [("2025-W52", 300.0), ("2025-W53", 100.0)]:
+        st.record(wk, {"revenue": {"now": rev, "prev": 0, "baseline8": 0}}, "r.html")
+    assert st.streak("revenue") == 0
+    st.close()
+
+
+def test_streak_is_the_same_whether_or_not_this_week_is_persisted(tmp_path):
+    """A read-only preview must report the streak the written report would, not
+    one short of it - the number is about the business, not about whether a file
+    got written."""
+    st = State(str(tmp_path / "state.db"))
+    for wk, rev in [("2026-W26", 300.0), ("2026-W27", 200.0)]:
+        st.record(wk, {"revenue": {"now": rev, "prev": 0, "baseline8": 0}}, "r.html")
+
+    this_week = {"revenue": {"now": 100.0, "prev": 200.0, "baseline8": 0}}
+    unwritten = st.streak("revenue", current=("2026-W28", this_week))
+    st.record("2026-W28", this_week, "r.html")
+    assert unwritten == st.streak("revenue") == 2
+    st.close()

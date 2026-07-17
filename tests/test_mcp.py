@@ -95,3 +95,44 @@ def test_build_server_registers_tools(demo_cfg):
     from erp_report_engine.mcp_server import build_server
     server = build_server(demo_cfg)
     assert server is not None
+
+
+# --- the semantic boundary: "the agent talks to `orders`, never LG_001_01_ORFICHE" ---
+# That was true of every tool except the one that mattered. `query` passed raw SQL
+# through, so an agent could read any table the login could reach and the semantic
+# layer - the whole product - was optional. These pin it shut.
+
+_OUT_OF_REACH = [
+    ("raw_erp_table", "SELECT * FROM orders_raw"),
+    ("system_catalogue", "SELECT name FROM sqlite_master"),
+    ("qualified_name", "SELECT * FROM main.orders"),
+    ("cte_shadowing_an_entity", "WITH orders AS (SELECT * FROM sqlite_master) SELECT * FROM orders"),
+    ("cte_squatting_the_prefix", "WITH _erp_orders AS (SELECT 1 AS a) SELECT * FROM _erp_orders"),
+]
+
+
+@pytest.mark.parametrize(("name", "sql"), _OUT_OF_REACH, ids=[c[0] for c in _OUT_OF_REACH])
+def test_query_cannot_escape_the_canonical_entities(demo_cfg, name, sql):
+    with pytest.raises(EngineError):
+        _query(demo_cfg, sql, max_rows=1)
+
+
+def test_query_reads_canonical_entities_by_name(demo_cfg):
+    """The entity names only exist in the profile - there is no `orders` table on
+    a Logo Tiger database - so the scoping injects the profile's own SQL as CTEs.
+    Without that the allowlist would be a way to make `query` useless."""
+    out = _query(demo_cfg, "SELECT customer, SUM(net_total) AS rev FROM orders GROUP BY customer",
+                 max_rows=5)
+    assert out["columns"] == ["customer", "rev"]
+    assert out["row_count"] > 0
+
+    joined = _query(demo_cfg,
+                    "SELECT o.customer, l.item_code FROM orders o "
+                    "JOIN order_lines l ON l.order_id = o.order_id", max_rows=3)
+    assert joined["columns"] == ["customer", "item_code"]
+    assert joined["row_count"] > 0
+
+
+def test_query_reaches_an_optional_entity_when_the_profile_maps_it(demo_cfg):
+    out = _query(demo_cfg, "SELECT customer, open_amount FROM receivables", max_rows=3)
+    assert out["columns"] == ["customer", "open_amount"]

@@ -37,7 +37,7 @@ def extract_all(engine, auditor: Auditor, profile: Profile, cfg: Config) -> Extr
     # anchor on the DATABASE server's date, and snap the window start to a Monday
     # so the oldest week in the window is a full ISO week, not a partial one.
     ex.as_of = server_today(engine, auditor)
-    ex.since = wc.monday_of(ex.as_of) - dt.timedelta(weeks=cfg.lookback_weeks + 1)
+    ex.since = wc.window_start(ex.as_of, cfg.lookback_weeks)
     since = ex.since.isoformat()
 
     all_columns = {**REQUIRED_COLUMNS, **OPTIONAL_COLUMNS}

@@ -40,6 +40,7 @@ mcp = ["mcp>=1.20"]
 notify = ["apprise>=1.7"]
 dev = [
     "pytest>=8.0",
+    "pytest-cov>=5.0",
     "ruff>=0.6",
     "mcp>=1.20",
     "hypothesis>=6.0",
@@ -65,6 +66,7 @@ packages = ["erp_report_engine"]
 # already included; only the data files need this), so `profile: netsis` resolves
 # from an installed package. Add a line when you add a profile — the CI wheel
 # check fails loudly if one is missing.
+"erp_report_engine/py.typed" = "erp_report_engine/py.typed"
 "erp_report_engine/profiles/generic.yaml" = "erp_report_engine/profiles/generic.yaml"
 "erp_report_engine/profiles/logo_tiger.yaml" = "erp_report_engine/profiles/logo_tiger.yaml"
 "erp_report_engine/profiles/netsis.yaml" = "erp_report_engine/profiles/netsis.yaml"

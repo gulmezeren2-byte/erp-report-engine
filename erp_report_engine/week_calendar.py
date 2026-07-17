@@ -25,9 +25,40 @@ def iso_week(d: dt.date) -> str:
     return f"{c.year}-W{c.week:02d}"
 
 
+def monday_of_week(key: str) -> dt.date:
+    """The Monday of an ISO-week key (``2026-W28`` -> 2026-07-06).
+
+    The inverse of :func:`iso_week`. Anything comparing two week keys needs this:
+    ``2026-W29`` and ``2026-W25`` sort adjacently as strings and are a month
+    apart on the calendar, and string order silently lies across a year boundary
+    (``2026-W01`` follows ``2025-W53``). Raises ValueError on a malformed key.
+    """
+    year, _, week = key.partition("-W")
+    return dt.date.fromisocalendar(int(year), int(week), 1)
+
+
+def is_previous_week(earlier: str, later: str) -> bool:
+    """True when ``earlier`` is the ISO week immediately before ``later``."""
+    try:
+        return monday_of_week(later) - monday_of_week(earlier) == dt.timedelta(days=7)
+    except (ValueError, TypeError):
+        return False
+
+
 def last_completed_monday(as_of: dt.date) -> dt.date:
     """Monday of the last fully-completed ISO week before the week of ``as_of``."""
     return monday_of(as_of) - dt.timedelta(days=7)
+
+
+def window_start(as_of: dt.date, lookback_weeks: int) -> dt.date:
+    """First day of the extraction window, snapped back to a Monday.
+
+    Snapped so the oldest week in the window is a full ISO week rather than a
+    partial one. Stated once here because both the extraction and the ad-hoc
+    query path bind it as `:since`, and a window that differed between them would
+    mean an agent's query and the report disagreed about which rows exist.
+    """
+    return monday_of(as_of) - dt.timedelta(weeks=lookback_weeks + 1)
 
 
 def week_axis(start_monday: dt.date, end_monday: dt.date) -> list[str]:

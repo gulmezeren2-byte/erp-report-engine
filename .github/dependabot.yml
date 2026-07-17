@@ -1,0 +1,25 @@
+# Keeps the pins current without anyone remembering to look. The action SHAs in
+# ci.yml and publish.yml are pinned deliberately (a tag is mutable; a SHA is
+# not), which is exactly why they need a bot to move them - a pin nobody updates
+# is a pin that ages into a known-vulnerable version.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      python-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
