@@ -87,12 +87,62 @@ class Config:
     raw: dict[str, Any] = field(default_factory=dict)
 
 
+# Every key the loader actually reads, per section. Checked rather than ignored,
+# because the failure mode of `.get(key, default)` is silence: `lookback_week`
+# (singular) parses fine, changes nothing, and the operator concludes the setting
+# does not work. An unattended report that quietly used a default nobody chose is
+# the same class of problem as a number nobody can trace.
+_KNOWN: dict[str, set[str]] = {
+    "": {"connection", "profile", "profile_vars", "report", "limits", "delivery", "narrative"},
+    "connection": {"url", "url_env"},
+    "report": {"company_alias", "lookback_weeks", "low_cover_weeks", "out_dir", "state_db"},
+    "limits": {"row_cap", "query_timeout_s"},
+    "narrative": {"api_base", "model", "api_key_env", "timeout_s", "include_names"},
+    "delivery": {"email", "slack", "teams", "power_automate", "healthcheck"},
+}
+
+
+def _suggest(key: str, known: set[str]) -> str:
+    import difflib
+    near = difflib.get_close_matches(key, sorted(known), n=1, cutoff=0.7)
+    return f" - did you mean {near[0]!r}?" if near else ""
+
+
+def _reject_unknown_keys(raw: dict) -> None:
+    for section, known in _KNOWN.items():
+        block = raw if section == "" else raw.get(section)
+        if not isinstance(block, dict):
+            continue
+        for key in block:
+            if key not in known:
+                where = f"{section}.{key}" if section else key
+                raise ConfigError(
+                    f"unknown config key {where!r}{_suggest(key, known)}. "
+                    f"Known keys here: {', '.join(sorted(known))}"
+                )
+
+
+def _num(block: dict, key: str, default, cast):
+    """Read a number, and say which key is wrong rather than raising ValueError
+    from somewhere three frames down."""
+    value = block.get(key, default)
+    try:
+        return cast(value)
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"report.{key} must be a number, got {value!r}"
+        ) from None
+
+
 def load_config(path: str) -> Config:
     try:
         with open(path, encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
     except FileNotFoundError:
         raise ConfigError(f"config file not found: {path}") from None
+    if not isinstance(raw, dict):
+        raise ConfigError(f"{path} does not contain a YAML mapping")
+    _reject_unknown_keys(raw)
 
     conn = raw.get("connection") or {}
     url = None
@@ -120,12 +170,12 @@ def load_config(path: str) -> Config:
         profile_path=profile,
         profile_vars={k: str(v) for k, v in (raw.get("profile_vars") or {}).items()},
         company_alias=rep.get("company_alias", "Company"),
-        lookback_weeks=int(rep.get("lookback_weeks", 26)),
-        low_cover_weeks=float(rep.get("low_cover_weeks", 2.0)),
+        lookback_weeks=_num(rep, "lookback_weeks", 26, int),
+        low_cover_weeks=_num(rep, "low_cover_weeks", 2.0, float),
         out_dir=rep.get("out_dir", "reports"),
         state_db=rep.get("state_db", "state.db"),
-        row_cap=int(lim.get("row_cap", 500_000)),
-        query_timeout_s=int(lim.get("query_timeout_s", 60)),
+        row_cap=_num(lim, "row_cap", 500_000, int),
+        query_timeout_s=_num(lim, "query_timeout_s", 60, int),
         delivery=raw.get("delivery"),
         narrative=raw.get("narrative"),
         raw=raw,

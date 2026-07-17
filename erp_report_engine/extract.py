@@ -11,9 +11,10 @@ import datetime as dt
 from dataclasses import dataclass, field
 
 import pandas as pd
+import sqlglot
 
 from .config import Config
-from .connect import Auditor, safe_read, scalar
+from .connect import _SQLGLOT_DIALECT, Auditor, safe_read, scalar
 from .errors import ContractError
 from .kpi import _DELIVERED  # one definition of "it shipped", imported, never restated
 from .semantic import OPTIONAL_COLUMNS, REQUIRED_COLUMNS, Profile
@@ -54,7 +55,7 @@ def extract_all(engine, auditor: Auditor, profile: Profile, cfg: Config) -> Extr
             )
 
         # independent count for reconciliation
-        count_sql = f"SELECT COUNT(*) FROM ( {sql.strip().rstrip(';')} ) t"
+        count_sql = _count_wrapper(sql, _SQLGLOT_DIALECT.get(engine.dialect.name))
         n_src = scalar(engine, auditor, f"{entity}:count", count_sql, params)
         ex.reconciliation[entity] = {"fetched": int(len(df)), "source_count": int(n_src or 0)}
         if int(n_src or 0) != len(df):
@@ -77,6 +78,24 @@ def extract_all(engine, auditor: Auditor, profile: Profile, cfg: Config) -> Extr
         if severity == "fail":
             ex.contract_failures.append(text)
     return ex
+
+
+def _count_wrapper(sql: str, dialect: str | None) -> str:
+    """An independent COUNT(*) over the same query, for reconciliation.
+
+    A top-level ORDER BY is stripped first. It means nothing to a COUNT, and MSSQL
+    and Oracle both refuse a subquery carrying one without TOP/OFFSET - so on the
+    engines two of the three bundled profiles actually target, reconciliation
+    would have been the thing that broke the run. The feature that exists to prove
+    the numbers is a poor candidate for the feature that stops them arriving.
+    """
+    try:
+        tree = sqlglot.parse_one(sql, read=dialect)
+        tree.set("order", None)
+        inner = tree.sql(dialect=dialect)
+    except Exception:
+        inner = sql.strip().rstrip(";")   # the guard already parsed this; belt and braces
+    return f"SELECT COUNT(*) FROM ( {inner} ) t"
 
 
 def _quality_gate(ex: Extraction) -> None:

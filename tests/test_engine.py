@@ -113,3 +113,22 @@ def test_validate_command():
     assert proc.returncode == 0, proc.stdout + proc.stderr
     payload = json.loads(proc.stdout)
     assert payload["entities"]["orders"]["fetched"] == payload["entities"]["orders"]["source_count"]
+
+
+def test_reconciliation_count_survives_an_order_by():
+    """The COUNT(*) reconciliation wraps the profile's own query in a subquery,
+    and MSSQL and Oracle both refuse a subquery carrying an ORDER BY without
+    TOP/OFFSET. Two of the three bundled profiles target MSSQL, so the feature
+    that exists to prove the numbers would have been the one that stopped them
+    arriving."""
+    from erp_report_engine.extract import _count_wrapper
+
+    sql = "SELECT FICHENO AS order_id FROM LG_001_01_ORFICHE WHERE DATE_ >= :since ORDER BY DATE_"
+    wrapped = _count_wrapper(sql, "tsql")
+    assert "ORDER BY" not in wrapped.upper()
+    assert ":since" in wrapped                      # the bound parameter survives
+    assert wrapped.upper().startswith("SELECT COUNT(*)")
+
+    # a query without one is untouched apart from the wrap
+    plain = _count_wrapper("SELECT a FROM t", "sqlite")
+    assert "COUNT(*)" in plain and "FROM t" in plain
