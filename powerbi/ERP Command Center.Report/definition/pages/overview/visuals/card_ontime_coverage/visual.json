@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "card_ontime_coverage",
+  "position": {
+    "x": 648,
+    "y": 244,
+    "z": 2400,
+    "height": 36,
+    "width": 144,
+    "tabOrder": 2400
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "On-Time Coverage"
+                }
+              },
+              "queryRef": "_Measures.On-Time Coverage",
+              "nativeQueryRef": "On-Time Coverage"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {},
+    "drillFilterOtherVisuals": true
+  }
+}

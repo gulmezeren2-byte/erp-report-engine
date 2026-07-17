@@ -212,36 +212,59 @@ def main() -> None:
                               card("On-Time % (This Week)", "On-time shipping — last full week")),
         "card_alerts": visual("card_alerts", 960, 92, 296, 144, 2300,
                               card("Alert Count", "Signals firing now")),
-        "trend_revenue": visual("trend_revenue", 24, 252, 608, 292, 3000,
-                                line_chart("DimWeek", "Week", ["Revenue"],
-                                           "Weekly revenue — completed weeks"),
+        # The on-time percentage's two caveats, directly under it rather than
+        # buried in a measure description no card reader ever sees: how much of it
+        # is backed by dates, and the late orders it structurally cannot count.
+        "card_ontime_coverage": visual("card_ontime_coverage", 648, 244, 144, 36, 2400,
+                                       card("On-Time Coverage", None)),
+        "card_unshipped": visual("card_unshipped", 800, 244, 144, 36, 2500,
+                                 card("Promised, Not Shipped", None)),
+        # The trends carry the SPC band: the same limits the HTML report quotes,
+        # as extra series in the same units (never a second axis).
+        "trend_revenue": visual("trend_revenue", 24, 288, 608, 252, 3000,
+                                line_chart("DimWeek", "Week",
+                                           ["Revenue", "Revenue UCL", "Revenue CL", "Revenue LCL"],
+                                           "Weekly revenue — completed weeks, with control limits"),
                                 filters=[trend_window_filter("trend_revenue_full_weeks")]),
-        "trend_ontime": visual("trend_ontime", 648, 252, 608, 292, 3100,
-                               line_chart("DimWeek", "Week", ["On-Time %"],
-                                          "On-time shipping % — completed weeks"),
+        "trend_ontime": visual("trend_ontime", 648, 288, 608, 252, 3100,
+                               line_chart("DimWeek", "Week",
+                                          ["On-Time %", "On-Time UCL", "On-Time CL", "On-Time LCL"],
+                                          "On-time shipping % — completed weeks, with control limits"),
                                filters=[trend_window_filter("trend_ontime_full_weeks")]),
-        "card_verdict": visual("card_verdict", 24, 560, 1232, 140, 4000,
+        "card_verdict": visual("card_verdict", 24, 548, 1232, 76, 4000,
                                card("Weekly Verdict", "What changed — plain language")),
+        # the arithmetic behind the band, on the page, not only in a tooltip
+        "card_spc": visual("card_spc", 24, 632, 1232, 44, 4100,
+                           card("SPC Receipt", None)),
     })
 
     page("drivers", "Drivers", {
         "title_box": visual("title_box", 24, 16, 900, 56, 1000,
                             title_props("Drivers — where the move concentrates")),
-        "decomp_revenue": visual("decomp_revenue", 24, 92, 736, 588, 2000,
+        # Concentration over the engine's 13-week window. powerbi/README.md
+        # described this page as carrying "the same concentration as a top-3 share
+        # + Herfindahl index (HHI)" while neither measure existed in the model.
+        "card_top3": visual("card_top3", 24, 92, 240, 108, 1900,
+                            card("Top 3 Share", "Top 3 customers · 13 weeks")),
+        "card_hhi": visual("card_hhi", 280, 92, 240, 108, 1950,
+                           card("HHI", "Herfindahl index · 2500+ = concentrated")),
+        "card_conc_verdict": visual("card_conc_verdict", 536, 92, 720, 108, 1960,
+                                    card("Concentration Verdict", None)),
+        "decomp_revenue": visual("decomp_revenue", 24, 216, 736, 464, 2000,
                                  decomposition_tree("Revenue",
                                                     [("FactOrders", "Region"),
                                                      ("FactOrders", "Customer"),
                                                      ("FactOrders", "Status")],
                                                     "Decompose revenue by region, customer, status")),
-        "bar_region": visual("bar_region", 776, 92, 480, 280, 3000,
+        "bar_region": visual("bar_region", 776, 216, 480, 216, 3000,
                              bar_chart("FactOrders", "Region", "Revenue", "Revenue by region")),
-        "table_customers": visual("table_customers", 776, 388, 480, 292, 4000,
+        "table_customers": visual("table_customers", 776, 448, 480, 232, 4000,
                                   table([("column", "FactOrders", "Customer"),
                                          ("measure", MEASURES, "Revenue (This Week)"),
                                          ("measure", MEASURES, "Revenue WoW %"),
-                                         ("measure", MEASURES, "Customer Revenue Share"),
+                                         ("measure", MEASURES, "Customer Revenue Share (This Week)"),
                                          ("measure", MEASURES, "Revenue Sparkline")],
-                                        "Customers — share, WoW and 13-week trend")),
+                                        "Customers — this week's share, WoW and 13-week trend")),
     })
 
     page("stock", "Stock", {

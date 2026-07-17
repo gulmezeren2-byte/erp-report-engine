@@ -1,0 +1,134 @@
+/// XmR control limits, computed by the engine and shipped as data.
+///
+/// Power BI had no SPC at all: its alert layer re-derived a crude |WoW| >= 5%
+/// threshold, which flags exactly the ordinary common-cause variation the method
+/// exists to ignore. So the "separate signal from noise, with receipts" verdict
+/// that defines this project lived only in the HTML report - on the surface a
+/// manager is LEAST likely to be looking at.
+///
+/// Exported rather than reimplemented in DAX on purpose. The limits are
+/// arithmetic the report already publishes (UCL/LCL = mean +/- 2.66 x average
+/// moving range, 2.66 = 3/d2 with d2 = 1.128 for a two-point moving range), and
+/// a second implementation would eventually be a second answer.
+///
+/// One row per metric, so LOOKUPVALUE by [Metric] is the access pattern; there
+/// is deliberately no relationship to FactOrders - these are constants for the
+/// week, not facts to slice.
+table MetaSpc
+	lineageTag: 67a9115c-0040-4000-8000-000000000040
+
+	column Metric
+		dataType: string
+		lineageTag: 67a9115c-0041-4000-8000-000000000041
+		summarizeBy: none
+		sourceColumn: metric
+
+		annotation SummarizationSetBy = Automatic
+
+	column Label
+		dataType: string
+		lineageTag: 67a9115c-0042-4000-8000-000000000042
+		summarizeBy: none
+		sourceColumn: label
+
+		annotation SummarizationSetBy = Automatic
+
+	/// The centre line: the mean of the baseline (which excludes the current
+	/// point, so a point is never judged against limits it helped set).
+	column CL
+		dataType: double
+		lineageTag: 67a9115c-0043-4000-8000-000000000043
+		summarizeBy: none
+		sourceColumn: cl
+
+		annotation SummarizationSetBy = User
+
+	column UCL
+		dataType: double
+		lineageTag: 67a9115c-0044-4000-8000-000000000044
+		summarizeBy: none
+		sourceColumn: ucl
+
+		annotation SummarizationSetBy = User
+
+	column LCL
+		dataType: double
+		lineageTag: 67a9115c-0045-4000-8000-000000000045
+		summarizeBy: none
+		sourceColumn: lcl
+
+		annotation SummarizationSetBy = User
+
+	/// Average moving range - the spread the limits are built from. Shipped so a
+	/// reader can redo the arithmetic: UCL = CL + 2.66 x this.
+	column 'MR Bar'
+		dataType: double
+		lineageTag: 67a9115c-0046-4000-8000-000000000046
+		summarizeBy: none
+		sourceColumn: mr_bar
+
+		annotation SummarizationSetBy = User
+
+	/// How many weeks the limits were computed from. Travels with every signal:
+	/// a band built from 5 weeks should not look as authoritative as one from 25.
+	column 'Baseline N'
+		dataType: int64
+		formatString: 0
+		lineageTag: 67a9115c-0047-4000-8000-000000000047
+		summarizeBy: none
+		sourceColumn: baseline_n
+
+		annotation SummarizationSetBy = User
+
+	column Current
+		dataType: double
+		lineageTag: 67a9115c-0048-4000-8000-000000000048
+		summarizeBy: none
+		sourceColumn: current
+
+		annotation SummarizationSetBy = User
+
+	/// 1 while the baseline is too short for the limits to have settled.
+	column Provisional
+		dataType: int64
+		formatString: 0
+		lineageTag: 67a9115c-0049-4000-8000-000000000049
+		summarizeBy: none
+		sourceColumn: provisional
+
+		annotation SummarizationSetBy = User
+
+	column Verdict
+		dataType: string
+		lineageTag: 67a9115c-004a-4000-8000-00000000004a
+		summarizeBy: none
+		sourceColumn: verdict
+
+		annotation SummarizationSetBy = Automatic
+
+	partition MetaSpc = m
+		mode: import
+		source =
+				let
+					Source = Csv.Document(File.Contents(DataFolder & "\meta_spc.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+					Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars = true]),
+					Typed = Table.TransformColumnTypes(
+						Promoted,
+						{
+							{"metric", type text},
+							{"label", type text},
+							{"cl", type number},
+							{"ucl", type number},
+							{"lcl", type number},
+							{"mr_bar", type number},
+							{"baseline_n", Int64.Type},
+							{"current", type number},
+							{"provisional", Int64.Type},
+							{"verdict", type text}
+						},
+						"en-US"
+					)
+				in
+					Typed
+
+	annotation PBI_ResultType = Table

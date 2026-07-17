@@ -3,9 +3,9 @@
   "name": "trend_ontime",
   "position": {
     "x": 648,
-    "y": 252,
+    "y": 288,
     "z": 3100,
-    "height": 292,
+    "height": 252,
     "width": 608,
     "tabOrder": 3100
   },
@@ -47,6 +47,48 @@
               },
               "queryRef": "_Measures.On-Time %",
               "nativeQueryRef": "On-Time %"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "On-Time UCL"
+                }
+              },
+              "queryRef": "_Measures.On-Time UCL",
+              "nativeQueryRef": "On-Time UCL"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "On-Time CL"
+                }
+              },
+              "queryRef": "_Measures.On-Time CL",
+              "nativeQueryRef": "On-Time CL"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "On-Time LCL"
+                }
+              },
+              "queryRef": "_Measures.On-Time LCL",
+              "nativeQueryRef": "On-Time LCL"
             }
           ]
         }
@@ -66,7 +108,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'On-time shipping % \u2014 completed weeks'"
+                  "Value": "'On-time shipping % \u2014 completed weeks, with control limits'"
                 }
               }
             }

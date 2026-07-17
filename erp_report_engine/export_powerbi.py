@@ -15,14 +15,14 @@ import os
 
 import pandas as pd
 
-from . import __version__
+from . import __version__, spc
 from . import week_calendar as wc
 from .config import Config
 from .connect import Auditor
 from .extract import Extraction
 
 # one definition per rule, imported - never restated here
-from .kpi import _AGING_BUCKETS, _DELIVERED, _TREND_WINDOW, _bucket
+from .kpi import _AGING_BUCKETS, _DELIVERED, _TREND_WINDOW, _bucket, compute
 from .semantic import Profile
 
 _ENC = "utf-8"  # no BOM: Power BI's Csv.Document reads 65001 cleanly
@@ -62,6 +62,49 @@ def _export_receivables(ex: Extraction, out_dir: str, as_of: dt.date) -> int:
     return _write(os.path.join(out_dir, "fact_receivables.csv"), header, rows)
 
 
+def _export_spc(cfg: Config, ex: Extraction, out_dir: str, as_of: dt.date) -> int:
+    """Write meta_spc.csv: the control limits, computed by the engine's own SPC
+    module from the engine's own series.
+
+    Without this, Power BI had no SPC at all. Its `Alert Count` re-derived a crude
+    |WoW| >= 5% threshold, which is precisely the "ordinary variation reported as
+    an alert" that the whole method exists to stop - so the surface a manager
+    actually sits in front of carried the naive layer, and the signal-vs-noise
+    verdict that defines this project lived only in the HTML report.
+
+    Exported rather than reimplemented in DAX: the limits are arithmetic the
+    report already publishes, and a second implementation is a second answer.
+    """
+    header = ["metric", "label", "cl", "ucl", "lcl", "mr_bar", "baseline_n",
+              "current", "provisional", "verdict"]
+    rows: list[list] = []
+    try:
+        kpis = compute(ex.frames, cfg.low_cover_weeks, as_of)
+    except Exception:
+        return _write(os.path.join(out_dir, "meta_spc.csv"), header, rows)
+
+    for metric, label, pct in (("revenue", "Revenue", False), ("on_time", "On-time shipping", True)):
+        lim = spc.limits_for(kpis, metric)
+        series = [v for v in kpis.get("spc", {}).get(metric, []) if v == v]
+        if not lim or not series:
+            continue
+        current = float(series[-1])
+        if current > lim["ucl"]:
+            verdict = "ABOVE the control limits - a real shift, worth a specific cause"
+        elif current < lim["lcl"]:
+            verdict = "BELOW the control limits - a real shift, worth a specific cause"
+        else:
+            verdict = "within the control limits - ordinary week-to-week variation"
+        rows.append([
+            metric, label,
+            round(lim["cl"], 4 if pct else 2), round(lim["ucl"], 4 if pct else 2),
+            round(lim["lcl"], 4 if pct else 2), round(lim["mr_bar"], 4 if pct else 2),
+            int(lim["n"]), round(current, 4 if pct else 2),
+            int(lim["n"] < spc._STABLE_N), verdict,
+        ])
+    return _write(os.path.join(out_dir, "meta_spc.csv"), header, rows)
+
+
 def export_all(cfg: Config, profile: Profile, ex: Extraction, auditor: Auditor,
                out_dir: str, streak: int) -> dict[str, int]:
     """Write the star schema + meta tables. Returns row counts per file."""
@@ -87,10 +130,15 @@ def export_all(cfg: Config, profile: Profile, ex: Extraction, auditor: Auditor,
     fact_rows = []
     for i, r in enumerate(o.itertuples(index=False)):
         wk, wk_idx = _iso_week(r.order_date.date())
+        # the week the order was PROMISED in, which is a different question from
+        # the week it was ordered in: it is what "promised this week and still
+        # not shipped" counts over, and on-time % cannot see those orders at all
+        promised_wk = _iso_week(r.promised_date.date())[0] if pd.notna(r.promised_date) else ""
         fact_rows.append([
             r.order_id, r.order_date.date().isoformat(), wk, wk_idx,
             r.region, r.customer, str(r.status).lower(),
             r.promised_date.date().isoformat() if pd.notna(r.promised_date) else "",
+            promised_wk,
             r.actual_ship_date.date().isoformat() if pd.notna(r.actual_ship_date) else "",
             round(float(r.net_total), 2),
             int(bool(delivered.iloc[i])),
@@ -100,7 +148,7 @@ def export_all(cfg: Config, profile: Profile, ex: Extraction, auditor: Auditor,
     counts["fact_orders.csv"] = _write(
         os.path.join(out_dir, "fact_orders.csv"),
         ["order_id", "order_date", "week_key", "week_index", "region", "customer",
-         "status", "promised_date", "actual_ship_date", "net_total",
+         "status", "promised_date", "promised_week", "actual_ship_date", "net_total",
          "is_delivered", "is_on_time", "lead_days"],
         fact_rows,
     )
@@ -179,6 +227,10 @@ def export_all(cfg: Config, profile: Profile, ex: Extraction, auditor: Auditor,
     # date the HTML report used (so both surfaces bucket identically). Always
     # written - empty when the profile maps no receivables - so the model loads.
     counts["fact_receivables.csv"] = _export_receivables(ex, out_dir, as_of)
+
+    # the SPC control limits, so Power BI can draw the band and quote the same
+    # arithmetic the HTML report does instead of a naive threshold
+    counts["meta_spc.csv"] = _export_spc(cfg, ex, out_dir, as_of)
 
     counts["meta_reconciliation.csv"] = _write(
         os.path.join(out_dir, "meta_reconciliation.csv"),

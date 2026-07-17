@@ -3,9 +3,9 @@
   "name": "table_customers",
   "position": {
     "x": 776,
-    "y": 388,
+    "y": 448,
     "z": 4000,
-    "height": 292,
+    "height": 232,
     "width": 480,
     "tabOrder": 4000
   },
@@ -65,11 +65,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "Customer Revenue Share"
+                  "Property": "Customer Revenue Share (This Week)"
                 }
               },
-              "queryRef": "_Measures.Customer Revenue Share",
-              "nativeQueryRef": "Customer Revenue Share"
+              "queryRef": "_Measures.Customer Revenue Share (This Week)",
+              "nativeQueryRef": "Customer Revenue Share (This Week)"
             },
             {
               "field": {
@@ -103,7 +103,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Customers \u2014 share, WoW and 13-week trend'"
+                  "Value": "'Customers \u2014 this week's share, WoW and 13-week trend'"
                 }
               }
             }

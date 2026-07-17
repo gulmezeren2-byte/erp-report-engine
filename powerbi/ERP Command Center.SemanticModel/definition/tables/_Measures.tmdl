@@ -16,7 +16,8 @@ table _Measures
 		lineageTag: 4ef8ad7c-87a7-4718-8878-b9575ba1fe3a
 
 	/// Order-level OTIF-lite: shipped on or before promised, over scored
-	/// delivered orders only. Completeness is NOT asserted - see README.
+	/// delivered orders only. Completeness is NOT asserted - see README, and see
+	/// [On-Time Coverage], which is the caveat in a form a card reader can see.
 	measure 'On-Time %' =
 			DIVIDE (
 			    SUM ( FactOrders[Is On Time] ),
@@ -25,6 +26,44 @@ table _Measures
 		formatString: 0.0%
 		displayFolder: 1. Base
 		lineageTag: 4ac0e738-a49f-433c-a14b-3412d7787bbe
+
+	/// How much of the percentage above is actually backed by dates: scored
+	/// deliveries out of delivered orders.
+	///
+	/// The HTML report and the dashboard both print this next to the number; the
+	/// Power BI card printed a bare percentage, and the caveat lived in a measure
+	/// description that a card reader never sees. A caveat nobody reads is not a
+	/// caveat.
+	measure 'On-Time Coverage' =
+			VAR scored = COUNT ( FactOrders[Is On Time] )
+			VAR delivered = SUM ( FactOrders[Is Delivered] )
+			RETURN
+			    IF (
+			        delivered > 0 && scored < delivered,
+			        scored & "/" & delivered & " scored",
+			        scored & " scored"
+			    )
+		displayFolder: 1. Base
+		lineageTag: 67a9115c-0070-4000-8000-000000000070
+
+	/// Orders promised in the last full week that have STILL not shipped.
+	///
+	/// On-time % scores orders that SHIPPED, so a late order that never ships is
+	/// in neither the numerator nor the denominator and never costs the metric a
+	/// point - taken to its end, on-time % RISES as fulfilment collapses. This is
+	/// the number the percentage cannot see. Read them together.
+	measure 'Promised, Not Shipped' =
+			VAR w = [Last Full Week]
+			RETURN
+			    CALCULATE (
+			        COUNTROWS ( FactOrders ),
+			        REMOVEFILTERS ( DimWeek ),
+			        FactOrders[Promised Week] = w,
+			        FactOrders[Actual Ship Date] = BLANK ()
+			    ) + 0
+		formatString: 0
+		displayFolder: 1. Base
+		lineageTag: 67a9115c-0071-4000-8000-000000000071
 
 	/// Average days from order date to actual ship date (delivered orders).
 	measure 'Avg Lead Days' = AVERAGE ( FactOrders[Lead Days] )
@@ -168,11 +207,17 @@ table _Measures
 		displayFolder: 3. Alerts
 		lineageTag: 67a9115c-0009-4000-8000-000000000009
 
-	/// Number of insight rules currently firing. Thresholds identical to the
-	/// engine's insights.py: |revenue WoW| >= 5%, on-time move >= 1.5 pts.
+	/// Number of things actually worth a manager's attention.
+	///
+	/// Revenue and on-time now ask the SPC layer whether the week is a SIGNAL,
+	/// not whether it crossed an arbitrary percentage. A +5% week inside the
+	/// control limits is ordinary variation, and reporting it as an alert is how
+	/// a dashboard trains people to ignore it - which is the failure this whole
+	/// project is arguing against. Cover, reconciliation and the decline streak
+	/// stay as rules because they are facts, not variation.
 	measure 'Alert Count' =
-			VAR revAlert = IF ( ABS ( [Revenue WoW %] ) >= 0.05, 1, 0 )
-			VAR otpAlert = IF ( ABS ( [On-Time Change (pts)] ) >= 1.5, 1, 0 )
+			VAR revAlert = IF ( [Revenue Is Signal] = 1, 1, 0 )
+			VAR otpAlert = IF ( [On-Time Is Signal] = 1, 1, 0 )
 			VAR coverAlert = IF ( [Low Cover Items] > 0, 1, 0 )
 			VAR reconAlert = IF ( [Reconciliation Mismatches] > 0, 1, 0 )
 			VAR streakAlert = IF ( MAX ( MetaRunInfo[Revenue Decline Streak] ) >= 2, 1, 0 )
@@ -181,6 +226,76 @@ table _Measures
 		formatString: 0
 		displayFolder: 3. Alerts
 		lineageTag: 67a9115c-0010-4000-8000-000000000010
+
+	// --- SPC: the control limits the engine computed, so this surface draws the
+	// --- same band and quotes the same arithmetic as the HTML report.
+
+	measure 'Revenue UCL' = LOOKUPVALUE ( MetaSpc[UCL], MetaSpc[Metric], "revenue" )
+		formatString: #,##0
+		displayFolder: 4. SPC
+		lineageTag: 67a9115c-0050-4000-8000-000000000050
+
+	measure 'Revenue CL' = LOOKUPVALUE ( MetaSpc[CL], MetaSpc[Metric], "revenue" )
+		formatString: #,##0
+		displayFolder: 4. SPC
+		lineageTag: 67a9115c-0051-4000-8000-000000000051
+
+	measure 'Revenue LCL' = LOOKUPVALUE ( MetaSpc[LCL], MetaSpc[Metric], "revenue" )
+		formatString: #,##0
+		displayFolder: 4. SPC
+		lineageTag: 67a9115c-0052-4000-8000-000000000052
+
+	measure 'On-Time UCL' = DIVIDE ( LOOKUPVALUE ( MetaSpc[UCL], MetaSpc[Metric], "on_time" ), 100 )
+		formatString: 0.0%
+		displayFolder: 4. SPC
+		lineageTag: 67a9115c-0053-4000-8000-000000000053
+
+	measure 'On-Time CL' = DIVIDE ( LOOKUPVALUE ( MetaSpc[CL], MetaSpc[Metric], "on_time" ), 100 )
+		formatString: 0.0%
+		displayFolder: 4. SPC
+		lineageTag: 67a9115c-0054-4000-8000-000000000054
+
+	measure 'On-Time LCL' = DIVIDE ( LOOKUPVALUE ( MetaSpc[LCL], MetaSpc[Metric], "on_time" ), 100 )
+		formatString: 0.0%
+		displayFolder: 4. SPC
+		lineageTag: 67a9115c-0055-4000-8000-000000000055
+
+	/// 1 when the last full week breached its control limits - a real shift,
+	/// worth finding a specific cause for. Anything inside the band is noise.
+	measure 'Revenue Is Signal' =
+			VAR c = LOOKUPVALUE ( MetaSpc[Current], MetaSpc[Metric], "revenue" )
+			RETURN
+			    IF ( ISBLANK ( c ), 0, IF ( c > [Revenue UCL] || c < [Revenue LCL], 1, 0 ) )
+		formatString: 0
+		displayFolder: 4. SPC
+		lineageTag: 67a9115c-0056-4000-8000-000000000056
+
+	measure 'On-Time Is Signal' =
+			VAR c = DIVIDE ( LOOKUPVALUE ( MetaSpc[Current], MetaSpc[Metric], "on_time" ), 100 )
+			RETURN
+			    IF ( ISBLANK ( c ), 0, IF ( c > [On-Time UCL] || c < [On-Time LCL], 1, 0 ) )
+		formatString: 0
+		displayFolder: 4. SPC
+		lineageTag: 67a9115c-0057-4000-8000-000000000057
+
+	/// The receipt, in full, for whichever metric is in context - the arithmetic
+	/// a reader can check with a pocket calculator, plus the baseline it rests on.
+	measure 'SPC Receipt' =
+			IF (
+			    HASONEVALUE ( MetaSpc[Metric] ),
+			    VAR n = MAX ( MetaSpc[Baseline N] )
+			    RETURN
+			        MAX ( MetaSpc[Label] ) & ": " & MAX ( MetaSpc[Verdict] )
+			            & "  ·  UCL " & FORMAT ( MAX ( MetaSpc[UCL] ), "#,##0.0" )
+			            & " / LCL " & FORMAT ( MAX ( MetaSpc[LCL] ), "#,##0.0" )
+			            & " = mean " & FORMAT ( MAX ( MetaSpc[CL] ), "#,##0.0" )
+			            & " ± 2.66 × avg moving range " & FORMAT ( MAX ( MetaSpc[MR Bar] ), "#,##0.0" )
+			            & "  ·  baseline n=" & n & " weeks"
+			            & IF ( MAX ( MetaSpc[Provisional] ) = 1, "  [provisional]", "" ),
+			    "Select a metric to see its control limits."
+			)
+		displayFolder: 4. SPC
+		lineageTag: 67a9115c-0058-4000-8000-000000000058
 
 	/// One-line plain-language verdict for the headline card - the same story
 	/// the HTML report tells, recomputed live on every refresh.
@@ -334,9 +449,12 @@ table _Measures
 		displayFolder: 4. Micro-charts
 		lineageTag: 67a9115c-0023-4000-8000-000000000023
 
-	/// Each customer's share of this week's revenue - the per-row lens on the
-	/// concentration analysis the engine also computes as top-3 share and HHI.
-	measure 'Customer Revenue Share' =
+	/// Each customer's share of THIS WEEK's revenue. Named for its window on
+	/// purpose: the engine's concentration analysis runs over 13 weeks, and a
+	/// single week is far more volatile - one large order makes an account look
+	/// dominant. Read this per-row lens next to [Top 3 Share] and [HHI], which
+	/// are the 13-week view, and do not mistake one for the other.
+	measure 'Customer Revenue Share (This Week)' =
 			DIVIDE (
 			    [Revenue (This Week)],
 			    CALCULATE ( [Revenue (This Week)], ALL ( FactOrders[Customer] ) )
@@ -344,6 +462,77 @@ table _Measures
 		formatString: 0.0%
 		displayFolder: 2. This Week
 		lineageTag: 67a9115c-0024-4000-8000-000000000024
+
+	// --- Concentration over the engine's 13-week window. These did not exist
+	// --- here at all, while powerbi/README.md described the page as carrying
+	// --- "the same concentration as a top-3 share + Herfindahl index (HHI)".
+
+	/// Revenue per customer over the engine's trend window - the base every
+	/// concentration measure below divides by.
+	measure 'Revenue (Trend Window)' =
+			CALCULATE (
+			    [Revenue],
+			    REMOVEFILTERS ( DimWeek ),
+			    DimWeek[Is Trend Week] = 1
+			)
+		formatString: #,##0
+		displayFolder: 6. Concentration
+		lineageTag: 67a9115c-0060-4000-8000-000000000060
+
+	/// The top 3 customers' share of the last 13 completed weeks' revenue.
+	/// Concentration is risk - one account can swing the number - not a forecast.
+	measure 'Top 3 Share' =
+			VAR total = CALCULATE ( [Revenue (Trend Window)], ALL ( FactOrders[Customer] ) )
+			VAR byCustomer =
+			    ADDCOLUMNS (
+			        ALL ( FactOrders[Customer] ),
+			        "@rev", CALCULATE ( [Revenue (Trend Window)] )
+			    )
+			VAR top3 = TOPN ( 3, FILTER ( byCustomer, [@rev] > 0 ), [@rev], DESC )
+			RETURN
+			    DIVIDE ( SUMX ( top3, [@rev] ), total )
+		formatString: 0.0%
+		displayFolder: 6. Concentration
+		lineageTag: 67a9115c-0061-4000-8000-000000000061
+
+	/// Herfindahl-Hirschman Index over the same 13 weeks: the sum of squared
+	/// customer shares x 10 000. Four equal customers = 2500; a monopoly = 10000.
+	/// The >= 2500 line is the DOJ/FTC "highly concentrated" threshold.
+	measure HHI =
+			VAR total = CALCULATE ( [Revenue (Trend Window)], ALL ( FactOrders[Customer] ) )
+			VAR byCustomer =
+			    ADDCOLUMNS (
+			        ALL ( FactOrders[Customer] ),
+			        "@rev", CALCULATE ( [Revenue (Trend Window)] )
+			    )
+			RETURN
+			    IF (
+			        total > 0,
+			        ROUND ( SUMX ( FILTER ( byCustomer, [@rev] > 0 ),
+			                       ( [@rev] / total ) ^ 2 ) * 10000, 0 )
+			    )
+		formatString: #,##0
+		displayFolder: 6. Concentration
+		lineageTag: 67a9115c-0062-4000-8000-000000000062
+
+	measure 'Concentration Verdict' =
+			VAR h = [HHI]
+			VAR t3 = [Top 3 Share]
+			RETURN
+			    IF (
+			        ISBLANK ( h ),
+			        "No revenue in the window.",
+			        FORMAT ( t3, "0%" ) & " of the last 13 weeks' revenue is the top 3 customers (HHI "
+			            & FORMAT ( h, "#,##0" ) & ") — "
+			            & IF (
+			                h >= 2500 || t3 >= 0.65,
+			                "concentration risk: one account swings the number.",
+			                IF ( t3 >= 0.5, "moderately concentrated; watch the top accounts.",
+			                     "well-diversified." )
+			            )
+			    )
+		displayFolder: 6. Concentration
+		lineageTag: 67a9115c-0063-4000-8000-000000000063
 
 	/// Total open receivables across all aging buckets.
 	measure 'Total AR' = SUM ( FactReceivables[Open Amount] )

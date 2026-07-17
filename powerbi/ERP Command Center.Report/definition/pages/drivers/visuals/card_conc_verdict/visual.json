@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "card_conc_verdict",
+  "position": {
+    "x": 536,
+    "y": 92,
+    "z": 1960,
+    "height": 108,
+    "width": 720,
+    "tabOrder": 1960
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Concentration Verdict"
+                }
+              },
+              "queryRef": "_Measures.Concentration Verdict",
+              "nativeQueryRef": "Concentration Verdict"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {},
+    "drillFilterOtherVisuals": true
+  }
+}

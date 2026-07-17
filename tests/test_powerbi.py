@@ -35,8 +35,8 @@ def test_export_powerbi_end_to_end(tmp_path):
     payload = json.loads(proc.stdout)
 
     expected = {"fact_orders.csv", "fact_order_lines.csv", "dim_item.csv", "dim_week.csv",
-                "fact_receivables.csv", "meta_reconciliation.csv", "meta_data_quality.csv",
-                "meta_audit_trail.csv", "meta_run_info.csv"}
+                "fact_receivables.csv", "meta_spc.csv", "meta_reconciliation.csv",
+                "meta_data_quality.csv", "meta_audit_trail.csv", "meta_run_info.csv"}
     assert set(payload["files"]) == expected
     for name in expected:
         assert (out / name).exists(), f"{name} missing"
@@ -183,3 +183,87 @@ def test_is_trend_week_marks_exactly_the_weeks_the_engine_plots(tmp_path):
     assert len(marked) == _TREND_WINDOW
     # and the partial week is never among them, by construction
     assert all(r["is_full_week"] == "1" for r in rows if r["is_trend_week"] == "1")
+
+
+def test_power_bi_gets_the_same_control_limits_the_report_quotes(tmp_path):
+    """SPC did not exist on this surface at all.
+
+    Power BI's Alert Count re-derived a crude |WoW| >= 5% threshold - exactly the
+    ordinary common-cause variation the method exists to ignore - so the
+    signal-vs-noise verdict that defines the project lived only in the HTML
+    report. The limits are now exported rather than reimplemented in DAX, because
+    a second implementation is eventually a second answer. This pins that they are
+    the same numbers.
+    """
+    import datetime as dt
+
+    import pandas as pd
+
+    from erp_report_engine import spc
+    from erp_report_engine.config import Config
+    from erp_report_engine.connect import Auditor
+    from erp_report_engine.export_powerbi import export_all
+    from erp_report_engine.extract import Extraction
+    from erp_report_engine.kpi import compute
+    from erp_report_engine.semantic import load_profile
+
+    as_of = dt.date(2026, 7, 16)
+    mondays = [dt.date(2026, 7, 6) - dt.timedelta(weeks=i) for i in range(20)]
+    o = pd.DataFrame(
+        [(f"SO-{i}", pd.Timestamp(m), "Ege", "C", "delivered", pd.Timestamp(m),
+          pd.Timestamp(m), 100.0 + i * 7) for i, m in enumerate(mondays)],
+        columns=["order_id", "order_date", "region", "customer", "status",
+                 "promised_date", "actual_ship_date", "net_total"])
+    frames = {
+        "orders": o,
+        "order_lines": pd.DataFrame([("SO-0", "ITM-A", 1.0)], columns=["order_id", "item_code", "qty"]),
+        "inventory": pd.DataFrame([("ITM-A", 5.0)], columns=["item_code", "stock_qty"]),
+    }
+    ex = Extraction(frames=frames, as_of=as_of)
+    cfg = Config(db_url="sqlite:///x", profile_path="generic")
+    export_all(cfg, load_profile("generic"), ex, Auditor(), str(tmp_path), streak=0)
+
+    with open(tmp_path / "meta_spc.csv", encoding="utf-8") as f:
+        rows = {r["metric"]: r for r in csv.DictReader(f)}
+    assert "revenue" in rows, "the control limits must reach Power BI"
+
+    kpis = compute(frames, low_cover_weeks=2.0, as_of=as_of)
+    lim = spc.limits_for(kpis, "revenue")
+    exported = rows["revenue"]
+    assert round(lim["ucl"], 2) == float(exported["ucl"])
+    assert round(lim["lcl"], 2) == float(exported["lcl"])
+    assert round(lim["cl"], 2) == float(exported["cl"])
+    assert int(lim["n"]) == int(exported["baseline_n"])   # the sample size travels too
+
+
+def test_promised_week_reaches_the_fact_so_power_bi_can_count_unshipped(tmp_path):
+    """On-time % scores orders that SHIPPED, so the surface needs the week an
+    order was PROMISED in to count the ones it cannot see."""
+    import datetime as dt
+
+    import pandas as pd
+
+    from erp_report_engine.config import Config
+    from erp_report_engine.connect import Auditor
+    from erp_report_engine.export_powerbi import export_all
+    from erp_report_engine.extract import Extraction
+    from erp_report_engine.semantic import load_profile
+
+    ts = pd.Timestamp("2026-07-06")     # 2026-W28
+    o = pd.DataFrame([
+        ("SO-1", ts, "Ege", "C", "delivered", ts, ts, 100.0),
+        ("SO-2", ts, "Ege", "C", "open", ts, pd.NaT, 100.0),      # promised W28, never shipped
+    ], columns=["order_id", "order_date", "region", "customer", "status",
+                "promised_date", "actual_ship_date", "net_total"])
+    ex = Extraction(frames={
+        "orders": o,
+        "order_lines": pd.DataFrame(columns=["order_id", "item_code", "qty"]),
+        "inventory": pd.DataFrame(columns=["item_code", "stock_qty"]),
+    }, as_of=dt.date(2026, 7, 16))
+    cfg = Config(db_url="sqlite:///x", profile_path="generic")
+    export_all(cfg, load_profile("generic"), ex, Auditor(), str(tmp_path), streak=0)
+
+    with open(tmp_path / "fact_orders.csv", encoding="utf-8") as f:
+        rows = {r["order_id"]: r for r in csv.DictReader(f)}
+    assert rows["SO-2"]["promised_week"] == "2026-W28"
+    assert rows["SO-2"]["actual_ship_date"] == ""      # the order the percentage cannot count

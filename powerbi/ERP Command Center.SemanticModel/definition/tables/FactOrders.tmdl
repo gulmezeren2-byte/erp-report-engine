@@ -63,6 +63,20 @@ table FactOrders
 
 		annotation SummarizationSetBy = Automatic
 
+	/// The ISO week the order was PROMISED in - a different question from the week
+	/// it was ordered in, and the one [Promised, Not Shipped] counts over. Kept as
+	/// a plain key rather than a relationship: FactOrders already joins DimWeek on
+	/// the ORDER week, and a second active relationship to the same dimension
+	/// would silently change what every other measure means.
+	column 'Promised Week'
+		dataType: string
+		isHidden
+		lineageTag: c7091d14-7a81-4845-9545-06145b0aa5bf
+		summarizeBy: none
+		sourceColumn: promised_week
+
+		annotation SummarizationSetBy = Automatic
+
 	column 'Ship Date'
 		dataType: dateTime
 		isHidden
@@ -130,6 +144,7 @@ table FactOrders
 							{"customer", type text},
 							{"status", type text},
 							{"promised_date", type date},
+							{"promised_week", type text},
 							{"actual_ship_date", type date},
 							{"net_total", type number},
 							{"is_delivered", Int64.Type},

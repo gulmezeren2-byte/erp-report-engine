@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "card_spc",
+  "position": {
+    "x": 24,
+    "y": 632,
+    "z": 4100,
+    "height": 44,
+    "width": 1232,
+    "tabOrder": 4100
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "SPC Receipt"
+                }
+              },
+              "queryRef": "_Measures.SPC Receipt",
+              "nativeQueryRef": "SPC Receipt"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {},
+    "drillFilterOtherVisuals": true
+  }
+}

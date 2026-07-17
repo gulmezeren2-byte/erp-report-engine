@@ -1,13 +1,13 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
-  "name": "card_verdict",
+  "name": "card_top3",
   "position": {
     "x": 24,
-    "y": 548,
-    "z": 4000,
-    "height": 76,
-    "width": 1232,
-    "tabOrder": 4000
+    "y": 92,
+    "z": 1900,
+    "height": 108,
+    "width": 240,
+    "tabOrder": 1900
   },
   "visual": {
     "visualType": "cardVisual",
@@ -23,11 +23,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "Weekly Verdict"
+                  "Property": "Top 3 Share"
                 }
               },
-              "queryRef": "_Measures.Weekly Verdict",
-              "nativeQueryRef": "Weekly Verdict"
+              "queryRef": "_Measures.Top 3 Share",
+              "nativeQueryRef": "Top 3 Share"
             }
           ]
         }
@@ -47,7 +47,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'What changed \u2014 plain language'"
+                  "Value": "'Top 3 customers \u00b7 13 weeks'"
                 }
               }
             }

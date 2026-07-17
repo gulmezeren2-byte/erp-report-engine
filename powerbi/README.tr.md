@@ -25,22 +25,23 @@ Hazır bir demo ihracı [`data/`](data/) içinde geliyor; rapor daha ilk yenilem
 
 | Parça | Teknoloji | Ne yapıyor |
 |---|---|---|
-| `ERP Command Center.SemanticModel/` | **TMDL** | Yıldız şema (2 fact, 2 boyut), opsiyonel `FactReceivables`, 4 meta tablo, açıklamalı ve klasörlü 28 DAX ölçüsü, `discourageImplicitMeasures` |
+| `ERP Command Center.SemanticModel/` | **TMDL** | Yıldız şema (2 fact, 2 boyut), opsiyonel `FactReceivables`, 5 meta tablo, açıklamalı ve klasörlü 46 DAX ölçüsü, `discourageImplicitMeasures` |
 | `Time Shift` tablosu | **Hesaplama grubu** | *Önceki Hafta / Haftalık Değişim / Haftalık % / 8 Haftalık Taban / Tabana Göre %* dönüşümlerini HERHANGİ bir ölçüye uygula — hafta aritmetiği boşluksuz sıra numarasında koşar, yıl sınırında asla kırılmaz |
-| `Selected KPI` tablosu | **Alan parametresi** | Tek grafik, dört KPI — dört kopya görsel yerine izleyici kendisi değiştirir |
+| `Selected KPI` tablosu | **Alan parametresi** *(model yeteneği — henüz bir sayfada değil)* | Tek grafik, dört KPI: bir eksene bırakın, izleyici kendisi değiştirsin. Overview şu an dört kart kullanıyor; bu, daha iyisini yapmak için duran araç — orada olanın tarifi değil |
 | `Revenue/On-Time Sparkline`, `Cover Bar` | **DAX SVG mikro-grafikleri** | `data:image/svg+xml` döndürüp `dataCategory: ImageUrl` etiketlenen ölçüler — tablo her satıra bir grafik çizer: **müşteri başına 13 haftalık sparkline** ve **ürün başına karşılama çubuğu** (eşiğin altında kırmızı, eşikte amber işaret). Özel görsel yok |
 | `measurement-honesty-theme.json` | **Koyu tema** | Fütüristik koyu tema (Microsoft'un resmi tema şemasına karşı doğrulandı): yuvarlatılmış cam kartlar, yumuşak gölgeler, koyu yüzey için basamaklanmış renk-körü-güvenli kategorik palet |
-| `FactReceivables` + yaşlandırma ölçüleri | **Cari yaşlandırma** | Opsiyonel AR fact'i (açık bakiyeler kova bazında: cari / 1-30 / 31-60 / 61-90 / 90+) + `Total AR`, `Overdue AR`, `Overdue %`, `AR 90+ Days` ölçüleri — kovaları HTML raporuyla *aynı* tanımla hesaplayan ihraç |
-| `ERP Command Center.Report/` | **PBIR** | 5 sayfa, 30 görsel, koyu tema — her görsel ayrı ve incelenebilir bir JSON |
+| `FactReceivables` + yaşlandırma ölçüleri | **Cari yaşlandırma** | Opsiyonel AR fact'i (açık bakiyeler kova bazında: cari / 1-30 / 31-60 / 61-90 / 91+) + `Total AR`, `Overdue AR`, `Overdue %`, `AR 91+ Days` ölçüleri — kovaları HTML raporuyla *aynı* tanımla hesaplayan ihraç |
+| `ERP Command Center.Report/` | **PBIR** | 5 sayfa, 36 görsel, koyu tema — her görsel ayrı ve incelenebilir bir JSON. Hafta trendleri **kilitli** bir `Is Trend Week = 1` filtresi taşır; izleyici onlara yarım haftayı çizdiremez |
+| `MetaSpc` tablosu | **Kontrol limitleri veri olarak** | Motorun hesapladığı XmR limitleri; DAX'te yeniden yazılmak yerine ihraç edilir — ikinci bir uygulama er geç ikinci bir cevaptır |
 | `tools/generate_report_pages.py` | **Kod-olarak-rapor** | Rapor sayfaları kompakt spec'lerden *üretilir*; yerleşim değişikliği = bir düzenleme + bir çalıştırma |
 | `data/` | CSV yıldız şema | `export-powerbi` tarafından, motorun bekçili-denetimli-salt-okunur yolundan yazılır |
 
 ## Beş sayfa
 
-1. **Overview** — **son tamamlanmış ISO haftasına** çapalı başlık kartları (iki günlük bir hafta asla çöküş gibi görünemez), haftalık ciro ve zamanında sevkiyat trendleri, DAX'in canlı hesapladığı sade dilli *Weekly Verdict* kartı.
-2. **Drivers** — ciro üstünde ayrıştırma ağacı (bölge → müşteri → durum) + haftalık değişim tablosu; burada her müşteri **bu haftaki cirodaki payını** gösterir ve kendi **13 haftalık ciro sparkline'ını** taşır (DAX'in çizdiği SVG mikro-grafik): hareket nerede yoğunlaşıyor *ve* her hesap oraya nasıl geldi. Motor aynı yoğunlaşmayı top-3 payı + Herfindahl endeksi (HHI) olarak da hesaplar.
+1. **Overview** — **son tamamlanmış ISO haftasına** çapalı başlık kartları (iki günlük bir hafta asla çöküş gibi görünemez) ve **SPC kontrol bandı** taşıyan ciro/zamanında sevkiyat trendleri: UCL, merkez çizgi ve LCL aynı birimde birer seri olarak; artı aritmetiği (`UCL/LCL = ortalama ± 2,66 × ort. hareketli menzil`) ve dayandığı bazı gösteren bir *SPC Receipt* kartı. `Alert Count` artık haftanın keyfi bir %5'i aşıp aşmadığını değil, SPC katmanına **sinyal mi** olduğunu sorar — bandı aşmak haberdir, bandın içindeki %5'lik salınım sadece salıdır. Limitleri motor hesaplar ve `MetaSpc` ile gönderir; DAX'te yeniden yazılmaz, böylece bu yüzey ile HTML raporu aynı sayıları alıntılar. Zamanında sevkiyat kartı iki uyarısını yanında taşır: `On-Time Coverage` (yüzdenin ne kadarı tarihle destekli) ve `Promised, Not Shipped` (yüzdenin yapısal olarak sayamadığı geciken siparişler).
+2. **Drivers** — ciro üstünde ayrıştırma ağacı (bölge → müşteri → durum) + haftalık değişim tablosu; burada her müşteri **bu haftaki cirodaki payını** gösterir ve kendi **13 haftalık ciro sparkline'ını** taşır (DAX'in çizdiği SVG mikro-grafik): hareket nerede yoğunlaşıyor *ve* her hesap oraya nasıl geldi. **Top 3 Share** ve **HHI** kartları motorun 13 haftalık yoğunlaşma görüşünü taşır; DOJ/FTC'nin 2500 çizgisine karşı düz Türkçe bir hüküm ile. İki pencerenin bilerek farklı olduğu artık yazılı: satır bazlı kolon `Customer Revenue Share (This Week)` — tek hafta çok daha oynaktır, tek bir büyük sipariş bir hesabı baskın gösterir — yoğunlaşma ise 13 hafta üzerinden ölçülür.
 3. **Stock** — **ürün başına karşılama çubuğu** (SVG, eşiğin altında kırmızı) içeren karşılama haftası tablosu ve sipariş miktarı sıralaması; düşük-karşılama eşiği DAX'e gömülü değil, motorun config'inden `MetaRunInfo` üzerinden gelir.
-4. **Aging** *(receivables eşlendiğinde)* — toplam AR, gecikme %'si ve 90+ kartları, yaş kovasına göre açık bakiye ve müşteriye göre sıralı gecikme: önce en eski parayı kovala.
+4. **Aging** *(receivables eşlendiğinde)* — toplam AR, gecikme %'si ve 91+ kartları, yaş kovasına göre açık bakiye ve müşteriye göre sıralı gecikme: önce en eski parayı kovala.
 5. **Trust** — imza sayfa: **kaynak mutabakat sayıları, her veri kalitesi bulgusu ve SQL denetim izinin tamamı** görsel olarak. Pano makbuzlarını gösterir.
 
 ## Tasarımı gereği proaktif

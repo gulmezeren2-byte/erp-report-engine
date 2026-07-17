@@ -1,13 +1,13 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
-  "name": "card_verdict",
+  "name": "card_hhi",
   "position": {
-    "x": 24,
-    "y": 548,
-    "z": 4000,
-    "height": 76,
-    "width": 1232,
-    "tabOrder": 4000
+    "x": 280,
+    "y": 92,
+    "z": 1950,
+    "height": 108,
+    "width": 240,
+    "tabOrder": 1950
   },
   "visual": {
     "visualType": "cardVisual",
@@ -23,11 +23,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "Weekly Verdict"
+                  "Property": "HHI"
                 }
               },
-              "queryRef": "_Measures.Weekly Verdict",
-              "nativeQueryRef": "Weekly Verdict"
+              "queryRef": "_Measures.HHI",
+              "nativeQueryRef": "HHI"
             }
           ]
         }
@@ -47,7 +47,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'What changed \u2014 plain language'"
+                  "Value": "'Herfindahl index \u00b7 2500+ = concentrated'"
                 }
               }
             }

@@ -3,9 +3,9 @@
   "name": "bar_region",
   "position": {
     "x": 776,
-    "y": 92,
+    "y": 216,
     "z": 3000,
-    "height": 280,
+    "height": 216,
     "width": 480,
     "tabOrder": 3000
   },

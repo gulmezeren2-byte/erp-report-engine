@@ -3,9 +3,9 @@
   "name": "trend_revenue",
   "position": {
     "x": 24,
-    "y": 252,
+    "y": 288,
     "z": 3000,
-    "height": 292,
+    "height": 252,
     "width": 608,
     "tabOrder": 3000
   },
@@ -47,6 +47,48 @@
               },
               "queryRef": "_Measures.Revenue",
               "nativeQueryRef": "Revenue"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Revenue UCL"
+                }
+              },
+              "queryRef": "_Measures.Revenue UCL",
+              "nativeQueryRef": "Revenue UCL"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Revenue CL"
+                }
+              },
+              "queryRef": "_Measures.Revenue CL",
+              "nativeQueryRef": "Revenue CL"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Revenue LCL"
+                }
+              },
+              "queryRef": "_Measures.Revenue LCL",
+              "nativeQueryRef": "Revenue LCL"
             }
           ]
         }
@@ -66,7 +108,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Weekly revenue \u2014 completed weeks'"
+                  "Value": "'Weekly revenue \u2014 completed weeks, with control limits'"
                 }
               }
             }

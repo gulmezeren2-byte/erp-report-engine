@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.0.0/schema.json",
+  "name": "card_unshipped",
+  "position": {
+    "x": 800,
+    "y": 244,
+    "z": 2500,
+    "height": 36,
+    "width": 144,
+    "tabOrder": 2500
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Promised, Not Shipped"
+                }
+              },
+              "queryRef": "_Measures.Promised, Not Shipped",
+              "nativeQueryRef": "Promised, Not Shipped"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {},
+    "drillFilterOtherVisuals": true
+  }
+}
