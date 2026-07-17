@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>erp-report-engine — weekly reports from the SQL behind your ERP</title>
-<meta name="description" content="A read-only, self-verifying data layer for the SQL database behind your ERP — weekly reports and a guarded MCP server for AI agents. Every query provably read-only, measured against 24 attacks.">
+<meta name="description" content="A read-only, self-verifying data layer for the SQL database behind your ERP — weekly reports and a guarded MCP server for AI agents. Every query provably read-only, measured against 28 attacks.">
 <style>
  *{box-sizing:border-box}
  body{margin:0;background:#0b0d10;color:#f4f6f8;
@@ -35,9 +35,9 @@
 <div class="wrap">
   <h1>erp-report-engine</h1>
   <p class="tag">A read-only, self-verifying data layer for the SQL database behind your ERP — weekly reports, and a guarded MCP server for AI agents.</p>
-  <p class="sub">Every query provably read-only, measured against 24 attacks. No BI license, no agent installed on the ERP server, no writes.</p>
+  <p class="sub">Every query provably read-only, measured against 28 attacks. No BI license, no agent installed on the ERP server, no writes.</p>
 
-  <a class="pill" href="playground.html">✓ read-only guard: 24/24 attacks refused — try to break it →</a>
+  <a class="pill" href="playground.html">✓ read-only guard: 28/28 attacks refused — try to break it →</a>
 
   <pre>pipx install erp-report-engine
 erp-report-engine init-demo
@@ -60,7 +60,7 @@ erp-report-engine run -c config.demo.yaml</pre>
       <span class="go">try it yourself</span>
     </a>
   </div>
-  <p style="margin:-22px 0 14px;color:#7d8590;font-size:14px">Prefer the static results? See the <a href="trust.html">full 24-attack trust benchmark →</a></p>
+  <p style="margin:-22px 0 14px;color:#7d8590;font-size:14px">Prefer the static results? See the <a href="trust.html">full 28-attack trust benchmark →</a></p>
   <p style="margin:0 0 14px;color:#7d8590;font-size:14px">Or read the story: <a href="case-study.html">why "read-only-in-prose" is not read-only →</a> — the two famous MCP database failures, and how to build a guard you can prove.</p>
   <p style="margin:0 0 40px;color:#7d8590;font-size:14px">Weighing your options? <a href="comparison.html">Read-only database access for AI agents, compared →</a> — transactions vs roles vs statement guards vs semantic layers, and where each is the right choice.</p>
 

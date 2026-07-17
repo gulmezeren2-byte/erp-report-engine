@@ -80,6 +80,10 @@ SIDE_EFFECTS = [
          "side_effect", "medium", "CPU-burning denial of service"),
     Case("load_extension", "sqlite", "SELECT load_extension('evil.so')",
          "side_effect", "critical", "loads a shared library - arbitrary code execution"),
+    Case("sys_exec", "mysql", "SELECT sys_exec('id')",
+         "side_effect", "critical", "a MySQL UDF that shells out - command execution where the UDF is installed"),
+    Case("comment_obfuscation", "postgres", "SELECT/**/pg_read_file('/etc/passwd')",
+         "side_effect", "high", "pg_read_file with a comment spliced in to dodge a name scan - the comment guard refuses it first"),
 ]
 
 # Writes and multi-statement tricks a keyword scan alone might miss.
@@ -104,6 +108,10 @@ WRITES = [
          "write", "critical", "the obvious case - mutates rows"),
     Case("lock_hint", "tsql", "SELECT * FROM orders WITH (TABLOCKX)",
          "write", "high", "an exclusive lock hint escalates a read into a blocker"),
+    Case("into_outfile", "mysql", "SELECT a INTO OUTFILE '/tmp/x' FROM t",
+         "write", "high", "SELECT ... INTO OUTFILE writes the result to a server file - a MySQL exfiltration primitive"),
+    Case("copy_to", "postgres", "COPY (SELECT 1) TO '/tmp/x'",
+         "write", "high", "COPY ... TO writes a server file; it isn't a SELECT/WITH, so it never clears the head check"),
 ]
 
 # Legitimate analytics the guard must NOT block. A guard that fails these is
@@ -122,6 +130,11 @@ READS = [
          "read", "-", "CASE and COALESCE - recognised functions, allowed"),
     Case("literal_keyword", "postgres", "SELECT 'please delete this note' AS note",
          "read", "-", "a write keyword INSIDE a string literal is data, not code"),
+    Case("date_bucket", "postgres", "SELECT date_trunc('week', order_date), COUNT(*) FROM orders GROUP BY 1",
+         "read", "-", "date_trunc + COUNT - the time-bucketing at the heart of a weekly report"),
+    Case("top_ordered", "tsql",
+         "SELECT TOP 10 customer, SUM(net_total) FROM orders GROUP BY customer ORDER BY 2 DESC",
+         "read", "-", "TOP with ORDER BY - a ranked read, allowed"),
 ]
 
 CASES = [*SIDE_EFFECTS, *WRITES, *READS]

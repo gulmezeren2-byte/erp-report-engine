@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>erp-report-engine — the read-only guard, measured</title>
-<meta name="description" content="A reproducible benchmark: 24 of 24 well-formed-SQL attacks refused by the read-only guard, 6 of 6 legitimate reads allowed.">
+<meta name="description" content="A reproducible benchmark: 28 of 28 well-formed-SQL attacks refused by the read-only guard, 8 of 8 legitimate reads allowed.">
 <style>
  *{box-sizing:border-box}
  body{margin:0;background:#0b0d10;color:#f4f6f8;
@@ -48,8 +48,8 @@
   opens a socket, runs more SQL, or flips the session. A shape-only guard waves them all through.</p>
 
   <div class="stat">
-    <div><div class="n">24/24</div><div class="l">attacks refused</div></div>
-    <div><div class="n">6/6</div><div class="l">legitimate reads allowed</div></div>
+    <div><div class="n">28/28</div><div class="l">attacks refused</div></div>
+    <div><div class="n">8/8</div><div class="l">legitimate reads allowed</div></div>
     <div><div class="n">4</div><div class="l">SQL dialects</div></div>
   </div>
   <p class="verdictline">Every case behaves as claimed.</p>
@@ -63,7 +63,7 @@ erp-report-engine trust-benchmark</pre>
     Or — no install — <a href="playground.html">paste your own SQL into the guard, in your browser →</a>
   </div>
 
-  <h2>Attacks — 24 well-formed SELECTs that are not reads</h2>
+  <h2>Attacks — 28 well-formed SELECTs that are not reads</h2>
   <div class="scroll"><table>
     <thead><tr><th>Severity</th><th>Function</th><th>Dialect</th><th>What it actually does</th><th>Guard</th></tr></thead>
     <tbody>
@@ -78,10 +78,14 @@ erp-report-engine trust-benchmark</pre>
 <tr><td><span class="sev" style="color:#d03b3b">critical</span></td><td class="mono">pg_read_file</td><td class="mono muted">postgres</td><td>reads an arbitrary server file straight off disk</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
 <tr><td><span class="sev" style="color:#d03b3b">critical</span></td><td class="mono">set_config</td><td class="mono muted">postgres</td><td>switches the read-only session backstop OFF from inside a SELECT</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
 <tr><td><span class="sev" style="color:#d03b3b">critical</span></td><td class="mono">sp_oacreate</td><td class="mono muted">tsql</td><td>OLE automation: another SQL Server path to arbitrary code</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
+<tr><td><span class="sev" style="color:#d03b3b">critical</span></td><td class="mono">sys_exec</td><td class="mono muted">mysql</td><td>a MySQL UDF that shells out - command execution where the UDF is installed</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
 <tr><td><span class="sev" style="color:#d03b3b">critical</span></td><td class="mono">trifecta_exfil</td><td class="mono muted">postgres</td><td>the Supabase &#x27;lethal trifecta&#x27; write leg - injected content steering an agent to copy secrets into an attacker-readable row; a guard denies the write a read-only role might not</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
 <tr><td><span class="sev" style="color:#d03b3b">critical</span></td><td class="mono">two_statements</td><td class="mono muted">postgres</td><td>a second statement smuggled behind a read</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
 <tr><td><span class="sev" style="color:#d03b3b">critical</span></td><td class="mono">update</td><td class="mono muted">postgres</td><td>the obvious case - mutates rows</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
 <tr><td><span class="sev" style="color:#d03b3b">critical</span></td><td class="mono">xp_cmdshell</td><td class="mono muted">tsql</td><td>SQL Server shell execution - and Logo, Netsis and Mikro all run on SQL Server</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
+<tr><td><span class="sev" style="color:#d95926">high</span></td><td class="mono">comment_obfuscation</td><td class="mono muted">postgres</td><td>pg_read_file with a comment spliced in to dodge a name scan - the comment guard refuses it first</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
+<tr><td><span class="sev" style="color:#d95926">high</span></td><td class="mono">copy_to</td><td class="mono muted">postgres</td><td>COPY ... TO writes a server file; it isn&#x27;t a SELECT/WITH, so it never clears the head check</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
+<tr><td><span class="sev" style="color:#d95926">high</span></td><td class="mono">into_outfile</td><td class="mono muted">mysql</td><td>SELECT ... INTO OUTFILE writes the result to a server file - a MySQL exfiltration primitive</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
 <tr><td><span class="sev" style="color:#d95926">high</span></td><td class="mono">lock_hint</td><td class="mono muted">tsql</td><td>an exclusive lock hint escalates a read into a blocker</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
 <tr><td><span class="sev" style="color:#d95926">high</span></td><td class="mono">opendatasource</td><td class="mono muted">tsql</td><td>ad-hoc connection to an attacker-named server</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
 <tr><td><span class="sev" style="color:#d95926">high</span></td><td class="mono">openquery</td><td class="mono muted">tsql</td><td>runs SQL on a linked server - a pivot off the reporting box</td><td class="verdict" style="color:#0ca30c">refused</td></tr>
@@ -94,7 +98,7 @@ erp-report-engine trust-benchmark</pre>
     </tbody>
   </table></div>
 
-  <h2>Legitimate reads — 6 that must be allowed</h2>
+  <h2>Legitimate reads — 8 that must be allowed</h2>
   <p class="muted" style="margin-top:-4px">A guard that blocks real work is useless, so these earn a place in the benchmark too.</p>
   <div class="scroll"><table>
     <thead><tr><th></th><th>Query</th><th>Dialect</th><th>Why it's a read</th><th>Guard</th></tr></thead>
@@ -102,8 +106,10 @@ erp-report-engine trust-benchmark</pre>
 <tr><td><span class="sev muted">read</span></td><td class="mono">aggregate</td><td class="mono muted">postgres</td><td>grouped aggregate - the bread and butter of a report</td><td class="verdict" style="color:#0ca30c">allowed</td></tr>
 <tr><td><span class="sev muted">read</span></td><td class="mono">case_coalesce</td><td class="mono muted">mysql</td><td>CASE and COALESCE - recognised functions, allowed</td><td class="verdict" style="color:#0ca30c">allowed</td></tr>
 <tr><td><span class="sev muted">read</span></td><td class="mono">cte_window</td><td class="mono muted">tsql</td><td>a CTE with a window function - reads, despite the machinery</td><td class="verdict" style="color:#0ca30c">allowed</td></tr>
+<tr><td><span class="sev muted">read</span></td><td class="mono">date_bucket</td><td class="mono muted">postgres</td><td>date_trunc + COUNT - the time-bucketing at the heart of a weekly report</td><td class="verdict" style="color:#0ca30c">allowed</td></tr>
 <tr><td><span class="sev muted">read</span></td><td class="mono">join</td><td class="mono muted">tsql</td><td>a two-table join</td><td class="verdict" style="color:#0ca30c">allowed</td></tr>
 <tr><td><span class="sev muted">read</span></td><td class="mono">literal_keyword</td><td class="mono muted">postgres</td><td>a write keyword INSIDE a string literal is data, not code</td><td class="verdict" style="color:#0ca30c">allowed</td></tr>
+<tr><td><span class="sev muted">read</span></td><td class="mono">top_ordered</td><td class="mono muted">tsql</td><td>TOP with ORDER BY - a ranked read, allowed</td><td class="verdict" style="color:#0ca30c">allowed</td></tr>
 <tr><td><span class="sev muted">read</span></td><td class="mono">union</td><td class="mono muted">postgres</td><td>a UNION of two reads</td><td class="verdict" style="color:#0ca30c">allowed</td></tr>
     </tbody>
   </table></div>

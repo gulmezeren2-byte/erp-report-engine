@@ -2,7 +2,7 @@
 
 > Pazartesi toplantısının rakamları zaten ERP'nizin veritabanında duruyor. Peki raporu hâlâ kim yazıyor?
 
-**ERP'nizin arkasındaki SQL veritabanı için salt-okunur, kendini doğrulayan bir veri katmanı — hem haftalık raporlar *hem de* AI ajanları için korumalı bir MCP sunucusu. Her sorgu kanıtlanabilir şekilde salt-okunur: 24 saldırıya karşı ölçülmüş, düzyazıda vaat edilmemiş.**
+**ERP'nizin arkasındaki SQL veritabanı için salt-okunur, kendini doğrulayan bir veri katmanı — hem haftalık raporlar *hem de* AI ajanları için korumalı bir MCP sunucusu. Her sorgu kanıtlanabilir şekilde salt-okunur: 28 saldırıya karşı ölçülmüş, düzyazıda vaat edilmemiş.**
 
 [![CI](https://github.com/gulmezeren2-byte/erp-report-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/gulmezeren2-byte/erp-report-engine/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/requirements.txt)
@@ -18,7 +18,7 @@ Zamanlanmış tek bir `run` komutu **9 denetlenmiş SELECT** çalıştırır ve 
 
 **Aynı korumalı motor AI ajanlarıyla da konuşur.** `erp-report-engine mcp`, ERP'yi bir ajana *kanonik varlıklar* üzerinden açar (`orders`, asla `LG_001_01_ORFICHE`) — aynı salt-okunur bekçinin arkasında. Bu, MCP ekosisteminin sürekli yanlış yaptığı katman: referans PostgreSQL MCP sunucusunun salt-okunur modu `COMMIT; DROP SCHEMA public CASCADE;` ile aşıldı ve [arşivlendi](https://github.com/modelcontextprotocol/servers-archived/tree/HEAD/src/postgres); Supabase'in MCP'si ders kitabı ["lethal trifecta"](https://simonwillison.net/2025/Jul/6/supabase-mcp-lethal-trifecta/) vakası oldu. Burada bekçi ifadenin **çağırdığı fonksiyonları** denetler, sadece şeklini değil — ve sıfatın sözüne güvenmek zorunda değilsiniz:
 
-**▶ [24 saldırılık güven benchmark'ını çalıştır](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** · **[bekçiyi tarayıcında kendin kır](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)** (gerçek `guard.py`, Pyodide ile, hiçbir yere bir şey gitmez).
+**▶ [28 saldırılık güven benchmark'ını çalıştır](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** · **[bekçiyi tarayıcında kendin kır](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)** (gerçek `guard.py`, Pyodide ile, hiçbir yere bir şey gitmez).
 
 ## 60 saniyede demo (ERP gerekmez)
 
@@ -95,10 +95,10 @@ Salt-okunur **dört katmanda** zorlanır; tek bir hata motoru yazma yapabilir ha
 
 **Ve bize ait olmayan katman.** MSSQL'de oturum düzeyinde salt-okunur anahtarı yoktur; orada bu katman doğrudan **kullanıcının kendisidir**. Tehlikeli fonksiyon listesi bir denylist'tir ve hiçbir denylist tam kanıtlanamaz — bu yüzden motoru **en az yetkili, salt-okunur bir kullanıcıyla** çalıştırın (MSSQL'de `db_datareader`, PostgreSQL'de yalnız `SELECT` yetkisi; ideali fiziksel bir okuma replikası). Bekçi derinlemesine savunmadır; bekçinin deliği olduğunda tutan katman yetkidir. Deliği oldu da: bu fonksiyon baypasları bu deponun denetlenmesiyle bulundu ve artık [`tests/test_guard.py`](tests/test_guard.py) içinde isimleriyle, diyalekt diyalekt pinlenmiş durumda.
 
-**Sözüme güvenme — ölç.** Bekçi, tekrar üretilebilir bir güven benchmark'ıyla gelir: şekil-odaklı bir bekçinin geçirdiği, dört diyalektte 24 kusursuz-SQL saldırısı — hepsi reddedilir — artı geçmesi gereken meşru okumalar. Sayı düzyazıda iddia edilmez, canlı bir bekçi koşusundan hesaplanır ve CI her commit'te doğrular.
+**Sözüme güvenme — ölç.** Bekçi, tekrar üretilebilir bir güven benchmark'ıyla gelir: şekil-odaklı bir bekçinin geçirdiği, dört diyalektte 28 kusursuz-SQL saldırısı — hepsi reddedilir — artı geçmesi gereken meşru okumalar. Sayı düzyazıda iddia edilmez, canlı bir bekçi koşusundan hesaplanır ve CI her commit'te doğrular.
 
 ```bash
-erp-report-engine trust-benchmark      # 24/24 saldırı reddedildi · 6/6 okuma serbest
+erp-report-engine trust-benchmark      # 28/28 saldırı reddedildi · 8/8 okuma serbest
 ```
 
 **▶ Sonuçları görün: [güven benchmark'ı](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** — her vaka, şiddeti ve gerçekte ne yaptığı. Ya da **[kendin kır](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)**: tarayıcında çalışan gerçek bekçiye SQL yapıştır (kurulum yok, hiçbir yere bir şey gitmez — Pyodide üzerinden, testlerin çalıştırdığı `guard.py`'nin ta kendisi).
