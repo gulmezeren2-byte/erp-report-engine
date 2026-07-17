@@ -37,7 +37,7 @@
   <p class="tag">Autonomous weekly reports straight from the SQL database behind your ERP.</p>
   <p class="sub">Read-only by construction, every query audited. No BI license, no agent installed on the ERP server.</p>
 
-  <span class="pill">✓ read-only guard: 20/20 attacks refused</span>
+  <a class="pill" href="playground.html">✓ read-only guard: 20/20 attacks refused — try to break it →</a>
 
   <pre>pipx install erp-report-engine
 erp-report-engine init-demo
@@ -54,12 +54,13 @@ erp-report-engine run -c config.demo.yaml</pre>
       <p>The premium dark dashboard: animated KPIs, SPC control-band charts, receivables aging and revenue concentration — a real chart in every cell, no external assets.</p>
       <span class="go">open the dashboard</span>
     </a>
-    <a class="card" href="trust.html">
-      <h3>Trust benchmark →</h3>
-      <p>The read-only guard, measured against 20 well-formed-SQL attacks across 4 dialects — reproducible in one command. Every number computed from a live guard run.</p>
-      <span class="go">see the benchmark</span>
+    <a class="card" href="playground.html">
+      <h3>Break the guard →</h3>
+      <p>Paste SQL and watch the <em>real</em> read-only guard allow or refuse it — running in your browser, on the exact code the engine ships. Interactive.</p>
+      <span class="go">try it yourself</span>
     </a>
   </div>
+  <p style="margin:-22px 0 40px;color:#7d8590;font-size:14px">Prefer the static results? See the <a href="trust.html">full 20-attack trust benchmark →</a></p>
 
   <h2>What one run produces</h2>
   <ul>

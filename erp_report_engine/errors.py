@@ -29,6 +29,14 @@ class DatabaseError(EngineError):
     exit_code = 3
 
 
+class ReadOnlyViolation(EngineError):
+    """A statement failed the read-only guard - it should never reach the DB.
+
+    Lives here, not in connect.py, so the guard module can import it without
+    pulling in pandas/sqlalchemy - which is what lets the guard run standalone
+    (the in-browser trust playground loads exactly this code, nothing heavier)."""
+
+
 class ContractError(EngineError):
     """A profile/schema contract was not met (missing columns, unparseable
     profile, or fetched rows not reconciling with the source count)."""

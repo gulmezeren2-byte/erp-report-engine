@@ -121,6 +121,7 @@ def build() -> None:
     <pre>pipx install erp-report-engine
 erp-report-engine trust-benchmark</pre>
     The same corpus is enforced by CI on every commit, so this page can never claim a result the tests don't hold.
+    Or — no install — <a href="playground.html">paste your own SQL into the guard, in your browser →</a>
   </div>
 
   <h2>Attacks — {len(attacks)} well-formed SELECTs that are not reads</h2>

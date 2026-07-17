@@ -97,7 +97,7 @@ Read-only is enforced in **four layers**, so no single mistake makes the engine 
 erp-report-engine trust-benchmark      # 20/20 attacks refused · 6/6 reads allowed
 ```
 
-**▶ See the results: [the trust benchmark](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** — every case, its severity, and what it actually does.
+**▶ See the results: [the trust benchmark](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** — every case, its severity, and what it actually does. Or **[break it yourself](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)**: paste SQL into the real guard, running in your browser (no install, nothing sent anywhere — it's the exact `guard.py` the tests run, via Pyodide).
 
 Plus: profile variables are identifier-safe (`^[A-Za-z0-9_]{1,16}$`, so `"001; DROP TABLE x"` raises before any connection), secrets never live in config files (the loader refuses embedded credentials in any spelling — `password`, `passwd`, `pwd`, `sslpassword`, ODBC `PWD=` — use `url_env`), every executed statement ships in the report's audit trail, and a row cap (default 500k) bounds any single query.
 

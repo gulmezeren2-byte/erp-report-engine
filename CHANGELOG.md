@@ -7,10 +7,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ### Added
 - **Reproducible trust benchmark.** A single attack corpus (`erp_report_engine/attack_corpus.py`) — 20 well-formed-SQL attacks across four dialects that a shape-only guard waves through, plus the legitimate reads that must still pass — is now the one source read by the guard tests, a new `erp-report-engine trust-benchmark` CLI command, and a published results page. The number on the page is computed from a live guard run and CI enforces it on every commit (page-drift gate), so the website can never claim a result the tests don't hold. Run it yourself: `erp-report-engine trust-benchmark`.
-- **A real landing page** at [gulmezeren2-byte.github.io/erp-report-engine](https://gulmezeren2-byte.github.io/erp-report-engine/) — the sample report, the Command Center dashboard, and the trust benchmark, with the install one-liner. (Was a bare redirect to the sample report.)
+- **An in-browser guard playground.** [playground.html](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html) runs the *actual* `guard.py` in the visitor's browser via Pyodide — paste any SQL and watch it allow or refuse it, client-side, nothing sent anywhere. It embeds the real guard source (CI fails on drift from `guard.py`), so it is the code the tests run, not a re-implementation.
+- **A real landing page** at [gulmezeren2-byte.github.io/erp-report-engine](https://gulmezeren2-byte.github.io/erp-report-engine/) — the sample report, the Command Center dashboard, and the interactive guard, with the install one-liner. (Was a bare redirect to the sample report.)
 
 ### Changed
-- The guard tests read their corpus from `attack_corpus` instead of an inline copy — one definition, shared by the tests, the CLI, and the docs page.
+- **The read-only guard moved to its own module** (`erp_report_engine/guard.py`), depending on nothing heavier than `re` and `sqlglot`, so it can run standalone (that is what lets the browser playground load the genuine code). `connect.py` re-exports it, so every `from .connect import assert_read_only / ReadOnlyViolation / _SQLGLOT_DIALECT` is unchanged; `ReadOnlyViolation` now lives in `errors.py`.
+- The guard tests read their corpus from `attack_corpus` instead of an inline copy — one definition, shared by the tests, the CLI, and the docs pages.
 
 ## [0.6.0] — 2026-07-17 · "Receivables, a narrative that can't lie, and a guard that keeps its word"
 

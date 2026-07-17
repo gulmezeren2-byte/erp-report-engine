@@ -78,10 +78,11 @@ jobs:
         run: |
           python "powerbi/tools/generate_report_pages.py"
           git diff --exit-code -- "powerbi/ERP Command Center.Report"
-      - name: The published trust benchmark matches a live guard run (no drift)
+      - name: The published trust pages match a live guard run (no drift)
         run: |
           python docs/generate_trust_page.py
-          git diff --exit-code -- docs/trust.html
+          python docs/generate_playground.py
+          git diff --exit-code -- docs/trust.html docs/playground.html
       - name: The trust-benchmark CLI passes (every attack refused)
         run: python -m erp_report_engine trust-benchmark
 

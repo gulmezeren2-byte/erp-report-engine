@@ -38,166 +38,28 @@ from __future__ import annotations
 
 import contextlib
 import logging
-import re
 import time
 from dataclasses import dataclass, field
 
 import pandas as pd
-import sqlglot
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
-from sqlglot import exp
 
-from .errors import DatabaseError, EngineError
+from .errors import DatabaseError
+
+# The read-only guard lives in guard.py - dependency-light (only re + sqlglot) so
+# it can run standalone, including in the browser trust playground. Re-exported
+# here so every `from .connect import assert_read_only / ReadOnlyViolation /
+# _SQLGLOT_DIALECT` across the codebase keeps working, one definition behind it.
+from .guard import _SQLGLOT_DIALECT, ReadOnlyViolation, assert_read_only
+
+__all__ = [
+    "assert_read_only", "ReadOnlyViolation", "_SQLGLOT_DIALECT",
+    "Auditor", "AuditEntry", "make_engine", "safe_read", "scalar", "server_today",
+]
 
 _log = logging.getLogger("erp_report_engine")
-
-
-class ReadOnlyViolation(EngineError):
-    """A statement failed the read-only guard - it should never reach the DB."""
-
-
-_FORBIDDEN = re.compile(
-    r"\b(insert|update|delete|drop|alter|create|truncate|merge|grant|revoke|exec|execute|call|into)\b",
-    re.IGNORECASE,
-)
-_COMMENT = re.compile(r"(--|/\*|#)")  # SQL, C-style, and MySQL '#' comments
-_LOCK_HINTS = re.compile(r"\b(TABLOCKX|UPDLOCK|XLOCK)\b", re.IGNORECASE)
-
-# A single-quoted literal, standard-SQL rules: '' doubles, backslash is NOT an
-# escape. Deliberately not dialect-aware. On MySQL, where \' does escape, this
-# splits a literal early and scans text that was really inside it - a false
-# positive, which is the safe direction for a guard to be wrong in.
-_STRING_LITERAL = re.compile(r"'(?:''|[^'])*'", re.DOTALL)
-
-# Functions that make a SELECT stop being a read. Every one of these was verified
-# to sail straight through the old shape-only guard. They are vendor-specific, so
-# sqlglot parses them as anonymous calls (see _FUNC_NAMES) - and OPENROWSET does
-# not parse at all, which is exactly why the lexical net below exists too.
-_DANGEROUS_FUNCS = frozenset({
-    # PostgreSQL - server-side file I/O and large objects (lo_export WRITES)
-    "pg_read_file", "pg_read_binary_file", "pg_stat_file", "pg_ls_dir",
-    "pg_ls_logdir", "pg_ls_waldir", "pg_ls_tmpdir", "pg_ls_archive_statusdir",
-    "lo_import", "lo_export", "lo_get", "lo_put", "lo_from_bytea", "lo_unlink",
-    # PostgreSQL - outbound connections (SSRF / exfiltration)
-    "dblink", "dblink_exec", "dblink_connect", "dblink_connect_u",
-    "dblink_send_query", "dblink_open", "dblink_fetch",
-    # PostgreSQL - re-enters the executor with arbitrary SQL, or edits the session
-    "query_to_xml", "query_to_xmlschema", "query_to_xml_and_xmlschema",
-    "set_config", "pg_reload_conf", "pg_rotate_logfile", "pg_logical_emit_message",
-    "pg_terminate_backend", "pg_cancel_backend",
-    "pg_sleep", "pg_sleep_for", "pg_sleep_until",
-    # MSSQL - ad-hoc remote/bulk sources, shell, registry, trace files
-    "openrowset", "opendatasource", "openquery", "openxml",
-    "xp_cmdshell", "xp_dirtree", "xp_fileexist", "xp_subdirs", "xp_regread",
-    "xp_regwrite", "xp_regdeletekey", "xp_regdeletevalue", "xp_regenumvalues",
-    "sp_executesql", "sp_oacreate", "sp_oamethod", "sp_configure",
-    "fn_trace_gettable", "fn_get_audit_file", "fn_xe_file_target_read_file",
-    # MySQL / MariaDB - file reads, UDF shells, and unbounded time sinks
-    "load_file", "sys_exec", "sys_eval", "benchmark", "sleep",
-    # SQLite - loading an extension is arbitrary code execution
-    "load_extension", "readfile", "writefile", "edit", "fts3_tokenizer",
-})
-
-# Lexical net for the same names, requiring a '(' so a COLUMN called "sleep" is
-# untouched. This is what catches OPENROWSET, which sqlglot cannot parse at all.
-_DANGEROUS_LEXICAL = re.compile(
-    r"\b(" + "|".join(sorted(_DANGEROUS_FUNCS)) + r")\s*\(", re.IGNORECASE
-)
-
-# sqlalchemy dialect name -> sqlglot dialect, for accurate parsing of the guard
-_SQLGLOT_DIALECT = {"mssql": "tsql", "postgresql": "postgres", "sqlite": "sqlite", "mysql": "mysql"}
-
-_ALLOWED_ROOTS = (exp.Select, exp.Union, exp.Except, exp.Intersect, exp.Subquery)
-_FORBIDDEN_NODES = (
-    exp.Insert, exp.Update, exp.Delete, exp.Drop, exp.Create,
-    exp.Alter, exp.Merge, exp.Command, exp.Into,
-)
-
-
-def _func_name(node: exp.Func) -> str:
-    """The called name, for a node sqlglot recognised and for one it didn't.
-
-    An unknown call (`pg_read_file(...)`) becomes exp.Anonymous with the name in
-    `this`; a known one (`SUM(...)`) is a typed node whose name comes from the
-    class. A schema qualifier is dropped by the parser, so `sys.fn_trace_gettable`
-    arrives here as `fn_trace_gettable` - which is what the denylist stores.
-    """
-    if isinstance(node, exp.Anonymous):
-        return str(node.this or "").lower()
-    try:
-        return str(node.sql_name() or "").lower()
-    except Exception:
-        return type(node).__name__.lower()
-
-
-def _assert_ast_read_only(sql: str, dialect: str | None, strict: bool) -> None:
-    try:
-        statements = [s for s in sqlglot.parse(sql, read=dialect) if s is not None]
-    except Exception as e:
-        # Fail CLOSED. This used to return, on the theory that the lexical guard
-        # still held - but the lexical guard has never heard of OPENROWSET, and
-        # OPENROWSET is precisely what fails to parse. A guard that cannot read a
-        # query has nothing to say about it, and silence is not a pass.
-        raise ReadOnlyViolation(
-            f"the read-only guard could not parse this statement as "
-            f"{dialect or 'generic'} SQL, so it cannot vouch for it: {str(e)[:120]}"
-        ) from e
-    if len(statements) != 1:
-        raise ReadOnlyViolation("exactly one statement is allowed")
-    root = statements[0]
-    if not isinstance(root, _ALLOWED_ROOTS):
-        raise ReadOnlyViolation(f"only read queries are allowed (parsed as {type(root).__name__})")
-    bad = root.find(*_FORBIDDEN_NODES)
-    if bad is not None:
-        raise ReadOnlyViolation(f"query contains a non-read operation ({type(bad).__name__})")
-
-    for fn in root.find_all(exp.Func):
-        name = _func_name(fn)
-        if name in _DANGEROUS_FUNCS:
-            raise ReadOnlyViolation(
-                f"function {name}() is not a read: it can touch the filesystem, open a "
-                f"connection, run more SQL or change the session"
-            )
-        if strict and isinstance(fn, exp.Anonymous):
-            raise ReadOnlyViolation(
-                f"strict mode allows only functions the guard can recognise, and "
-                f"{name}() is not one of them"
-            )
-
-
-def assert_read_only(sql: str, dialect: str | None = None, *, strict: bool = False) -> None:
-    """Refuse anything that is not a single, side-effect-free read.
-
-    `strict` is for SQL the operator did not write - the agent/MCP path - and
-    additionally default-denies every function sqlglot cannot name.
-    """
-    stripped = sql.strip().rstrip(";").strip()
-    if ";" in stripped:
-        raise ReadOnlyViolation("multiple statements are not allowed")
-    if _COMMENT.search(stripped):
-        raise ReadOnlyViolation("SQL comments are not allowed (injection hygiene)")
-    head = stripped.split(None, 1)[0].lower() if stripped else ""
-    if head not in ("select", "with"):
-        raise ReadOnlyViolation(f"only SELECT/WITH statements are allowed (got: {head!r})")
-
-    # Keyword scanning happens with string literals blanked: SELECT 'please delete
-    # this note' is a perfectly good read, and blocking it taught users that the
-    # guard is superstitious rather than principled.
-    scannable = _STRING_LITERAL.sub("''", stripped)
-    if _FORBIDDEN.search(scannable):
-        raise ReadOnlyViolation("statement contains a forbidden keyword")
-    if _LOCK_HINTS.search(scannable):
-        raise ReadOnlyViolation("write-escalating lock hint is not allowed")
-    hit = _DANGEROUS_LEXICAL.search(scannable)
-    if hit:
-        raise ReadOnlyViolation(
-            f"function {hit.group(1).lower()}() is not a read: it can touch the filesystem, "
-            f"open a connection, run more SQL or change the session"
-        )
-
-    _assert_ast_read_only(stripped, dialect, strict)
 
 
 @dataclass

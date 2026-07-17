@@ -97,7 +97,7 @@ Salt-okunur **dört katmanda** zorlanır; tek bir hata motoru yazma yapabilir ha
 erp-report-engine trust-benchmark      # 20/20 saldırı reddedildi · 6/6 okuma serbest
 ```
 
-**▶ Sonuçları görün: [güven benchmark'ı](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** — her vaka, şiddeti ve gerçekte ne yaptığı.
+**▶ Sonuçları görün: [güven benchmark'ı](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** — her vaka, şiddeti ve gerçekte ne yaptığı. Ya da **[kendin kır](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)**: tarayıcında çalışan gerçek bekçiye SQL yapıştır (kurulum yok, hiçbir yere bir şey gitmez — Pyodide üzerinden, testlerin çalıştırdığı `guard.py`'nin ta kendisi).
 
 Ayrıca: profil değişkenleri tanımlayıcı-güvenli (`^[A-Za-z0-9_]{1,16}$`, yani `"001; DROP TABLE x"` daha bağlantı kurulmadan hata fırlatır), sırlar asla config dosyasında yaşamaz (yükleyici gömülü kimlik bilgisini her yazımıyla reddeder — `password`, `passwd`, `pwd`, `sslpassword`, ODBC `PWD=` — `url_env` kullanın), çalıştırılan her ifade raporun denetim izinde gönderilir ve satır tavanı (varsayılan 500 bin) her sorguyu sınırlar.
 
