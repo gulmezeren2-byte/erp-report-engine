@@ -31,7 +31,11 @@ jobs:
         with:
           languages: python
           build-mode: none          # pure Python - nothing to compile
-          queries: security-and-quality
+          # security-focused, not the quality suite: on this codebase the quality
+          # queries flagged only correct idioms (NaN checks written `v == v`, an
+          # intentional typed-except fallback, a re-exported constant), which is
+          # exactly the noise that trains people to ignore a Security tab.
+          queries: security-extended
       - name: Analyze
         uses: github/codeql-action/analyze@e58424170fb0262c8d7ed60a2e84b9bffe205c67 # codeql-bundle-v2.26.1
         with:
