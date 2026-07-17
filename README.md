@@ -95,10 +95,10 @@ Read-only is enforced in **four layers**, so no single mistake makes the engine 
 
 **And the layer that isn't ours.** MSSQL has no session-level read-only switch, so run the engine under a **least-privilege, read-only login** (`db_datareader` on MSSQL, a `SELECT`-only grant on PostgreSQL — ideally a read replica). The guard is defence in depth; the grant is the layer that holds if the guard has a hole. It has had one before: these function bypasses were found by auditing this repo, and are now pinned in [`tests/test_guard.py`](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/tests/test_guard.py) by name, per dialect.
 
-**Don't take my word for it — measure it.** The guard ships with a reproducible trust benchmark: 20 well-formed-SQL attacks across four dialects that a shape-only guard waves through, every one refused, plus the legitimate reads that must still pass. The number is computed from a live guard run, not asserted in prose, and CI enforces it on every commit.
+**Don't take my word for it — measure it.** The guard ships with a reproducible trust benchmark: 24 well-formed-SQL attacks across four dialects that a shape-only guard waves through, every one refused, plus the legitimate reads that must still pass. The number is computed from a live guard run, not asserted in prose, and CI enforces it on every commit.
 
 ```bash
-erp-report-engine trust-benchmark      # 20/20 attacks refused · 6/6 reads allowed
+erp-report-engine trust-benchmark      # 24/24 attacks refused · 6/6 reads allowed
 ```
 
 **▶ See the results: [the trust benchmark](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** — every case, its severity, and what it actually does. Or **[break it yourself](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)**: paste SQL into the real guard, running in your browser (no install, nothing sent anywhere — it's the exact `guard.py` the tests run, via Pyodide).

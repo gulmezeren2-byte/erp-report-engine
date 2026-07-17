@@ -95,10 +95,10 @@ Salt-okunur **dört katmanda** zorlanır; tek bir hata motoru yazma yapabilir ha
 
 **Ve bize ait olmayan katman.** MSSQL'de oturum düzeyinde salt-okunur anahtarı yoktur; orada bu katman doğrudan **kullanıcının kendisidir**. Tehlikeli fonksiyon listesi bir denylist'tir ve hiçbir denylist tam kanıtlanamaz — bu yüzden motoru **en az yetkili, salt-okunur bir kullanıcıyla** çalıştırın (MSSQL'de `db_datareader`, PostgreSQL'de yalnız `SELECT` yetkisi; ideali fiziksel bir okuma replikası). Bekçi derinlemesine savunmadır; bekçinin deliği olduğunda tutan katman yetkidir. Deliği oldu da: bu fonksiyon baypasları bu deponun denetlenmesiyle bulundu ve artık [`tests/test_guard.py`](tests/test_guard.py) içinde isimleriyle, diyalekt diyalekt pinlenmiş durumda.
 
-**Sözüme güvenme — ölç.** Bekçi, tekrar üretilebilir bir güven benchmark'ıyla gelir: şekil-odaklı bir bekçinin geçirdiği, dört diyalektte 20 kusursuz-SQL saldırısı — hepsi reddedilir — artı geçmesi gereken meşru okumalar. Sayı düzyazıda iddia edilmez, canlı bir bekçi koşusundan hesaplanır ve CI her commit'te doğrular.
+**Sözüme güvenme — ölç.** Bekçi, tekrar üretilebilir bir güven benchmark'ıyla gelir: şekil-odaklı bir bekçinin geçirdiği, dört diyalektte 24 kusursuz-SQL saldırısı — hepsi reddedilir — artı geçmesi gereken meşru okumalar. Sayı düzyazıda iddia edilmez, canlı bir bekçi koşusundan hesaplanır ve CI her commit'te doğrular.
 
 ```bash
-erp-report-engine trust-benchmark      # 20/20 saldırı reddedildi · 6/6 okuma serbest
+erp-report-engine trust-benchmark      # 24/24 saldırı reddedildi · 6/6 okuma serbest
 ```
 
 **▶ Sonuçları görün: [güven benchmark'ı](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** — her vaka, şiddeti ve gerçekte ne yaptığı. Ya da **[kendin kır](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)**: tarayıcında çalışan gerçek bekçiye SQL yapıştır (kurulum yok, hiçbir yere bir şey gitmez — Pyodide üzerinden, testlerin çalıştırdığı `guard.py`'nin ta kendisi).

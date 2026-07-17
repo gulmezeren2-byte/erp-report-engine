@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Read-only-in-prose is not read-only — making an MCP SQL guard provable</title>
+<meta name="description" content="Why 'read-only' database access for AI agents keeps failing, the class of attack behind the two most-cited MCP incidents, and how to build a guard you can prove — with a public benchmark and an in-browser playground.">
+<style>
+ *{box-sizing:border-box}
+ body{margin:0;background:#0b0d10;color:#e8edf2;
+   font:16px/1.72 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+ .wrap{max-width:760px;margin:0 auto;padding:60px 22px 90px}
+ a{color:#3987e5;text-decoration:none} a:hover{text-decoration:underline}
+ h1{font-size:32px;line-height:1.22;margin:0 0 10px;letter-spacing:-.6px;color:#f4f6f8}
+ .deck{font-size:18px;color:#aab3bd;margin:0 0 10px;line-height:1.5}
+ .meta{color:#7d8590;font-size:14px;margin:0 0 40px}
+ h2{font-size:22px;margin:44px 0 12px;letter-spacing:-.3px;color:#f4f6f8}
+ h3{font-size:16px;margin:28px 0 8px;color:#c7d1db}
+ p{margin:0 0 16px} li{margin:6px 0}
+ code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#15181d;padding:1.5px 6px;border-radius:5px;font-size:.9em;color:#e6b673}
+ pre{background:#111418;border:1px solid #20242b;border-radius:9px;padding:15px 17px;overflow-x:auto;
+   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;color:#c7d1db;line-height:1.55;margin:0 0 20px}
+ blockquote{margin:0 0 20px;padding:2px 0 2px 18px;border-left:3px solid #3987e5;color:#c7d1db;font-size:16px}
+ .callout{background:#0f1216;border:1px solid #20242b;border-radius:11px;padding:18px 20px;margin:0 0 22px}
+ .callout strong{color:#f4f6f8}
+ .try{background:#0f2a16;border:1px solid #14401f;border-radius:11px;padding:18px 20px;margin:26px 0}
+ .try a{font-weight:600}
+ table{width:100%;border-collapse:collapse;font-size:14px;margin:0 0 22px}
+ th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #16191e;vertical-align:top}
+ th{color:#7d8590;font-size:12px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid #20242b}
+ .scroll{overflow-x:auto}
+ footer{margin-top:56px;padding-top:22px;border-top:1px solid #20242b;color:#7d8590;font-size:13px}
+ .k{color:#7fe0a0} .x{color:#f0a3a3}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Read-only-in-prose is not read-only</h1>
+  <p class="deck">The two most-cited failures of AI-agent database access have the same root cause: a guard that trusted a promise instead of checking the statement. Here's the class of attack, and how to build a guard you can <em>prove</em> — in a browser, in one command.</p>
+  <p class="meta">A build note from <a href="https://github.com/gulmezeren2-byte/erp-report-engine">erp-report-engine</a> · by Eren Gülmez</p>
+
+  <p>In 2026, letting an AI agent query a production database is no longer exotic — the Model Context Protocol (MCP) made it a checkbox. What it did not make safe is the part everyone assumed was easy: <strong>read-only</strong>. Twice now, in the two most-cited MCP database stories, "read-only" turned out to mean "read-only if nothing goes wrong."</p>
+
+  <h2>Two incidents, one root cause</h2>
+
+  <h3>1. The transaction that walked out of read-only</h3>
+  <p>Anthropic's <em>reference</em> PostgreSQL MCP server wrapped each query in <code>BEGIN TRANSACTION READ ONLY</code>. Reasonable — except the Postgres driver happily accepts multiple semicolon-separated statements in one string. So an attacker (or a prompt-injected agent) sends:</p>
+  <pre>COMMIT; DROP SCHEMA public CASCADE;</pre>
+  <p>The <code>COMMIT</code> closes the read-only transaction; everything after runs with the connection's <em>full</em> privileges. Datadog Security Labs reported it; Anthropic <a href="https://github.com/modelcontextprotocol/servers-archived/tree/HEAD/src/postgres">archived the server in May 2025</a>. The read-only guarantee was real in prose and absent in code.</p>
+
+  <h3>2. The lethal trifecta</h3>
+  <p>Simon Willison's term for the three ingredients of an agent data breach: <strong>access to private data + exposure to untrusted content + a way to communicate out</strong>. Hold any two and you're fine; grant all three and a prompt injection needs no exploit. The Supabase MCP case was the textbook example: a support ticket carried <em>hidden instructions</em>, an agent triaging tickets ran with a role that bypassed row-level security, and it copied a secrets table into a ticket reply the attacker could read. <a href="https://simonwillison.net/2025/Jul/6/supabase-mcp-lethal-trifecta/">(write-up)</a></p>
+
+  <div class="callout"><strong>The common thread:</strong> both systems delegated "read-only" to a <em>configuration</em> — a transaction mode, a database role — and something reached past it. The lesson isn't "those teams were careless." It's that a read-only guarantee has to be a property of the <em>statement</em>, checked before execution, not a property of the environment you hope holds.</p></div>
+
+  <h2>Why a shape-only guard is not enough</h2>
+  <p>The obvious guard checks a statement's <em>shape</em>: is it a <code>SELECT</code>? No <code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code>/<code>DROP</code> keyword? That stops the beginner cases and misses three whole classes:</p>
+
+  <p><strong>Class A — statement stacking &amp; transaction escape.</strong> <code>COMMIT; DROP …</code> is a perfectly shaped pair of statements. A guard that scans one statement's shape never sees the second.</p>
+
+  <p><strong>Class B — functions that read like reads but aren't.</strong> This is the deep one. Every database ships built-ins that make a syntactically flawless <code>SELECT</code> touch the world:</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Looks like a read</th><th>Actually</th></tr></thead>
+    <tbody>
+    <tr><td><code>SELECT pg_read_file('/etc/passwd')</code></td><td>reads a server file</td></tr>
+    <tr><td><code>SELECT lo_export(…, '/tmp/x')</code></td><td><span class="x">writes</span> a server file</td></tr>
+    <tr><td><code>SELECT * FROM dblink('host=…', …)</code></td><td>opens an outbound connection — exfiltration</td></tr>
+    <tr><td><code>SELECT set_config('…read_only','off',false)</code></td><td>switches the read-only session <em>off</em></td></tr>
+    <tr><td><code>SELECT * FROM OPENROWSET(BULK …)</code></td><td>reads a host file (SQL Server)</td></tr>
+    <tr><td><code>EXEC xp_cmdshell 'whoami'</code></td><td>shell execution (SQL Server)</td></tr>
+    <tr><td><code>SELECT load_extension('evil.so')</code></td><td>loads a library — arbitrary code (SQLite)</td></tr>
+    </tbody>
+  </table></div>
+  <p>None of these carry a write keyword. A shape-only guard waves every one through. And the SQL Server names matter here specifically: the ERPs this tool targets — Logo Tiger, Netsis, Mikro — all run on SQL Server, where <code>xp_cmdshell</code> and OLE automation (<code>sp_OACreate</code>) are a shell away.</p>
+
+  <p><strong>Class C — the parser's blind spot.</strong> You might reach for an AST: parse the SQL, walk the tree, reject bad nodes. Good — but <code>OPENROWSET(BULK …)</code> doesn't parse in most SQL parsers. If your guard <em>fails open</em> on a parse error ("couldn't read it, let it through"), the one input that defeats the parser is exactly the one that defeats the guard.</p>
+
+  <h2>A guard you can prove</h2>
+  <p>The guard in this project answers each class explicitly, in four layers — and the design rule throughout is <em>fail closed and check the statement, never trust the environment</em>:</p>
+  <ol>
+    <li><strong>Lexical.</strong> One statement only (Class A dies here — a second statement is a hard refusal). Must begin <code>SELECT</code>/<code>WITH</code>. No comments, no write keyword, no write-escalating lock hint. Crucially, the scan blanks string literals first, so <code>SELECT 'please delete this note'</code> is correctly a read — a guard that cries wolf gets switched off.</li>
+    <li><strong>Parse-tree, fail-<em>closed</em>.</strong> The statement must parse; if it can't, it's refused, not waved through (Class C). It must resolve to a single read query with no write/DDL node — catching writes hidden inside CTEs.</li>
+    <li><strong>Function check (Class B), by AST <em>and</em> lexically.</strong> A denylist of side-effecting built-ins across PostgreSQL, SQL Server, MySQL and SQLite, checked on the parse tree — and, because <code>OPENROWSET</code> won't parse, checked lexically too.</li>
+    <li><strong>Read-only session</strong> where the engine allows it (PostgreSQL read-only transaction, MySQL <code>SET SESSION TRANSACTION READ ONLY</code>, SQLite <code>query_only</code>) — plus a per-statement timeout so <code>pg_sleep(100000)</code> can't tie up a connection.</li>
+  </ol>
+  <p>For SQL that didn't come from the operator — the agent path — there's a fifth stance: <strong>strict mode</strong> default-denies <em>every</em> function the parser can't name. The parser's own function registry becomes the allowlist: it knows <code>SUM</code>, <code>COALESCE</code>, <code>ROW_NUMBER</code>, and nothing that reads a file or opens a socket. All the bundled ERP profiles pass it — they call no unrecognised function at all — so default-deny costs nothing real.</p>
+
+  <div class="callout"><strong>The honest limit, stated plainly:</strong> a denylist is never provably complete, and SQL Server has no session-level read-only switch. So the outermost layer is always a <strong>least-privilege, read-only database login</strong> — a role that <em>cannot</em> write, ideally a physical read replica. The guard is defence in depth; the grant is the layer that holds if the guard has a hole. Saying so is the difference between a security tool and a security claim.</p></div>
+
+  <h2>"Provable" has to mean reproducible</h2>
+  <p>A security claim you can't check is marketing. So the guard ships an attack corpus — the two incidents above by name, plus the file-read / exfiltration / shell / extension cases across four dialects, plus the legitimate reads that <em>must</em> still pass (a guard that blocks real work is useless). One list, shared by three things:</p>
+  <ul>
+    <li>the <strong>test suite</strong>, which runs it on every commit;</li>
+    <li>a <strong>CLI command</strong> — <code>erp-report-engine trust-benchmark</code> — so anyone who installs the package reproduces the number;</li>
+    <li>the <strong>results page</strong>, whose figure is computed from a live guard run, with CI failing on drift.</li>
+  </ul>
+  <p>Because it's one source, the website can't claim a result the tests don't hold. And the strongest form of "trust me" is "don't" — so the guard also runs, unchanged, <em>in your browser</em>: paste your nastiest payload and watch the real <code>guard.py</code> refuse it, nothing sent anywhere.</p>
+
+  <div class="try">
+    <strong>See for yourself.</strong><br>
+    ▶ <a href="trust.html">The trust benchmark</a> — every attack, its severity, and what it actually does.<br>
+    ▶ <a href="playground.html">Break the guard yourself</a> — the real guard, client-side, via Pyodide.<br>
+    ▶ One command: <code>pipx install erp-report-engine &amp;&amp; erp-report-engine trust-benchmark</code>
+  </div>
+
+  <h2>Why this generalises past one tool</h2>
+  <p>The reason both famous incidents happened to <em>database</em> MCP servers is that a database is the lethal trifecta's natural home: it holds the private data, agents feed it untrusted content, and SQL itself is an exfiltration channel (<code>dblink</code>, <code>OPENROWSET</code>, a crafted error message). If you're pointing an agent at a production database — ERP, CRM, anything — the question isn't "is it read-only?" but "can you <em>show</em> me?" That's the bar this was built to clear, and the bar the whole category is going to be held to.</p>
+
+  <footer>
+    <a href="index.html">erp-report-engine</a> ·
+    <a href="https://github.com/gulmezeren2-byte/erp-report-engine">GitHub</a> ·
+    <a href="https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/SECURITY.md">full security model</a> ·
+    <a href="trust.html">benchmark</a> · <a href="playground.html">playground</a><br>
+    Designed and written by Eren Gülmez. Sources: Datadog Security Labs; Simon Willison; the MCP servers-archived repository.
+  </footer>
+</div>
+</body>
+</html>
