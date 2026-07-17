@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Read-only database access for AI agents, compared</title>
+<meta name="description" content="How the approaches to giving an AI agent read-only access to a database actually differ — read-only transactions, DB roles, statement guards, semantic layers, and gateways — and the tradeoffs of each.">
+<style>
+ *{box-sizing:border-box}
+ body{margin:0;background:#0b0d10;color:#e8edf2;
+   font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+ .wrap{max-width:940px;margin:0 auto;padding:60px 22px 90px}
+ a{color:#3987e5;text-decoration:none} a:hover{text-decoration:underline}
+ h1{font-size:31px;line-height:1.22;margin:0 0 10px;letter-spacing:-.5px;color:#f4f6f8}
+ .deck{font-size:18px;color:#aab3bd;margin:0 0 10px;line-height:1.5}
+ .meta{color:#7d8590;font-size:14px;margin:0 0 38px}
+ h2{font-size:21px;margin:42px 0 12px;letter-spacing:-.3px;color:#f4f6f8}
+ h3{font-size:16px;margin:26px 0 6px;color:#e8edf2}
+ p{margin:0 0 16px} li{margin:6px 0}
+ code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#15181d;padding:1.5px 6px;border-radius:5px;font-size:.88em;color:#e6b673}
+ .scroll{overflow-x:auto;margin:0 0 20px;border:1px solid #20242b;border-radius:10px}
+ table{width:100%;border-collapse:collapse;font-size:13px;min-width:680px}
+ th,td{text-align:left;padding:9px 9px;border-bottom:1px solid #16191e;vertical-align:top}
+ thead th{color:#7d8590;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #20242b;background:#0f1216}
+ tbody th{color:#f4f6f8;font-weight:600;font-size:13.5px;white-space:nowrap}
+ .y{color:#7fe0a0;font-weight:600} .n{color:#f0a3a3} .p{color:#e6b673}
+ .callout{background:#0f1216;border:1px solid #20242b;border-radius:11px;padding:16px 20px;margin:0 0 22px}
+ .callout strong{color:#f4f6f8}
+ footer{margin-top:56px;padding-top:22px;border-top:1px solid #20242b;color:#7d8590;font-size:13px}
+ .note{color:#7d8590;font-size:13.5px;margin:-8px 0 22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Read-only database access for AI agents, compared</h1>
+  <p class="deck">"Give the agent read-only access" is one sentence and at least five different engineering decisions. Here's how the common approaches actually differ — and where each is the right choice.</p>
+  <p class="meta">A build note from <a href="https://github.com/gulmezeren2-byte/erp-report-engine">erp-report-engine</a> · by Eren Gülmez · this project is one row in the table below, and the note is honest about where the others are stronger.</p>
+
+  <p>If you want an AI agent to answer questions from a production database, you have to stop it from writing, reading files, or phoning home — while still letting it run real analytical SQL. There are several ways to draw that line, and they fail in different places. This compares them on the axes that decide whether "read-only" holds under a prompt injection.</p>
+
+  <div class="scroll"><table>
+    <thead>
+      <tr>
+        <th>Approach</th>
+        <th>Read-only<br>by default</th>
+        <th>Checks the<br>statement</th>
+        <th>Blocks side-<br>effect functions</th>
+        <th>Fails<br>closed</th>
+        <th>Publicly<br>benchmarked</th>
+        <th>Semantic<br>entities</th>
+        <th>Open<br>source</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th>Read-only <em>transaction</em><br><span style="font-weight:400;color:#7d8590">(the archived reference<br>Postgres MCP server)</span></th>
+        <td class="y">yes</td><td class="n">no</td><td class="n">no</td><td class="n">no</td><td class="n">no</td><td class="n">no</td><td class="y">yes</td>
+      </tr>
+      <tr>
+        <th>Read/write with a<br>read-only <em>mode</em><br><span style="font-weight:400;color:#7d8590">(e.g. crystaldba postgres-mcp)</span></th>
+        <td class="n">no*</td><td class="p">partial</td><td class="p">partial</td><td class="p">—</td><td class="n">no</td><td class="n">no</td><td class="y">yes</td>
+      </tr>
+      <tr>
+        <th>Read-only DB <em>role</em> +<br>text-to-SQL<br><span style="font-weight:400;color:#7d8590">(the common closed pattern)</span></th>
+        <td class="y">yes</td><td class="n">no</td><td class="n">no</td><td class="p">—</td><td class="n">no</td><td class="p">varies</td><td class="n">usually not</td>
+      </tr>
+      <tr>
+        <th>Semantic layer<br><span style="font-weight:400;color:#7d8590">(Cube, dbt Semantic Layer)</span></th>
+        <td class="y">yes</td><td class="y">n/a**</td><td class="y">n/a**</td><td class="y">yes</td><td class="n">no</td><td class="y">yes</td><td class="p">core OSS</td>
+      </tr>
+      <tr>
+        <th>MCP security gateway<br><span style="font-weight:400;color:#7d8590">(TrueFoundry, MintMCP, …)</span></th>
+        <td class="p">policy</td><td class="n">no</td><td class="n">no</td><td class="p">—</td><td class="n">no</td><td class="n">no</td><td class="p">varies</td>
+      </tr>
+      <tr style="background:#0f1a12">
+        <th>Statement guard<br><span style="font-weight:400;color:#7fe0a0">(this project)</span></th>
+        <td class="y">yes</td><td class="y">yes</td><td class="y">yes</td><td class="y">yes</td><td class="y">yes</td><td class="y">yes</td><td class="y">yes</td>
+      </tr>
+    </tbody>
+  </table></div>
+  <p class="note">* read/write by configuration; a read-only mode exists but is not the default. &nbsp; ** a semantic layer never exposes raw SQL to the agent at all, so "checks the statement" doesn't apply — it's a different, also-valid answer (see below).</p>
+
+  <h2>What each column means</h2>
+  <ul>
+    <li><strong>Read-only by default</strong> — is the safe setting the one you get without reading the docs? Opt-in safety is the setting people forget.</li>
+    <li><strong>Checks the statement</strong> — does something inspect the actual SQL, or is "read-only" delegated to a transaction mode / a role / a gateway policy that the SQL runs underneath?</li>
+    <li><strong>Blocks side-effect functions</strong> — a syntactically perfect <code>SELECT</code> can still read a file (<code>pg_read_file</code>), open a socket (<code>dblink</code>), or run a shell (<code>xp_cmdshell</code>). Does anything stop those?</li>
+    <li><strong>Fails closed</strong> — when the guard can't understand a statement, does it refuse it or wave it through? The input that defeats a parser is often the payload.</li>
+    <li><strong>Publicly benchmarked</strong> — can you reproduce the read-only claim, or do you have to trust it?</li>
+    <li><strong>Semantic entities</strong> — does the agent see <code>orders</code>, or <code>LG_001_01_ORFICHE</code>? Naming shapes both safety and accuracy.</li>
+  </ul>
+
+  <h2>Where each approach is genuinely stronger</h2>
+  <p>A comparison that only flatters one row is marketing. Here's the honest version:</p>
+
+  <h3>Read-only transaction (the reference server)</h3>
+  <p>Dead simple, and for a trusted, non-agent caller it's often enough. Its failure — <code>COMMIT; DROP …</code> walking out of the transaction — is a story about statement <em>stacking</em>, not about the idea being bad. It got <a href="https://securitylabs.datadoghq.com/articles/mcp-vulnerability-case-study-SQL-injection-in-the-postgresql-mcp-server/">archived</a> because it faced untrusted agent input it wasn't built for.</p>
+
+  <h3>crystaldba postgres-mcp</h3>
+  <p><strong>Stronger than this project at being a database tool.</strong> It ships real DBA capability — index tuning, <code>EXPLAIN</code> analysis, health checks — and a genuine read-only mode. If you're a developer who wants an agent to help operate a Postgres database, it's excellent and purpose-built. This project isn't a DBA tool; it's a read-only reporting/agent layer for the database <em>behind an ERP</em>, and it's cross-dialect (SQL Server first, because that's where Logo/Netsis/Mikro live). Different jobs.</p>
+
+  <h3>Semantic layers (Cube, dbt)</h3>
+  <p><strong>Arguably the most correct answer of all — when you have the prerequisites.</strong> They never hand the agent SQL: the agent requests governed metrics by name, and the layer compiles them with access control baked in. dbt's own 2026 benchmark found that querying through a semantic layer beat text-to-SQL on accuracy (98–100% vs 84–90%), because <em>"with text-to-SQL, failure looks like a plausible but incorrect answer; with the semantic layer, failure looks like an error message."</em> The catch: they assume a data warehouse and a modeling layer (dbt) you've already built. This project targets the case where there is <em>no</em> warehouse — you point it straight at the operational ERP database — and its canonical entities are the same idea applied there.</p>
+
+  <h3>MCP security gateways</h3>
+  <p><strong>Stronger at the things a single tool can't do:</strong> horizontal auth, RBAC, SSO, org-wide policy, SOC 2. If you're running many MCP servers across a company, a gateway is the right layer. It sits <em>in front of</em> servers like this one — it's complementary, not competing. What it doesn't do is understand SQL, so it won't tell a read from a <code>pg_read_file</code>.</p>
+
+  <h3>Read-only role + text-to-SQL (the common closed pattern)</h3>
+  <p>A least-privilege read-only database login is <em>real</em> defence — in fact this project insists on it as the outer layer, because a denylist is never provably complete. The difference is that a role is the <em>only</em> line in this pattern, and it's a coarse one: a read-only role on SQL Server can still be walked toward <code>OPENROWSET</code> file reads or linked-server pivots depending on configuration, and text-to-SQL against raw tables carries the silent-wrong-answer problem above. A statement guard plus a narrow role is belt <em>and</em> braces.</p>
+
+  <div class="callout"><strong>The point isn't that this project wins every row.</strong> It's that read-only for an <em>agent</em> — untrusted input, a tool that acts, an exfiltration channel one <code>dblink</code> away — needs the statement itself checked, failing closed, and provable. Most approaches were built for a trusted caller and are being asked to hold under conditions they weren't designed for. This one was built for those conditions, on the specific databases (Logo Tiger, Netsis, Mikro — all SQL Server) that global tools and OSS communities skip.</p></div>
+
+  <p>Don't take the table's word for the last row — <a href="playground.html">paste an attack into the guard yourself</a>, or <a href="trust.html">read the reproducible benchmark</a>. Both run the real code.</p>
+
+  <footer>
+    <a href="index.html">erp-report-engine</a> ·
+    <a href="case-study.html">the security case-study</a> ·
+    <a href="trust.html">benchmark</a> · <a href="playground.html">playground</a> ·
+    <a href="https://github.com/gulmezeren2-byte/erp-report-engine">GitHub</a><br>
+    By Eren Gülmez. Facts on competing tools are drawn from their own docs and public reporting; where a product is closed-source I describe the general pattern rather than assert specifics I can't verify.
+  </footer>
+</div>
+</body>
+</html>

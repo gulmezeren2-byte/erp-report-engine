@@ -103,6 +103,8 @@ erp-report-engine trust-benchmark      # 24/24 attacks refused · 6/6 reads allo
 
 **▶ See the results: [the trust benchmark](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** — every case, its severity, and what it actually does. Or **[break it yourself](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)**: paste SQL into the real guard, running in your browser (no install, nothing sent anywhere — it's the exact `guard.py` the tests run, via Pyodide).
 
+Further reading: **[why "read-only-in-prose" is not read-only](https://gulmezeren2-byte.github.io/erp-report-engine/case-study.html)** (the two famous MCP database failures and the class of attack behind them) · **[read-only database access for AI agents, compared](https://gulmezeren2-byte.github.io/erp-report-engine/comparison.html)** (transactions vs roles vs statement guards vs semantic layers — honest about where each wins).
+
 Plus: profile variables are identifier-safe (`^[A-Za-z0-9_]{1,16}$`, so `"001; DROP TABLE x"` raises before any connection), secrets never live in config files (the loader refuses embedded credentials in any spelling — `password`, `passwd`, `pwd`, `sslpassword`, ODBC `PWD=` — use `url_env`), every executed statement ships in the report's audit trail, and a row cap (default 500k) bounds any single query.
 
 The test suite throws a battery of injection attempts at the guard — multi-statement, comment smuggling in three syntaxes, transaction-control splices (`ROLLBACK`/`COMMIT`), `SELECT INTO`, lock hints, and a `DELETE` hidden inside a CTE — and expects every one to raise. See [SECURITY.md](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/SECURITY.md).
