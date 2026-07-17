@@ -32,7 +32,7 @@ Hazır bir demo ihracı [`data/`](data/) içinde geliyor; rapor daha ilk yenilem
 | `measurement-honesty-theme.json` | **Koyu tema** | Fütüristik koyu tema (Microsoft'un resmi tema şemasına karşı doğrulandı): yuvarlatılmış cam kartlar, yumuşak gölgeler, koyu yüzey için basamaklanmış renk-körü-güvenli kategorik palet |
 | `FactReceivables` + yaşlandırma ölçüleri | **Cari yaşlandırma** | Opsiyonel AR fact'i (açık bakiyeler kova bazında: cari / 1-30 / 31-60 / 61-90 / 91+) + `Total AR`, `Overdue AR`, `Overdue %`, `AR 91+ Days` ölçüleri — kovaları HTML raporuyla *aynı* tanımla hesaplayan ihraç |
 | `ERP Command Center.Report/` | **PBIR** | 5 sayfa, 36 görsel, koyu tema — her görsel ayrı ve incelenebilir bir JSON. Hafta trendleri **kilitli** bir `Is Trend Week = 1` filtresi taşır; izleyici onlara yarım haftayı çizdiremez |
-| `MetaSpc` tablosu | **Kontrol limitleri veri olarak** | Motorun hesapladığı XmR limitleri; DAX'te yeniden yazılmak yerine ihraç edilir — ikinci bir uygulama er geç ikinci bir cevaptır |
+| `MetaSpc` tablosu | **Kontrol limitleri veri olarak** | Motorun hesapladığı kontrol limitleri — ciro için XmR, zamanında sevkiyat için **p-chart** (bir oran; haftanın paydası inceyken limitleri genişler) — artı hazır bir `Receipt` metni; DAX'te yeniden yazılmaz |
 | `tools/generate_report_pages.py` | **Kod-olarak-rapor** | Rapor sayfaları kompakt spec'lerden *üretilir*; yerleşim değişikliği = bir düzenleme + bir çalıştırma |
 | `data/` | CSV yıldız şema | `export-powerbi` tarafından, motorun bekçili-denetimli-salt-okunur yolundan yazılır |
 
@@ -41,7 +41,7 @@ Hazır bir demo ihracı [`data/`](data/) içinde geliyor; rapor daha ilk yenilem
 1. **Overview** — **son tamamlanmış ISO haftasına** çapalı başlık kartları (iki günlük bir hafta asla çöküş gibi görünemez) ve **SPC kontrol bandı** taşıyan ciro/zamanında sevkiyat trendleri: UCL, merkez çizgi ve LCL aynı birimde birer seri olarak; artı aritmetiği (`UCL/LCL = ortalama ± 2,66 × ort. hareketli menzil`) ve dayandığı bazı gösteren bir *SPC Receipt* kartı. `Alert Count` artık haftanın keyfi bir %5'i aşıp aşmadığını değil, SPC katmanına **sinyal mi** olduğunu sorar — bandı aşmak haberdir, bandın içindeki %5'lik salınım sadece salıdır. Limitleri motor hesaplar ve `MetaSpc` ile gönderir; DAX'te yeniden yazılmaz, böylece bu yüzey ile HTML raporu aynı sayıları alıntılar. Zamanında sevkiyat kartı iki uyarısını yanında taşır: `On-Time Coverage` (yüzdenin ne kadarı tarihle destekli) ve `Promised, Not Shipped` (yüzdenin yapısal olarak sayamadığı geciken siparişler).
 2. **Drivers** — ciro üstünde ayrıştırma ağacı (bölge → müşteri → durum) + haftalık değişim tablosu; burada her müşteri **bu haftaki cirodaki payını** gösterir ve kendi **13 haftalık ciro sparkline'ını** taşır (DAX'in çizdiği SVG mikro-grafik): hareket nerede yoğunlaşıyor *ve* her hesap oraya nasıl geldi. **Top 3 Share** ve **HHI** kartları motorun 13 haftalık yoğunlaşma görüşünü taşır; DOJ/FTC'nin 2500 çizgisine karşı düz Türkçe bir hüküm ile. İki pencerenin bilerek farklı olduğu artık yazılı: satır bazlı kolon `Customer Revenue Share (This Week)` — tek hafta çok daha oynaktır, tek bir büyük sipariş bir hesabı baskın gösterir — yoğunlaşma ise 13 hafta üzerinden ölçülür.
 3. **Stock** — **ürün başına karşılama çubuğu** (SVG, eşiğin altında kırmızı) içeren karşılama haftası tablosu ve sipariş miktarı sıralaması; düşük-karşılama eşiği DAX'e gömülü değil, motorun config'inden `MetaRunInfo` üzerinden gelir.
-4. **Aging** *(receivables eşlendiğinde)* — toplam AR, gecikme %'si ve 91+ kartları, yaş kovasına göre açık bakiye ve müşteriye göre sıralı gecikme: önce en eski parayı kovala.
+4. **Aging** *(receivables eşlendiğinde)* — toplam AR, gecikme %'si ve 91+ kartları, yaş kovasına göre açık bakiye (**şiddete göre renkli**, yeşil→kırmızı, `Bucket Colour` ölçüsüyle) ve müşteriye göre sıralı gecikme: önce en eski parayı kovala.
 5. **Trust** — imza sayfa: **kaynak mutabakat sayıları, her veri kalitesi bulgusu ve SQL denetim izinin tamamı** görsel olarak. Pano makbuzlarını gösterir.
 
 ## Tasarımı gereği proaktif
@@ -59,7 +59,7 @@ Model, motorun içgörü kurallarını DAX'te yeniden türetir — `insights.py`
 Proje, Power BI Desktop'ı görmeden önce üç katmanda kontrol edilir:
 
 1. `pytest tests/test_powerbi.py` — ihraç sözleşmesi (benzersiz anahtarlar, boşluksuz hafta sırası, BOM yok) + proje bütünlüğü (sayfa/görsel adlandırma kuralları, **görsel çakışma tespiti**, tema çözümleme, görsellerdeki her varlığın TMDL'de var olması).
-2. [`pbir-cli`](https://pypi.org/project/pbir-cli/): `pbir validate "ERP Command Center.Report" --fields --qa` — resmi JSON şemaları + **yüklü TMDL modele karşı alan bağlama doğrulaması** (SVG mikro-grafik ölçüleri dahil 42 alan referansı kontrol edildi).
+2. [`pbir-cli`](https://pypi.org/project/pbir-cli/): `pbir validate "ERP Command Center.Report" --fields --qa` — resmi JSON şemaları + **yüklü TMDL modele karşı alan bağlama doğrulaması** (SVG mikro-grafik ölçüleri dahil 69 alan referansı kontrol edildi).
 3. Power BI Desktop açılışta tüm PBIR dosyalarını kendisi de doğrular.
 
 ## Dürüst sınırlar

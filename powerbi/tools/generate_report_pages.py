@@ -131,7 +131,8 @@ def line_chart(cat_entity: str, cat_prop: str, y_props: list[str], title: str) -
 
 
 def bar_chart(cat_entity: str, cat_prop: str, y_prop: str, title: str,
-              chart_type: str = "barChart", sort_by_value: bool = True) -> dict:
+              chart_type: str = "barChart", sort_by_value: bool = True,
+              color_measure: str | None = None) -> dict:
     query: dict = {
         "queryState": {
             "Category": {"projections": [
@@ -144,10 +145,20 @@ def bar_chart(cat_entity: str, cat_prop: str, y_prop: str, title: str,
             "sort": [{"field": measure(MEASURES, y_prop), "direction": "Descending"}],
             "isDefaultSort": True,
         }
+    objects = vc_title(title)
+    if color_measure:
+        # colour each bar by a measure that returns a hex per category ("colour by
+        # field value"). A single-measure column chart otherwise paints every bar
+        # dataColors[0], throwing away the severity encoding the theme has slots
+        # for. If a Power BI version ignores this object, bars fall back to the
+        # default colour - a graceful no-op, never an error.
+        objects["dataPoint"] = [{"properties": {"fill": {"solid": {"color": {
+            "expr": {"Measure": {"Expression": {"SourceRef": {"Entity": MEASURES}},
+                                 "Property": color_measure}}}}}}}]
     return {
         "visualType": chart_type,
         "query": query,
-        "visualContainerObjects": vc_title(title),
+        "visualContainerObjects": objects,
         "drillFilterOtherVisuals": True,
     }
 
@@ -323,7 +334,7 @@ def main() -> None:
         "bar_buckets": visual("bar_buckets", 24, 252, 608, 428, 3000,
                               bar_chart("FactReceivables", "Aging Bucket", "Total AR",
                                         "Open receivables by age", chart_type="columnChart",
-                                        sort_by_value=False)),
+                                        sort_by_value=False, color_measure="Bucket Colour")),
         "bar_overdue_cust": visual("bar_overdue_cust", 648, 252, 608, 428, 4000,
                                    bar_chart("FactReceivables", "Customer", "Overdue AR",
                                              "Overdue by customer — worst first")),
