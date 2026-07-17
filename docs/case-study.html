@@ -95,7 +95,9 @@
     <li>a <strong>CLI command</strong> — <code>erp-report-engine trust-benchmark</code> — so anyone who installs the package reproduces the number;</li>
     <li>the <strong>results page</strong>, whose figure is computed from a live guard run, with CI failing on drift.</li>
   </ul>
-  <p>Because it's one source, the website can't claim a result the tests don't hold. And the strongest form of "trust me" is "don't" — so the guard also runs, unchanged, <em>in your browser</em>: paste your nastiest payload and watch the real <code>guard.py</code> refuse it, nothing sent anywhere.</p>
+  <p>Because it's one source, the website can't claim a result the tests don't hold. And a number only means something next to a baseline, so the same corpus is run through the shortcuts these guards usually lean on: a starts-with-<code>SELECT</code> check refuses just <strong>6</strong> of the 28, a write-keyword blocklist <strong>9</strong> — and the blocklist even blocks a legitimate read whose string literal contains the word "delete". The statement guard refuses all <strong>28</strong> and blocks none, and a test pins that it beats every shortcut. <a href="comparison.html">The full comparison →</a></p>
+
+  <p>The strongest form of "trust me" is "don't" — so the guard also runs, unchanged, <em>in your browser</em>: paste your nastiest payload and watch the real <code>guard.py</code> refuse it, nothing sent anywhere.</p>
 
   <div class="try">
     <strong>See for yourself.</strong><br>
