@@ -91,3 +91,24 @@ def test_every_bundled_profile_passes_strict_mode():
         for entity, query in prof.entities.items():
             sql = re.sub(r"\{([A-Za-z0-9_]+)\}", "X", query)
             assert_read_only(sql, dialect=dialect, strict=True), f"{name}:{entity}"
+
+
+def test_trust_benchmark_cli_reports_and_exits_clean(capsys):
+    """The `trust-benchmark` command runs the corpus through the guard and
+    reports it - the reproducible artifact behind the published page."""
+    from types import SimpleNamespace
+
+    from erp_report_engine.cli import cmd_trust_benchmark
+
+    cmd_trust_benchmark(SimpleNamespace(json=False))
+    human = capsys.readouterr().out
+    assert "20/20 attacks refused" in human
+    assert "6/6 reads allowed" in human
+    assert "ALL CORRECT" in human
+
+    cmd_trust_benchmark(SimpleNamespace(json=True))
+    import json as _json
+    payload = _json.loads(capsys.readouterr().out)
+    assert payload["summary"]["all_correct"] is True
+    assert payload["summary"]["attacks_blocked"] == payload["summary"]["attacks_total"]
+    assert len(payload["cases"]) == 26         # 20 attacks + 6 reads, the whole corpus
