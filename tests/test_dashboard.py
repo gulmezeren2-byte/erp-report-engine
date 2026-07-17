@@ -42,3 +42,39 @@ def test_dashboard_renders_and_escapes_untrusted_text():
     assert "<img src=x onerror=alert(1)>" not in html
     assert "<b>ACME</b>" not in html
     assert "&lt;script&gt;alert" in html
+
+
+def test_dashboard_uses_only_validated_palette_steps():
+    """The validated palette's whole value is that THOSE steps cleared the
+    colour-vision gates. Six of the eight had drifted into brightened
+    approximations while the docstring still claimed validation - so pin the
+    steps, including the copies hand-written into the CSS, where they drifted.
+
+    Validator run for this exact set against this dashboard's plane (#0b0d10) is
+    recorded in render_dashboard's module docstring: ALL CHECKS PASS.
+    """
+    import re
+    from pathlib import Path
+
+    from erp_report_engine import render_dashboard as rd
+
+    # skill-validated dark categorical steps + the fixed status palette
+    validated = {"#3987e5", "#008300", "#d55181", "#c98500",     # slots 1-4
+                 "#199e70", "#d95926", "#9085e9", "#e66767",     # slots 5-8
+                 "#0ca30c", "#fab219", "#ec835a", "#d03b3b"}     # good/warning/serious/critical
+    for name in ("BLUE", "MAGENTA", "AQUA", "VIOLET", "GOOD", "WARN", "SERIOUS", "CRIT"):
+        assert getattr(rd, name) in validated, f"{name}={getattr(rd, name)} is not a validated step"
+
+    # Chrome the palette does not govern, because none of it encodes a value:
+    # the plane, the ink/grid greys, the near-white gradient stop in the title,
+    # and the three background orbs - heavily blurred glows at 0.36-0.5 opacity
+    # behind everything. The line is data marks, not decoration; if one of these
+    # ever carries a number, it belongs in `validated` instead.
+    chrome = {rd.PLANE, rd.INK, rd.INK2, rd.MUTED, rd.GRID, rd.AXIS,
+              "#ffffff", "#c7d6f0",                      # title gradient stops
+              "#1d4ed8", "#0e7490", "#6d28d9"}           # decorative orbs a/b/c
+    source = Path(rd.__file__).read_text(encoding="utf-8")
+    # ignore the docstring, which quotes the full validated palette by design
+    body = source.split('"""', 2)[2]
+    stray = {h.lower() for h in re.findall(r"#[0-9a-fA-F]{6}", body)} - validated - chrome
+    assert not stray, f"unvalidated colours hard-coded in render_dashboard: {sorted(stray)}"

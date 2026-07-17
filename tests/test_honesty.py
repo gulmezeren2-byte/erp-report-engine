@@ -8,6 +8,7 @@
 - stock cover divides by the weeks actually measured, not a hopeful 8 (K8)
 - no segment ever 'explains' more than 100% of the move (K9)
 - a move nobody can support with the sample is reported, not called (K10)
+- a late order that never shipped is counted, not silently excused (K11)
 """
 
 from __future__ import annotations
@@ -164,6 +165,38 @@ def test_a_supported_on_time_move_is_called_with_its_sample():
                      build(_kpis_with_on_time(80.0, 95.0, scored=40), frames={}, low_cover_weeks=2.0))
     assert "over 40 scored deliveries" in texts        # the denominator travels with the claim
     assert "ops meeting" in texts
+
+
+def test_on_time_percent_cannot_see_orders_that_never_shipped():
+    """The survivorship trap, made visible.
+
+    One order shipped on time; four were promised the same week and never
+    shipped. On-time % reads a triumphant 100% - correctly, by its own
+    definition, which scores orders that SHIPPED. Left there, the metric
+    improves as fulfilment collapses. So the count it cannot see must travel
+    beside it.
+    """
+    ts = pd.Timestamp("2026-07-06")                    # 2026-W28, last completed week
+    rows = [("SO-1", ts, "Ege", "C", "delivered", ts, ts, 100.0)]    # shipped, on time
+    rows += [(f"SO-L{i}", ts, "Ege", "C", "open", ts, pd.NaT, 100.0)  # promised, never shipped
+             for i in range(4)]
+    frames = {
+        "orders": _orders(rows),
+        "order_lines": pd.DataFrame(columns=["order_id", "item_code", "qty"]),
+        "inventory": pd.DataFrame(columns=["item_code", "stock_qty"]),
+    }
+    frames["orders"] = pd.concat([frames["orders"], _orders([
+        ("SO-PREV", ts - pd.Timedelta(weeks=1), "Ege", "C", "delivered",
+         ts - pd.Timedelta(weeks=1), ts - pd.Timedelta(weeks=1), 100.0)])], ignore_index=True)
+
+    kpis = compute(frames, low_cover_weeks=2.0, as_of=dt.date(2026, 7, 16))
+    s = kpis["on_time_pct"]
+    assert s["now"] == 100.0            # the percentage is not wrong - it is incomplete
+    assert s["promised_unshipped"] == 4  # and this is what it could not see
+
+    texts = " ".join(f["text"] for f in build(kpis, frames, low_cover_weeks=2.0))
+    assert "4 order(s) were promised this week and have not shipped" in texts
+    assert "never counts as late" in texts
 
 
 def test_streak_counts_consecutive_revenue_declines(tmp_path):

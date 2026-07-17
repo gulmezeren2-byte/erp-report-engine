@@ -3,9 +3,31 @@ dashboard rendered from the same RunResult data as the standard report.
 
 Self-contained (inline CSS + hand-authored SVG, no external assets), rendered
 through Jinja2 autoescape so ERP-sourced text is safe. The charts carry the SPC
-control band so 'signal vs noise' is visible at a glance. Colors are the
-data-viz skill's validated dark palette; the glass/glow is decorative chrome
-over those hues.
+control band so 'signal vs noise' is visible at a glance. The glass/glow is
+decorative chrome over the hues below, never a substitute for them.
+
+Colours are the data-viz skill's validated dark palette, at the exact validated
+steps. They used to be brightened approximations of it - six of the eight were
+off - which quietly threw away the only thing a validated palette is for: those
+specific steps are the ones that cleared the colour-vision-deficiency gates.
+Prettier is not a reason; it is the reason people ship charts two of their
+readers cannot read.
+
+The steps are validated against THIS surface, not the reference one. The skill is
+explicit that contrast and band results only mean something against the surface a
+chart actually renders on, and this dashboard's plane (#0b0d10) is darker than
+the reference (#1a1a19), so the result had to be re-earned rather than assumed:
+
+    node scripts/validate_palette.js \
+      "#3987e5,#008300,#d55181,#c98500,#199e70,#d95926,#9085e9,#e66767" \
+      --mode dark --surface "#0b0d10"
+    -> ALL CHECKS PASS. worst adjacent CVD dE 8.4 (protan), tritan 8.7;
+       worst adjacent normal-vision dE 19.3; all 8 clear 3:1 on the plane.
+
+Status hues (good/warning/serious/critical) are the skill's fixed status palette
+and are deliberately outside the categorical lightness band - they are never
+themed, never reused as "series 5", and always ship with an icon and a label, so
+tone is never carried by colour alone.
 """
 
 from __future__ import annotations
@@ -18,11 +40,13 @@ from markupsafe import Markup
 
 from . import spc
 
-# validated dark palette (data-viz skill) + futuristic accents
+# The data-viz skill's validated dark palette, at the validated steps (see the
+# module docstring for the validator run against this plane). Slot numbers are
+# the skill's: the ORDER is the CVD-safety mechanism, not decoration.
 PLANE = "#0b0d10"
 INK, INK2, MUTED, GRID, AXIS = "#f4f6f8", "#aab3bd", "#7d8590", "#20242b", "#333a44"
-BLUE, AQUA, VIOLET, MAGENTA = "#3f8ef5", "#22c197", "#9a8cf0", "#e07bab"
-GOOD, WARN, SERIOUS, CRIT = "#28c76f", "#fab219", "#ec835a", "#f0524d"
+BLUE, MAGENTA, AQUA, VIOLET = "#3987e5", "#d55181", "#199e70", "#9085e9"   # slots 1, 3, 5, 7
+GOOD, WARN, SERIOUS, CRIT = "#0ca30c", "#fab219", "#ec835a", "#d03b3b"     # fixed status palette
 TONE = {"good": GOOD, "bad": CRIT, "warn": WARN}
 ICON = {"good": "▲", "bad": "▼", "warn": "◆"}
 
@@ -66,7 +90,21 @@ def _area_chart(weeks: list[str], values: list[float], color: str, *,
 
     band_svg = ""
     if band:
+        # The band is the receipt, so it is labelled. It used to render as an
+        # unexplained shaded rectangle with two dashed lines and no numbers: if
+        # nothing breached, the limits appeared NOWHERE on this surface, and a
+        # reader was asked to trust a mysterious glow. The arithmetic belongs on
+        # the chart, not only in the finding text that fires once a quarter.
         y_ucl, y_lcl, y_cl = y(band["ucl"]), y(band["lcl"]), y(band["cl"])
+        fmt = (lambda v: f"{v:.1f}%") if pct else (lambda v: f"{v:,.0f}")
+
+        # Left-anchored on purpose: the last point's marker is always at the right
+        # edge, so a right-anchored label is guaranteed to collide with it - which
+        # is what happened, and is only visible by rendering the thing and looking.
+        def _band_label(yy: float, text: str, col: str) -> str:
+            return (f'<text x="{pad_l + 3}" y="{yy - 3:.1f}" fill="{col}" font-size="8.5" '
+                    f'text-anchor="start" opacity="0.85">{html.escape(text)}</text>')
+
         band_svg = (
             f'<rect x="{pad_l}" y="{y_ucl:.1f}" width="{iw}" height="{(y_lcl - y_ucl):.1f}" '
             f'fill="{color}" opacity="0.05" rx="4"/>'
@@ -76,6 +114,9 @@ def _area_chart(weeks: list[str], values: list[float], color: str, *,
             f'stroke="{color}" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 4"/>'
             f'<line x1="{pad_l}" y1="{y_cl:.1f}" x2="{pad_l + iw}" y2="{y_cl:.1f}" '
             f'stroke="{MUTED}" stroke-opacity="0.4" stroke-width="1"/>'
+            + _band_label(y_ucl, f"UCL {fmt(band['ucl'])}", MUTED)
+            + _band_label(y_cl, f"mean {fmt(band['cl'])}", MUTED)
+            + _band_label(y_lcl, f"LCL {fmt(band['lcl'])}", MUTED)
         )
 
     # last point marker; glows red if it breached the band
@@ -110,6 +151,35 @@ def _area_chart(weeks: list[str], values: list[float], color: str, *,
 
 def _pct(v: float) -> str:
     return f"{v:.1f}%" if v == v else "n/a"
+
+
+def _band_meta(band: dict | None) -> str:
+    """How much history the band was built from, on the chart itself.
+
+    A band drawn from 5 weeks looked exactly as authoritative as one drawn from
+    25. The size is the reader's cue for how hard to lean on it, so it should not
+    only appear in a finding that fires when something breaches.
+    """
+    if not band:
+        return "· not enough history yet"
+    n = band["n"]
+    return f"· baseline n={n}" + (" (provisional)" if n < spc._STABLE_N else "")
+
+
+def _otp_base(s: dict) -> str:
+    """The on-time card's subtitle: the two caveats the percentage hides.
+
+    `scored/delivered` is how much of it is backed by dates at all; the
+    promised-but-unshipped count is the survivorship trap - the metric only
+    scores orders that shipped, so an order that never ships never lands on it.
+    """
+    parts = []
+    if s.get("delivered") and s.get("scored", 0) < s["delivered"]:
+        parts.append(f"{s.get('scored', 0)}/{s['delivered']} scored")
+    if s.get("promised_unshipped"):
+        parts.append(f"{s['promised_unshipped']} promised, unshipped")
+    parts.append(f"baseline {_pct(s['baseline8'])}")
+    return " · ".join(parts)
 
 
 def _bullet(now: float, ref: float, color: str, *, width: int = 200, height: int = 10,
@@ -150,7 +220,7 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>{{ company }} — Command Center {{ week }}</title>
 <style>
  *{box-sizing:border-box}
- :root{--blue:#3f8ef5;--aqua:#22c197;--violet:#9a8cf0;--ink:#f4f6f8;--ink2:#aab3bd;--muted:#7d8590}
+ :root{--blue:#3987e5;--aqua:#199e70;--violet:#9085e9;--ink:#f4f6f8;--ink2:#aab3bd;--muted:#7d8590}
  body{margin:0;background:#0b0d10;color:var(--ink);position:relative;
    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
  /* ambient aurora - drifting orbs behind the glass */
@@ -166,15 +236,15 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
  header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;margin-bottom:22px;
    animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) both}
  h1{font-size:23px;margin:0;letter-spacing:.2px;font-weight:650;
-   background:linear-gradient(90deg,#ffffff,#c7d6f0 55%,#9a8cf0);-webkit-background-clip:text;background-clip:text;
+   background:linear-gradient(90deg,#ffffff,#c7d6f0 55%,#9085e9);-webkit-background-clip:text;background-clip:text;
    -webkit-text-fill-color:transparent;color:#fff}
  .sub{color:var(--ink2);font-size:13px;margin-top:6px}
  .pills{display:flex;gap:8px;flex-wrap:wrap}
  .pill{font-size:11px;color:var(--ink2);border:1px solid rgba(255,255,255,.12);
    background:rgba(255,255,255,.04);border-radius:999px;padding:5px 11px;backdrop-filter:blur(6px)}
  .pill.live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
-   background:#28c76f;margin-right:6px;box-shadow:0 0 8px #28c76f;vertical-align:middle;animation:pulse 2.4s ease-in-out infinite}
- @keyframes pulse{0%,100%{box-shadow:0 0 6px #28c76f;opacity:1}50%{box-shadow:0 0 14px #28c76f;opacity:.55}}
+   background:#0ca30c;margin-right:6px;box-shadow:0 0 8px #0ca30c;vertical-align:middle;animation:pulse 2.4s ease-in-out infinite}
+ @keyframes pulse{0%,100%{box-shadow:0 0 6px #0ca30c;opacity:1}50%{box-shadow:0 0 14px #0ca30c;opacity:.55}}
  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
  .card{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:18px;
    padding:18px 20px;backdrop-filter:blur(16px);box-shadow:0 8px 40px rgba(0,0,0,.35);
@@ -202,6 +272,7 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
  .verdict .txt{font-size:16.5px;line-height:1.45;font-weight:520}
  .chart{grid-column:span 6}
  .chart h3,.panel h3{margin:0 0 12px;font-size:13px;color:var(--ink2);font-weight:600;letter-spacing:.3px}
+ .bmeta{font-weight:400;font-size:11px;color:var(--muted);letter-spacing:0}
  .panel{grid-column:span 6}
  .panel.wide{grid-column:span 12}
  .conc-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
@@ -227,7 +298,7 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
  .trust .item{display:flex;flex-direction:column;gap:2px}
  .trust .k{font-size:22px;font-weight:680;font-variant-numeric:tabular-nums}
  .trust .t{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
- .ok{color:#28c76f}.crit{color:#f0524d}.warnc{color:#fab219}
+ .ok{color:#0ca30c}.crit{color:#d03b3b}.warnc{color:#fab219}
  polyline.draw{stroke-dasharray:2600;stroke-dashoffset:2600;animation:draw 1.6s .3s cubic-bezier(.4,0,.2,1) forwards}
  @keyframes draw{to{stroke-dashoffset:0}}
  footer{margin-top:22px;color:var(--muted);font-size:11.5px;line-height:1.6;text-align:center}
@@ -259,8 +330,8 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
     <div><div class="tag">weekly verdict</div><div class="txt">{{ verdict }}</div></div>
   </div>
 
-  <div class="card chart" style="animation-delay:360ms"><h3>Revenue · with SPC control band</h3>{{ chart_rev }}</div>
-  <div class="card chart" style="animation-delay:420ms"><h3>On-time shipping % · with SPC control band</h3>{{ chart_otp }}</div>
+  <div class="card chart" style="animation-delay:360ms"><h3>Revenue · with SPC control band <span class="bmeta">{{ band_rev_meta }}</span></h3>{{ chart_rev }}</div>
+  <div class="card chart" style="animation-delay:420ms"><h3>On-time shipping % · with SPC control band <span class="bmeta">{{ band_otp_meta }}</span></h3>{{ chart_otp }}</div>
 
   <div class="card panel wide" style="animation-delay:480ms"><h3>Signals &amp; what to look at</h3>
     {% for f in findings %}
@@ -358,9 +429,7 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
         {"label": "On-time shipping", "value": _pct(s["now"]),
          "count": (s["now"] if s["now"] == s["now"] else None), "kind": "pct",
          "delta": sd, "color": TONE[st],
-         "base": (f"{s.get('scored', 0)}/{s.get('delivered', 0)} scored · baseline {_pct(s['baseline8'])}"
-                  if s.get("delivered") and s.get("scored", 0) < s["delivered"]
-                  else f"vs 8-wk baseline {_pct(s['baseline8'])}"),
+         "base": _otp_base(s),
          "bar": Markup(_bullet(s["now"], s["baseline8"], TONE[st]))},
         {"label": "Items low on stock", "value": f"{kpis['n_low_cover']}",
          "count": kpis["n_low_cover"], "kind": "int",
@@ -370,8 +439,9 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
          "bar": Markup(_bullet(kpis["n_low_cover"], 0, GOOD if kpis["n_low_cover"] == 0 else WARN, tick=False))},
     ]
 
-    band_rev = spc._limits(_nums(kpis["trend"]["revenue"])[:-1]) if len(_nums(kpis["trend"]["revenue"])) >= 6 else None
-    band_otp = spc._limits(_nums(kpis["trend"]["on_time"])[:-1]) if len(_nums(kpis["trend"]["on_time"])) >= 6 else None
+    # the same limits the findings quote - never rebuilt from a different window
+    band_rev = spc.limits_for(kpis, "revenue")
+    band_otp = spc.limits_for(kpis, "on_time")
     if band_rev and band_rev["mr_bar"] == 0:
         band_rev = None
     if band_otp and band_otp["mr_bar"] == 0:
@@ -429,6 +499,8 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
         verdict=verdict,
         chart_rev=Markup(_area_chart(kpis["trend"]["weeks"], kpis["trend"]["revenue"], BLUE, band=band_rev)),
         chart_otp=Markup(_area_chart(kpis["trend"]["weeks"], kpis["trend"]["on_time"], AQUA, pct=True, band=band_otp)),
+        band_rev_meta=_band_meta(band_rev),
+        band_otp_meta=_band_meta(band_otp),
         findings=[{"icon": ICON[f["tone"]], "color": TONE[f["tone"]], "text": f["text"]} for f in findings],
         stock=stock,
         conc=conc_ctx,

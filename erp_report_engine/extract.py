@@ -15,6 +15,7 @@ import pandas as pd
 from .config import Config
 from .connect import Auditor, safe_read, scalar
 from .errors import ContractError
+from .kpi import _DELIVERED  # one definition of "it shipped", imported, never restated
 from .semantic import OPTIONAL_COLUMNS, REQUIRED_COLUMNS, Profile
 
 
@@ -76,9 +77,6 @@ def extract_all(engine, auditor: Auditor, profile: Profile, cfg: Config) -> Extr
         if severity == "fail":
             ex.contract_failures.append(text)
     return ex
-
-
-_DELIVERED = ("delivered", "shipped", "closed")
 
 
 def _quality_gate(ex: Extraction) -> None:

@@ -86,6 +86,11 @@ table _Measures
 		lineageTag: a8b5cc90-972c-4b2f-9ef4-8bde91cf95bb
 
 	/// Average weekly revenue over the 8 completed weeks before the last one.
+	/// The "+ 0" is load-bearing: a week with no orders returns BLANK, and
+	/// AVERAGEX skips blanks - so a holiday shutdown week would quietly leave the
+	/// divisor and read HIGHER here than in the HTML report, which counts that
+	/// week as a zero. Same name, same window, two different numbers. The engine
+	/// gap-fills its week axis on purpose; this is that decision, in DAX.
 	measure 'Revenue (8W Baseline)' =
 			VAR w = [_Last Full Week Ordinal]
 			RETURN
@@ -96,7 +101,7 @@ table _Measures
 			                && DimWeek[Week Ordinal] <= w - 1
 			                && DimWeek[Is Full Week] = 1
 			        ),
-			        CALCULATE ( [Revenue] )
+			        CALCULATE ( [Revenue] ) + 0
 			    )
 		formatString: #,##0
 		displayFolder: 2. This Week

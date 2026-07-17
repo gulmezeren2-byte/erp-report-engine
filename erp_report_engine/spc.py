@@ -90,6 +90,23 @@ def evaluate_metric(label: str, values, *, pct: bool = False, higher_is_better: 
     return []
 
 
+def limits_for(kpis: dict, metric: str) -> dict | None:
+    """The exact limits `signals()` will quote for a metric ('revenue' /
+    'on_time'), or None when there is not enough history to draw any.
+
+    Exists so a surface cannot draw one band and cite another. The dashboard used
+    to rebuild limits from the 13-week chart series while the finding text quoted
+    limits from the SPC window - a shaded band and an arithmetic receipt that
+    disagreed, which is worse than either alone.
+    """
+    series = kpis.get("spc") or kpis.get("trend", {})
+    clean = [float(v) for v in series.get(metric, []) if v == v]
+    if len(clean) < _MIN_POINTS:
+        return None
+    lim = _limits(clean[:-1])
+    return lim if lim["mr_bar"] else None
+
+
 def signals(kpis: dict) -> list[dict]:
     """SPC findings for revenue and on-time %.
 

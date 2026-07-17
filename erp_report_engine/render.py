@@ -106,7 +106,9 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <details><summary>SQL audit trail ({{ audit|length }} statements, all read-only)</summary>
 <table><tr><th>Label</th><th>Statement</th><th>Rows</th><th>Time</th></tr>{% for a in audit %}<tr><td>{{ a.label }}</td><td class="sql">{{ a.sql }}</td><td>{{ a.rows }}</td><td>{{ a.seconds }}s</td></tr>{% endfor %}</table></details>
 <footer>erp-report-engine · designed by Eren Gülmez · definitions: revenue = sum(net_total) by ISO week of order date;
-on-time = shipped ≤ promised (order level; completeness not asserted — see README); cover = stock / 8-week avg weekly demand.</footer>
+on-time = of orders that <b>shipped</b>, the share shipped ≤ promised (order level; an order that never ships is not counted late —
+the promised-but-unshipped count is on the card; completeness not asserted — see README);
+cover = stock / avg weekly demand over the weeks measured.</footer>
 </div></body></html>"""
 
 _ENV = Environment(autoescape=select_autoescape(default=True, default_for_string=True))
@@ -132,6 +134,9 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak, narrative=
         delivered, scored = d.get("delivered", 0), d.get("scored", 0)
         if delivered and scored < delivered:
             base += f" · {scored}/{delivered} scored"
+        # the orders the percentage cannot see: promised this week, never shipped
+        if d.get("promised_unshipped"):
+            base += f" · {d['promised_unshipped']} promised, unshipped"
         return base
 
     cards = [

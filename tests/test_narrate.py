@@ -108,3 +108,41 @@ def test_render_shows_narrative_and_the_exact_payload():
     assert "What the model saw" in html and "gpt-4o-mini" in html
     # the exact payload is shown (autoescaped in the HTML source; the browser un-escapes it)
     assert "this_week" in html and "&#34;week&#34;: &#34;2026-W28&#34;" in html
+
+
+def test_customer_names_are_pseudonymised_by_default():
+    """"Aggregates only" is not the same as "nothing identifiable".
+
+    An aggregate can still name a party: the top overdue balances ARE customer
+    names, and a driver finding names the account behind the move. The endpoint
+    is very often a third party, so the default must not hand it a debtor list.
+    """
+    ex = SimpleNamespace(issues=[], frames={"orders": "MUST_NOT_LEAK"})
+    findings = [
+        {"tone": "bad", "text": "Revenue -20.0% — main driver: customer 'Acme Holding' "
+                                "(62% of the week's movement, partly offset by Beta Ltd (+400)).",
+         "names": ["Acme Holding", "Beta Ltd"]},
+        {"tone": "warn", "text": "2 items are below 2 weeks of stock cover (worst first: ITM-SECRET-1).",
+         "names": ["ITM-SECRET-1"]},
+    ]
+    cfg = SimpleNamespace(company_alias="Demo", narrative={})
+    payload = narrate.build_payload(cfg, _kpis(), findings, ex)
+    blob = json.dumps(payload, ensure_ascii=False)
+
+    for identifiable in ("Acme Holding", "Beta Ltd", "ITM-SECRET-1"):
+        assert identifiable not in blob, f"{identifiable} reached the payload"
+    assert payload["names_included"] is False
+    assert "<name-1>" in blob and "<name-2>" in blob      # distinguishable, not blanked
+    assert payload["receivables_aging"]["top_overdue"][0]["amount"] == 5000.0   # the money stays
+    assert payload["receivables_aging"]["top_overdue"][0]["customer"].startswith("<name-")
+
+
+def test_names_travel_only_when_explicitly_opted_in():
+    ex = SimpleNamespace(issues=[], frames={})
+    findings = [{"tone": "bad", "text": "main driver: customer 'Acme Holding'.",
+                 "names": ["Acme Holding"]}]
+    cfg = SimpleNamespace(company_alias="Demo", narrative={"include_names": True})
+    payload = narrate.build_payload(cfg, _kpis(), findings, ex, include_names=True)
+    blob = json.dumps(payload, ensure_ascii=False)
+    assert "Acme Holding" in blob
+    assert payload["names_included"] is True             # and the appendix says so

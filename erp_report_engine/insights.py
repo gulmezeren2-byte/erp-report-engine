@@ -36,6 +36,9 @@ def build(kpis: dict, frames: dict, low_cover_weeks: float,
                     f"movement{offset_txt}). "
                     f"Confirm whether this is demand or a one-off before reacting."
                 ),
+                # the identifiable strings in `text`, declared so a consumer that
+                # must not see them (the LLM narrative) can redact rather than guess
+                "names": [driver["segment"]] + ([off["segment"]] if off else []),
             })
 
     otp = kpis["on_time_pct"]
@@ -65,6 +68,21 @@ def build(kpis: dict, frames: dict, low_cover_weeks: float,
                     ),
                 })
 
+    # On-time % is scored over orders that SHIPPED, so an order that is late and
+    # still sitting there never costs it a point - the metric can improve while
+    # fulfilment falls over. Say the number the percentage cannot see.
+    unshipped = int(otp.get("promised_unshipped", 0))
+    if unshipped:
+        out.append({
+            "tone": "warn",
+            "text": (
+                f"{unshipped} order(s) were promised this week and have not shipped. "
+                f"They are not in the on-time % — it scores orders that shipped, so an "
+                f"order that never ships never counts as late. Check them before reading "
+                f"the percentage as good news."
+            ),
+        })
+
     if kpis["n_low_cover"]:
         top = ", ".join(x["item_code"] for x in kpis["low_cover"][:3])
         dw = int(kpis.get("demand_window_weeks", 8))
@@ -76,6 +94,7 @@ def build(kpis: dict, frames: dict, low_cover_weeks: float,
                 f"{kpis['n_low_cover']} items are below {low_cover_weeks:.0f} weeks of stock cover "
                 f"(worst first: {top}). Review replenishment before the weekend.{thin}"
             ),
+            "names": [x["item_code"] for x in kpis["low_cover"][:3]],
         })
 
     conc = kpis.get("concentration")
@@ -104,6 +123,7 @@ def build(kpis: dict, frames: dict, low_cover_weeks: float,
                 f"{aging['over90_pct']:.0f}% is over 90 days.{worst_txt} "
                 f"Chase the oldest balances before they age further."
             ),
+            "names": [worst["customer"]] if worst else [],
         })
 
     # SPC: separate genuine signals from week-to-week noise, each with its arithmetic.

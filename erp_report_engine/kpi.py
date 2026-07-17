@@ -25,6 +25,12 @@ from .errors import EngineError
 _TREND_WINDOW = 13  # completed weeks a chart can show legibly
 _SPC_WINDOW = 26    # completed weeks the control limits deserve
 
+# Which statuses count as "the order left the building". Stated once and imported
+# by the extraction gate and the Power BI exporter: this used to be three separate
+# literal tuples, and "one definition, every surface" rested on remembering to
+# edit all three.
+_DELIVERED = ("delivered", "shipped", "closed")
+
 
 def _week(s: pd.Series) -> pd.Series:
     iso = s.dt.isocalendar()
@@ -141,13 +147,22 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
     rev = o.groupby("week").net_total.sum().reindex(axis, fill_value=0.0)
     cnt = o.groupby("week").size().reindex(axis, fill_value=0).astype(float)
 
-    all_delivered = o[o.status.astype(str).str.lower().isin(("delivered", "shipped", "closed"))]
+    all_delivered = o[o.status.astype(str).str.lower().isin(_DELIVERED)]
     delivered = all_delivered[all_delivered.actual_ship_date.notna() & all_delivered.promised_date.notna()].copy()
     delivered["on_time"] = delivered.actual_ship_date <= delivered.promised_date
     otp = (delivered.groupby("week").on_time.mean() * 100).reindex(axis)  # NaN where no scored deliveries
     # how much of this week's on-time % is actually backed by data (K3 honesty)
     scored_this = int(len(delivered[delivered.week == this_w]))
     delivered_this = int(len(all_delivered[all_delivered.week == this_w]))
+
+    # The survivorship trap, counted instead of left implicit (K11). The on-time
+    # denominator is orders that SHIPPED - so an order that is late and has not
+    # shipped at all is in neither the numerator nor the denominator, and never
+    # costs the metric a point. Taken to its end, on-time % RISES as fulfilment
+    # collapses, because the worst orders quietly leave the sample. This counts
+    # what the percentage cannot see: promised to ship this week, still hasn't.
+    promised_w = _week(o.promised_date)
+    unshipped_this = int(len(o[(promised_w == this_w) & o.actual_ship_date.isna()]))
 
     lines = frames["order_lines"].copy()
     lines["qty"] = pd.to_numeric(lines.qty, errors="coerce").fillna(0.0)
@@ -193,7 +208,8 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
         "as_of": as_of.isoformat(),
         "revenue": wow(rev),
         "orders": wow(cnt),
-        "on_time_pct": {**wow(otp), "scored": scored_this, "delivered": delivered_this},
+        "on_time_pct": {**wow(otp), "scored": scored_this, "delivered": delivered_this,
+                        "promised_unshipped": unshipped_this},
         # completed weeks only - the current partial week is never plotted
         "trend": series_over(trend_weeks),
         # same rule, longer window: what the control limits are computed from

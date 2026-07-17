@@ -22,7 +22,7 @@ from .connect import Auditor
 from .extract import Extraction
 
 # one definition per rule, imported - never restated here
-from .kpi import _AGING_BUCKETS, _TREND_WINDOW, _bucket
+from .kpi import _AGING_BUCKETS, _DELIVERED, _TREND_WINDOW, _bucket
 from .semantic import Profile
 
 _ENC = "utf-8"  # no BOM: Power BI's Csv.Document reads 65001 cleanly
@@ -78,7 +78,7 @@ def export_all(cfg: Config, profile: Profile, ex: Extraction, auditor: Auditor,
     dupes_dropped = int(o.duplicated(subset=["order_id"]).sum())
     o = o.drop_duplicates(subset=["order_id"], keep="first")
 
-    delivered = o.status.astype(str).str.lower().isin(("delivered", "shipped", "closed"))
+    delivered = o.status.astype(str).str.lower().isin(_DELIVERED)
     on_time = (delivered & o.actual_ship_date.notna() & o.promised_date.notna()
                & (o.actual_ship_date <= o.promised_date))
     scored = delivered & o.actual_ship_date.notna() & o.promised_date.notna()
