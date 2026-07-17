@@ -16,6 +16,16 @@ Nothing here is novel: these are documented PostgreSQL / SQL Server / MySQL /
 SQLite built-ins. The point is not the functions - it is that "read-only in
 prose" does not survive contact with them, and measuring your own guard against
 them is the only honest way to claim it does.
+
+Two of these cases are the exact failures that made the news. The MCP world's
+most-cited read-only bypass is a transaction escape: Anthropic's reference
+PostgreSQL MCP server ran queries inside `BEGIN TRANSACTION READ ONLY`, but the
+driver accepted stacked statements, so `COMMIT; DROP SCHEMA public CASCADE;`
+closed the read-only transaction and ran with full rights (found by Datadog
+Security Labs; Anthropic archived the server in May 2025). And the Supabase MCP
+"lethal trifecta" incident turned on the WRITE leg - injected content steering an
+agent to copy a secrets table into an attacker-readable row. Both are here, both
+refused: a guard that inspects the statement, not merely a read-only DB role.
 """
 
 from __future__ import annotations
@@ -51,6 +61,10 @@ SIDE_EFFECTS = [
          "side_effect", "high", "re-enters the executor with an arbitrary SQL string"),
     Case("pg_sleep", "postgres", "SELECT pg_sleep(100000)",
          "side_effect", "medium", "ties up a connection indefinitely - denial of service"),
+    Case("xp_cmdshell", "tsql", "SELECT * FROM orders WHERE 1=1; EXEC xp_cmdshell 'whoami'",
+         "side_effect", "critical", "SQL Server shell execution - and Logo, Netsis and Mikro all run on SQL Server"),
+    Case("sp_oacreate", "tsql", "DECLARE @o INT; EXEC sp_OACreate 'WScript.Shell', @o OUT",
+         "side_effect", "critical", "OLE automation: another SQL Server path to arbitrary code"),
     Case("openrowset", "tsql", "SELECT * FROM OPENROWSET(BULK 'C:/Windows/win.ini', SINGLE_CLOB) AS x",
          "side_effect", "critical", "reads a host file; sqlglot cannot even parse it, so the lexical net catches it"),
     Case("openquery", "tsql", "SELECT * FROM OPENQUERY(srv, 'SELECT 1')",
@@ -70,6 +84,12 @@ SIDE_EFFECTS = [
 
 # Writes and multi-statement tricks a keyword scan alone might miss.
 WRITES = [
+    Case("commit_drop", "postgres", "COMMIT; DROP SCHEMA public CASCADE;",
+         "write", "critical", "THE famous one: the read-only transaction ESCAPE that got Anthropic's "
+         "reference Postgres MCP server archived (Datadog, 2025) - refused as a second statement"),
+    Case("trifecta_exfil", "postgres", "INSERT INTO tickets(body) SELECT token FROM integration_tokens",
+         "write", "critical", "the Supabase 'lethal trifecta' write leg - injected content steering an agent "
+         "to copy secrets into an attacker-readable row; a guard denies the write a read-only role might not"),
     Case("drop", "postgres", "DROP TABLE orders",
          "write", "critical", "destroys a table"),
     Case("cte_insert", "postgres", "WITH x AS (INSERT INTO t VALUES (1) RETURNING *) SELECT * FROM x",

@@ -53,8 +53,8 @@ def _standalone_guard_source() -> str:
 def _presets() -> list[dict]:
     # a curated, high-impact subset - the scariest attacks plus the reads that
     # prove the guard is not just saying "no" to everything
-    want = ["pg_read_file", "lo_export", "dblink", "set_config", "openrowset",
-            "load_extension", "sleep", "drop", "two_statements",
+    want = ["commit_drop", "trifecta_exfil", "xp_cmdshell", "pg_read_file",
+            "lo_export", "dblink", "set_config", "openrowset", "load_extension",
             "aggregate", "literal_keyword", "join"]
     by = {c.name: c for c in CASES}
     out = []

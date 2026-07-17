@@ -98,17 +98,19 @@ def test_trust_benchmark_cli_reports_and_exits_clean(capsys):
     reports it - the reproducible artifact behind the published page."""
     from types import SimpleNamespace
 
+    from erp_report_engine.attack_corpus import CASES, READS, SIDE_EFFECTS, WRITES
     from erp_report_engine.cli import cmd_trust_benchmark
+    n_attacks, n_reads = len(SIDE_EFFECTS) + len(WRITES), len(READS)
 
     cmd_trust_benchmark(SimpleNamespace(json=False))
     human = capsys.readouterr().out
-    assert "20/20 attacks refused" in human
-    assert "6/6 reads allowed" in human
+    assert f"{n_attacks}/{n_attacks} attacks refused" in human   # computed, so adding a case never breaks this
+    assert f"{n_reads}/{n_reads} reads allowed" in human
     assert "ALL CORRECT" in human
 
     cmd_trust_benchmark(SimpleNamespace(json=True))
     import json as _json
     payload = _json.loads(capsys.readouterr().out)
     assert payload["summary"]["all_correct"] is True
-    assert payload["summary"]["attacks_blocked"] == payload["summary"]["attacks_total"]
-    assert len(payload["cases"]) == 26         # 20 attacks + 6 reads, the whole corpus
+    assert payload["summary"]["attacks_blocked"] == payload["summary"]["attacks_total"] == n_attacks
+    assert len(payload["cases"]) == len(CASES)
