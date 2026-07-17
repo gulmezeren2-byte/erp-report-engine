@@ -1,0 +1,9 @@
+# Blank issues are fine, but steer the two special cases to the right place.
+blank_issues_enabled: true
+contact_links:
+  - name: 🔒 Security / read-only guard bypass
+    url: https://github.com/gulmezeren2-byte/erp-report-engine/security/advisories/new
+    about: Found a way past the read-only guard? Report it privately here — it's a contribution, not an attack. Please don't open a public issue.
+  - name: 📊 Try to break the guard (live)
+    url: https://gulmezeren2-byte.github.io/erp-report-engine/playground.html
+    about: Paste SQL into the real guard in your browser before filing — the 28-attack benchmark and playground run the exact code.
