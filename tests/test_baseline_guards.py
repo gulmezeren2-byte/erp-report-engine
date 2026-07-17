@@ -69,6 +69,15 @@ def test_keyword_scan_is_unsafe_and_brittle_at_once():
     assert_read_only(read.sql, dialect=read.dialect)
 
 
+def test_starts_with_select_is_redos_safe():
+    """A pathological comment-like string is refused promptly, not exponentially.
+    Regression for a ReDoS in the first cut of the head regex (nested quantifiers
+    over `/*...*/`); if the linear form is ever undone, this hangs the suite."""
+    evil = "/*" + "*//*" * 10000
+    with pytest.raises(ReadOnlyViolation):
+        starts_with_select(evil)
+
+
 def test_starts_with_select_still_allows_every_real_read():
     """It is unsafe, not useless: the lenient shape check does pass all the reads
     (that is why it gets shipped). The danger is entirely in what it also passes."""

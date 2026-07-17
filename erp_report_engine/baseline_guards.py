@@ -36,9 +36,11 @@ import re
 from .errors import ReadOnlyViolation
 
 # The lenient shape check: a statement is treated as a read if its first
-# keyword is SELECT or WITH. Comments/whitespace are stripped first, which is
-# already more care than many implementations take.
-_HEAD = re.compile(r"^\s*(?:/\*.*?\*/\s*|--[^\n]*\n\s*)*(select|with)\b", re.IGNORECASE | re.DOTALL)
+# keyword is SELECT or WITH. Deliberately linear (a leading `\s*` over a fixed
+# alternation, then a word boundary) - a naive guard is naive precisely because
+# it does no real parsing, and it certainly should not open itself to
+# regex-denial-of-service while pretending to.
+_HEAD = re.compile(r"\s*(?:select|with)\b", re.IGNORECASE)
 
 
 def starts_with_select(sql: str, dialect: str | None = None) -> None:
