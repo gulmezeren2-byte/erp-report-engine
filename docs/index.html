@@ -2,11 +2,86 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>erp-report-engine — live sample report</title>
-<meta http-equiv="refresh" content="0; url=sample-report.html">
-<link rel="canonical" href="sample-report.html">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>erp-report-engine — weekly reports from the SQL behind your ERP</title>
+<meta name="description" content="Autonomous weekly reports straight from the SQL database behind your ERP — read-only by construction, every query audited. Read-only guard measured against 20 attacks.">
+<style>
+ *{box-sizing:border-box}
+ body{margin:0;background:#0b0d10;color:#f4f6f8;
+   font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+   -webkit-font-smoothing:antialiased}
+ .wrap{max-width:900px;margin:0 auto;padding:64px 22px 80px}
+ a{color:#3987e5;text-decoration:none} a:hover{text-decoration:underline}
+ h1{font-size:34px;line-height:1.2;margin:0 0 10px;letter-spacing:-.6px}
+ .tag{color:#c7d1db;font-size:19px;margin:0 0 8px}
+ .sub{color:#7d8590;font-size:15px;margin:0 0 30px}
+ pre{background:#111418;border:1px solid #20242b;border-radius:8px;padding:14px 16px;overflow-x:auto;
+   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;color:#c7d1db;margin:0 0 34px}
+ .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:0 0 40px}
+ .card{display:block;background:#0f1216;border:1px solid #20242b;border-radius:12px;padding:20px 22px;
+   color:inherit;transition:border-color .15s,transform .15s}
+ .card:hover{border-color:#3987e5;transform:translateY(-2px);text-decoration:none}
+ .card h3{margin:0 0 6px;font-size:17px}
+ .card p{margin:0;color:#7d8590;font-size:14px;line-height:1.5}
+ .card .go{color:#3987e5;font-size:13px;margin-top:12px;display:inline-block}
+ .pill{display:inline-block;background:#0f2a16;color:#0ca30c;border:1px solid #14401f;border-radius:20px;
+   padding:3px 12px;font-size:13px;font-weight:600;margin:0 0 26px}
+ h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:#7d8590;margin:38px 0 12px;font-weight:600}
+ ul{margin:0 0 30px;padding-left:20px;color:#c7d1db} li{margin:5px 0}
+ footer{margin-top:52px;padding-top:20px;border-top:1px solid #20242b;color:#7d8590;font-size:13px}
+</style>
 </head>
 <body>
-<p>Redirecting to the <a href="sample-report.html">live sample report</a>…</p>
+<div class="wrap">
+  <h1>erp-report-engine</h1>
+  <p class="tag">Autonomous weekly reports straight from the SQL database behind your ERP.</p>
+  <p class="sub">Read-only by construction, every query audited. No BI license, no agent installed on the ERP server.</p>
+
+  <span class="pill">✓ read-only guard: 20/20 attacks refused</span>
+
+  <pre>pipx install erp-report-engine
+erp-report-engine init-demo
+erp-report-engine run -c config.demo.yaml</pre>
+
+  <div class="grid">
+    <a class="card" href="sample-report.html">
+      <h3>Live sample report →</h3>
+      <p>One command against the bundled demo database: four KPIs vs an 8-week baseline, named drivers, a data-quality gate, reconciled counts — self-contained HTML.</p>
+      <span class="go">open the report</span>
+    </a>
+    <a class="card" href="dashboard.html">
+      <h3>Command Center →</h3>
+      <p>The premium dark dashboard: animated KPIs, SPC control-band charts, receivables aging and revenue concentration — a real chart in every cell, no external assets.</p>
+      <span class="go">open the dashboard</span>
+    </a>
+    <a class="card" href="trust.html">
+      <h3>Trust benchmark →</h3>
+      <p>The read-only guard, measured against 20 well-formed-SQL attacks across 4 dialects — reproducible in one command. Every number computed from a live guard run.</p>
+      <span class="go">see the benchmark</span>
+    </a>
+  </div>
+
+  <h2>What one run produces</h2>
+  <ul>
+    <li>KPI cards — revenue, orders, on-time %, low-stock count, each vs last week and an 8-week baseline</li>
+    <li>Findings with named drivers, and SPC signals separated from week-to-week noise, with the arithmetic shown</li>
+    <li>A data-quality gate and source reconciliation — the report audits its own inputs</li>
+    <li>A Power BI Command Center (TMDL + PBIR, authored as code) from the same guarded extraction</li>
+  </ul>
+
+  <h2>Read-only, enforced in code</h2>
+  <ul>
+    <li>A four-layer guard: lexical, parse-tree, a side-effecting-function check, and a read-only session</li>
+    <li>The guard checks the functions a statement calls, not just its shape — and fails closed when it can't parse one</li>
+    <li>Three Turkish ERP profiles (Logo Tiger, Netsis, Mikro) plus a guarded MCP server for agent access</li>
+  </ul>
+
+  <footer>
+    <a href="https://github.com/gulmezeren2-byte/erp-report-engine">GitHub</a> ·
+    <a href="https://pypi.org/project/erp-report-engine/">PyPI</a> ·
+    <a href="https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/SECURITY.md">Security model</a><br>
+    Designed by Eren Gülmez.
+  </footer>
+</div>
 </body>
 </html>

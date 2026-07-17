@@ -106,6 +106,52 @@ def cmd_mcp(args) -> None:
     serve(args.config)
 
 
+def cmd_trust_benchmark(args) -> None:
+    """Run the read-only guard against its own attack corpus and report.
+
+    No database, no config - it exercises the guard in memory, so anyone who
+    installed the package can reproduce the number on the results page:
+    `erp-report-engine trust-benchmark`. Exits non-zero if any case is wrong,
+    so it doubles as a self-check.
+    """
+    from .attack_corpus import CASES, run, summarize
+    from .connect import assert_read_only
+
+    results = run(assert_read_only)
+    s = summarize(results)
+
+    if args.json:
+        print(json.dumps({"summary": s, "cases": results}, indent=2, ensure_ascii=False))
+    else:
+        by = {c.name: c for c in CASES}
+        order = {"critical": 0, "high": 1, "medium": 2, "-": 3}
+        print("READ-ONLY GUARD — TRUST BENCHMARK\n")
+        print("Attacks (well-formed SQL that is not a read; every one must be REFUSED):")
+        for r in sorted([r for r in results if r["expected_block"]],
+                        key=lambda r: (order.get(r["severity"], 9), r["name"])):
+            mark = "BLOCKED " if r["blocked"] else "PASSED!!"
+            print(f"  {mark} [{r['severity']:8}] {r['name']:16} {r['dialect']:8} — {by[r['name']].why}")
+        print("\nLegitimate reads (must be ALLOWED, or the guard is useless):")
+        for r in [r for r in results if not r["expected_block"]]:
+            mark = "allowed " if not r["blocked"] else "BLOCKED!"
+            print(f"  {mark}            {r['name']:16} {r['dialect']:8} — {by[r['name']].why}")
+        print(
+            f"\n{s['attacks_blocked']}/{s['attacks_total']} attacks refused · "
+            f"{s['reads_allowed']}/{s['reads_total']} reads allowed · "
+            f"{'ALL CORRECT' if s['all_correct'] else 'FAILURES ABOVE'}"
+        )
+        print("\nThe guard checks the functions a statement CALLS, not just its shape. "
+              "Run in strict mode (the agent path) it also default-denies every "
+              "function it does not recognise. See SECURITY.md.")
+
+    if not s["all_correct"]:
+        raise EngineError(
+            f"trust benchmark FAILED: "
+            f"{s['attacks_blocked']}/{s['attacks_total']} attacks blocked, "
+            f"{s['reads_allowed']}/{s['reads_total']} reads allowed"
+        )
+
+
 def _strict_gate(args, rr, *, wrote: bool = False) -> None:
     """Under --strict, a reconciliation mismatch or a fail-severity contract
     violation is a hard failure (exit 5)."""
@@ -166,6 +212,11 @@ def main(argv: list[str] | None = None) -> None:
     s = sub.add_parser("mcp", help="run the guarded MCP server (stdio) for agent access to the ERP")
     s.add_argument("-c", "--config", required=True)
     s.set_defaults(fn=cmd_mcp)
+
+    s = sub.add_parser("trust-benchmark",
+                       help="run the read-only guard against its attack corpus (no DB needed)")
+    s.add_argument("--json", action="store_true", help="emit machine-readable JSON")
+    s.set_defaults(fn=cmd_trust_benchmark)
 
     args = p.parse_args(argv)
     run_id = logsetup.configure(verbose=args.verbose, log_file=args.log_file)

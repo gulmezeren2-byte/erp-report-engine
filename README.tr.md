@@ -91,6 +91,14 @@ Salt-okunur **dört katmanda** zorlanır; tek bir hata motoru yazma yapabilir ha
 
 **Ve bize ait olmayan katman.** MSSQL'de oturum düzeyinde salt-okunur anahtarı yoktur; orada bu katman doğrudan **kullanıcının kendisidir**. Tehlikeli fonksiyon listesi bir denylist'tir ve hiçbir denylist tam kanıtlanamaz — bu yüzden motoru **en az yetkili, salt-okunur bir kullanıcıyla** çalıştırın (MSSQL'de `db_datareader`, PostgreSQL'de yalnız `SELECT` yetkisi; ideali fiziksel bir okuma replikası). Bekçi derinlemesine savunmadır; bekçinin deliği olduğunda tutan katman yetkidir. Deliği oldu da: bu fonksiyon baypasları bu deponun denetlenmesiyle bulundu ve artık [`tests/test_guard.py`](tests/test_guard.py) içinde isimleriyle, diyalekt diyalekt pinlenmiş durumda.
 
+**Sözüme güvenme — ölç.** Bekçi, tekrar üretilebilir bir güven benchmark'ıyla gelir: şekil-odaklı bir bekçinin geçirdiği, dört diyalektte 20 kusursuz-SQL saldırısı — hepsi reddedilir — artı geçmesi gereken meşru okumalar. Sayı düzyazıda iddia edilmez, canlı bir bekçi koşusundan hesaplanır ve CI her commit'te doğrular.
+
+```bash
+erp-report-engine trust-benchmark      # 20/20 saldırı reddedildi · 6/6 okuma serbest
+```
+
+**▶ Sonuçları görün: [güven benchmark'ı](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** — her vaka, şiddeti ve gerçekte ne yaptığı.
+
 Ayrıca: profil değişkenleri tanımlayıcı-güvenli (`^[A-Za-z0-9_]{1,16}$`, yani `"001; DROP TABLE x"` daha bağlantı kurulmadan hata fırlatır), sırlar asla config dosyasında yaşamaz (yükleyici gömülü kimlik bilgisini her yazımıyla reddeder — `password`, `passwd`, `pwd`, `sslpassword`, ODBC `PWD=` — `url_env` kullanın), çalıştırılan her ifade raporun denetim izinde gönderilir ve satır tavanı (varsayılan 500 bin) her sorguyu sınırlar.
 
 Test paketi bekçiye bir dizi enjeksiyon fırlatır — çoklu ifade, üç sözdiziminde yorum kaçakçılığı, işlem-kontrol eklemeleri (`ROLLBACK`/`COMMIT`), `SELECT INTO`, kilit ipuçları ve bir CTE içine gizlenmiş `DELETE` — ve her birinin hata üretmesini bekler. Bkz. [SECURITY.md](SECURITY.md).

@@ -91,6 +91,14 @@ Read-only is enforced in **four layers**, so no single mistake makes the engine 
 
 **And the layer that isn't ours.** MSSQL has no session-level read-only switch, so run the engine under a **least-privilege, read-only login** (`db_datareader` on MSSQL, a `SELECT`-only grant on PostgreSQL — ideally a read replica). The guard is defence in depth; the grant is the layer that holds if the guard has a hole. It has had one before: these function bypasses were found by auditing this repo, and are now pinned in [`tests/test_guard.py`](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/tests/test_guard.py) by name, per dialect.
 
+**Don't take my word for it — measure it.** The guard ships with a reproducible trust benchmark: 20 well-formed-SQL attacks across four dialects that a shape-only guard waves through, every one refused, plus the legitimate reads that must still pass. The number is computed from a live guard run, not asserted in prose, and CI enforces it on every commit.
+
+```bash
+erp-report-engine trust-benchmark      # 20/20 attacks refused · 6/6 reads allowed
+```
+
+**▶ See the results: [the trust benchmark](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** — every case, its severity, and what it actually does.
+
 Plus: profile variables are identifier-safe (`^[A-Za-z0-9_]{1,16}$`, so `"001; DROP TABLE x"` raises before any connection), secrets never live in config files (the loader refuses embedded credentials in any spelling — `password`, `passwd`, `pwd`, `sslpassword`, ODBC `PWD=` — use `url_env`), every executed statement ships in the report's audit trail, and a row cap (default 500k) bounds any single query.
 
 The test suite throws a battery of injection attempts at the guard — multi-statement, comment smuggling in three syntaxes, transaction-control splices (`ROLLBACK`/`COMMIT`), `SELECT INTO`, lock hints, and a `DELETE` hidden inside a CTE — and expects every one to raise. See [SECURITY.md](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/SECURITY.md).
