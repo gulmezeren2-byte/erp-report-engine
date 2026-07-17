@@ -81,6 +81,8 @@
   </table></div>
   <p class="note">* read/write by configuration; a read-only mode exists but is not the default. &nbsp; ** a semantic layer never exposes raw SQL to the agent at all, so "checks the statement" doesn't apply — it's a different, also-valid answer (see below).</p>
 
+  <div class="callout"><strong>The last row's "yes"es are measured, not claimed.</strong> Run the same 28-attack corpus through the shortcuts the other rows lean on and the gap is a number: a starts-with-<code>SELECT</code> check refuses <span class="y">6</span> of 28, a write-keyword blocklist <span class="y">9</span> of 28 — and the blocklist also <em>blocks a legitimate read</em>, <code>SELECT 'please delete this note'</code>, because the word is inside the string. Checking the statement itself refuses all <span class="y">28</span> and blocks none. Every figure is computed from a live guard run on the <a href="trust.html">benchmark page</a>, and a test pins that the guard strictly beats each shortcut — so "checks the statement," "blocks side-effect functions," and "publicly benchmarked" are one measurement, not three adjectives.</div>
+
   <h2>What each column means</h2>
   <ul>
     <li><strong>Read-only by default</strong> — is the safe setting the one you get without reading the docs? Opt-in safety is the setting people forget.</li>
