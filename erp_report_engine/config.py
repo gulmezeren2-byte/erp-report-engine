@@ -24,6 +24,7 @@ config.yaml shape (see config.example.yaml):
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -39,24 +40,31 @@ _CRED_MSG = (
 )
 
 
+# Any query-string key that is some spelling of a secret. Matching a PATTERN
+# rather than a fixed list is deliberate: an explicit {password, pwd} pair let
+# MySQLdb's `?passwd=` and libpq's `?sslpassword=` through, and the next driver
+# will invent another spelling.
+_CRED_KEY = re.compile(r"(password|passwd|pwd|secret)", re.IGNORECASE)
+
+
 def _reject_embedded_credential(url: str) -> None:
     """Refuse a connection URL that carries a password in any common shape.
 
-    Catches user:pass@host, `?password=`/`?pwd=` query parameters, and the
-    pyodbc `odbc_connect=...PWD=...` form (which has no `@` at all).
+    Catches user:pass@host, any `?...password/passwd/pwd/secret...=` query
+    parameter, and the pyodbc `odbc_connect=...PWD=...` form (which has no `@`).
     """
     from sqlalchemy.engine import make_url
 
     try:
         u = make_url(url)
     except Exception:
-        low = url.lower()
-        if "pwd=" in low or "password=" in low:
+        if _CRED_KEY.search(url):
             raise ConfigError(_CRED_MSG) from None
         return
-    q = {k.lower(): str(v) for k, v in u.query.items()}
-    odbc = q.get("odbc_connect", "").lower()
-    if u.password or "password" in q or "pwd" in q or "pwd=" in odbc or "password=" in odbc:
+    if u.password or any(_CRED_KEY.search(k) for k in u.query):
+        raise ConfigError(_CRED_MSG)
+    odbc = str(u.query.get("odbc_connect", ""))
+    if _CRED_KEY.search(odbc):
         raise ConfigError(_CRED_MSG)
 
 

@@ -10,7 +10,7 @@
 
 🇬🇧 English: [README.md](README.md)
 
-Zamanlanmış tek bir `run` komutu **6 denetlenmiş SELECT** çalıştırır ve kendi kendine yeten bir HTML rapor üretir: 8 haftalık taban çizgisine karşı dört KPI, sürücüsü isimlendirilmiş bulgular, veri kalitesi kapısı ve kaynakla mutabakatı yapılmış satır sayıları. BI lisansı yok, ERP sunucusuna kurulan ajan yok ve **yazma yok — üç katmanda zorlanır (sözcüksel + ayrıştırma-ağacı bekçisi ve salt-okunur oturum), dokümanda vaat edilerek değil**.
+Zamanlanmış tek bir `run` komutu **6 denetlenmiş SELECT** çalıştırır ve kendi kendine yeten bir HTML rapor üretir: 8 haftalık taban çizgisine karşı dört KPI, sürücüsü isimlendirilmiş bulgular, veri kalitesi kapısı ve kaynakla mutabakatı yapılmış satır sayıları. BI lisansı yok, ERP sunucusuna kurulan ajan yok ve **yazma yok — dört katmanda zorlanır (sözcüksel, ayrıştırma-ağacı, yan etkili fonksiyon bekçisi ve salt-okunur oturum), dokümanda vaat edilerek değil**.
 
 ![Motorun ürettiği haftalık rapor (demo veritabanından)](assets/erp_report_preview.png)
 
@@ -78,15 +78,20 @@ Bu sistemi taşınabilir kılan katman **semantik profil**: bir ERP'nin şifreli
 
 Bir yazılımı canlı ERP veritabanına doğrultmak bir güven kararıdır. Bu motor konuya böyle yaklaşır — garantiler kodda zorlanır ve testlerle kapsanır:
 
-Salt-okunur **üç katmanda** zorlanır; tek bir hata motoru yazma yapabilir hale getirmez:
+Salt-okunur **dört katmanda** zorlanır; tek bir hata motoru yazma yapabilir hale getirmez:
 
 | Katman | Nerede zorlanıyor |
 |---|---|
-| Sözcüksel bekçi | Tek ifade, `SELECT`/`WITH` başı, yorum yok (`--`, `/*`, `#`), yazma/DDL kelimesi yok, yazma-yükselten kilit ipucu yok (`TABLOCKX`, `UPDLOCK`, `XLOCK`) |
-| Ayrıştırma-ağacı bekçisi | `sqlglot` ifadeyi ayrıştırır; tek bir okuma sorgusu olmalı ve ağacında `INSERT`/`UPDATE`/`DELETE`/`CREATE`/`DROP`/`ALTER`/`MERGE`/`EXEC`/`INTO` düğümü bulunmamalı (CTE içine gizlenmiş yazmaları yakalar) |
-| Salt-okunur oturum | PostgreSQL `default_transaction_read_only=on`, SQLite `PRAGMA query_only` ve son güvence olarak belgelenmiş bir **salt-okunur kullanıcı** (MSSQL'de `db_datareader`) — böylece yazmaya çalışan bir fonksiyon bile veritabanınca reddedilir |
+| Sözcüksel bekçi | Tek ifade, `SELECT`/`WITH` başı, yorum yok (`--`, `/*`, `#`), yazma/DDL kelimesi yok, yazma-yükselten kilit ipucu yok (`TABLOCKX`, `UPDLOCK`, `XLOCK`). Tarama, metin sabitleri boşaltılarak yapılır — tırnak içindeki bir kelime koddur değil veridir, yani `SELECT 'lütfen bu notu sil'` bir okumadır |
+| Ayrıştırma-ağacı bekçisi | `sqlglot` ifadeyi ayrıştırır — ve **ayrıştırabilmek zorundadır**, aksi halde sorgu reddedilir: okuyamadığı bir sorguya kefil olamaz. Tek bir okuma sorgusu olmalı ve ağacında `INSERT`/`UPDATE`/`DELETE`/`CREATE`/`DROP`/`ALTER`/`MERGE`/`EXEC`/`INTO` düğümü bulunmamalı (CTE içine gizlenmiş yazmaları yakalar) |
+| Fonksiyon bekçisi | **Masum görünen pek çok `SELECT` aslında okuma değildir.** `pg_read_file`, `lo_export` (dosya *yazar*), `dblink` (dışarı bağlanır), `OPENROWSET`, `LOAD_FILE`, `load_extension` (kod çalıştırır), `query_to_xml` (SQL çalıştırır), `set_config` (4. katmanı kapatır), `SLEEP`/`BENCHMARK` (hizmet reddi) — hepsi isimden reddedilir; hem AST'de hem sözlüksel olarak, çünkü `sqlglot`'un ayrıştıramadığı şey tam da `OPENROWSET` |
+| Salt-okunur oturum | PostgreSQL `default_transaction_read_only=on`, SQLite `PRAGMA query_only`, MySQL `SET SESSION TRANSACTION READ ONLY` + `max_execution_time` ve her motorda ifade başına zaman aşımı |
 
-Ayrıca: profil değişkenleri tanımlayıcı-güvenli (`^[A-Za-z0-9_]{1,16}$`, yani `"001; DROP TABLE x"` daha bağlantı kurulmadan hata fırlatır), sırlar asla config dosyasında yaşamaz (yükleyici gömülü kimlik bilgisini reddeder — `url_env` kullanın), çalıştırılan her ifade raporun denetim izinde gönderilir ve satır tavanı (varsayılan 500 bin) her sorguyu sınırlar.
+**Ad-hoc SQL — ajan yolu — daha da sıkı.** `query` ve `guarded_query` **katı modda** çalışır: bekçinin *tanımadığı her fonksiyonu* varsayılan olarak reddeder. `sqlglot`'un fonksiyon kaydı allowlist'in kendisidir — taşınabilir analitik fonksiyonları bilir, dosya okuyan veya soket açan hiçbir şeyi bilmez. Paketteki dört profilin dördü de bu modu geçer; hiçbiri tanınmayan fonksiyon çağırmaz.
+
+**Ve bize ait olmayan katman.** MSSQL'de oturum düzeyinde salt-okunur anahtarı yoktur; orada bu katman doğrudan **kullanıcının kendisidir**. Tehlikeli fonksiyon listesi bir denylist'tir ve hiçbir denylist tam kanıtlanamaz — bu yüzden motoru **en az yetkili, salt-okunur bir kullanıcıyla** çalıştırın (MSSQL'de `db_datareader`, PostgreSQL'de yalnız `SELECT` yetkisi; ideali fiziksel bir okuma replikası). Bekçi derinlemesine savunmadır; bekçinin deliği olduğunda tutan katman yetkidir. Deliği oldu da: bu fonksiyon baypasları bu deponun denetlenmesiyle bulundu ve artık [`tests/test_guard.py`](tests/test_guard.py) içinde isimleriyle, diyalekt diyalekt pinlenmiş durumda.
+
+Ayrıca: profil değişkenleri tanımlayıcı-güvenli (`^[A-Za-z0-9_]{1,16}$`, yani `"001; DROP TABLE x"` daha bağlantı kurulmadan hata fırlatır), sırlar asla config dosyasında yaşamaz (yükleyici gömülü kimlik bilgisini her yazımıyla reddeder — `password`, `passwd`, `pwd`, `sslpassword`, ODBC `PWD=` — `url_env` kullanın), çalıştırılan her ifade raporun denetim izinde gönderilir ve satır tavanı (varsayılan 500 bin) her sorguyu sınırlar.
 
 Test paketi bekçiye bir dizi enjeksiyon fırlatır — çoklu ifade, üç sözdiziminde yorum kaçakçılığı, işlem-kontrol eklemeleri (`ROLLBACK`/`COMMIT`), `SELECT INTO`, kilit ipuçları ve bir CTE içine gizlenmiş `DELETE` — ve her birinin hata üretmesini bekler. Bkz. [SECURITY.md](SECURITY.md).
 

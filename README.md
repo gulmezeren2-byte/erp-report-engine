@@ -10,7 +10,7 @@
 
 🇹🇷 Türkçesi: [README.tr.md](README.tr.md)
 
-One scheduled `run` executes **6 audited SELECT statements** and delivers a self-contained HTML report: four KPIs against an 8-week baseline, findings with named drivers, a data-quality gate, and row counts reconciled against the source. No BI license, no agent installed on the ERP server, and **no writes — enforced in three layers (a lexical + parse-tree guard and a read-only session), not promised in prose**.
+One scheduled `run` executes **6 audited SELECT statements** and delivers a self-contained HTML report: four KPIs against an 8-week baseline, findings with named drivers, a data-quality gate, and row counts reconciled against the source. No BI license, no agent installed on the ERP server, and **no writes — enforced in four layers (lexical, parse-tree, a side-effecting-function guard, and a read-only session), not promised in prose**.
 
 ![Weekly report produced by the engine from the bundled demo database](assets/erp_report_preview.png)
 
@@ -78,15 +78,20 @@ The layer that makes this portable is the **semantic profile**: a versioned YAML
 
 Pointing software at a production ERP database is a trust decision. This engine treats it that way — the guarantees are enforced in code and covered by tests:
 
-Read-only is enforced in **three layers**, so no single mistake makes the engine capable of writing:
+Read-only is enforced in **four layers**, so no single mistake makes the engine capable of writing:
 
 | Layer | Enforced by |
 |---|---|
-| Lexical guard | Single statement, `SELECT`/`WITH` head, no comments (`--`, `/*`, `#`), no write/DDL keyword, no write-escalating lock hint (`TABLOCKX`, `UPDLOCK`, `XLOCK`) |
-| Parse-tree guard | `sqlglot` parses the statement; it must be a single read query whose AST contains no `INSERT`/`UPDATE`/`DELETE`/`CREATE`/`DROP`/`ALTER`/`MERGE`/`EXEC`/`INTO` node (catches writes hidden inside CTEs) |
-| Read-only session | PostgreSQL `default_transaction_read_only=on`, SQLite `PRAGMA query_only`, and a documented **read-only login** (`db_datareader` on MSSQL) as the backstop — so even a function that tries to write is refused by the database |
+| Lexical guard | Single statement, `SELECT`/`WITH` head, no comments (`--`, `/*`, `#`), no write/DDL keyword, no write-escalating lock hint (`TABLOCKX`, `UPDLOCK`, `XLOCK`). Scanned with string literals blanked, so `SELECT 'please delete this note'` is a read, not a threat |
+| Parse-tree guard | `sqlglot` parses the statement — and **must succeed**, or the query is refused: a guard that can't read a query can't vouch for it. It must be a single read query whose AST holds no `INSERT`/`UPDATE`/`DELETE`/`CREATE`/`DROP`/`ALTER`/`MERGE`/`EXEC`/`INTO` node (catches writes hidden inside CTEs) |
+| Function guard | **Plenty of pure-looking `SELECT`s are not reads.** `pg_read_file`, `lo_export` (which *writes* a file), `dblink` (which dials out), `OPENROWSET`, `LOAD_FILE`, `load_extension` (arbitrary code), `query_to_xml` (arbitrary SQL), `set_config` (switches off the session backstop), `SLEEP`/`BENCHMARK` (denial of service) — all refused, by AST **and** lexically, because `OPENROWSET` is precisely what `sqlglot` cannot parse |
+| Read-only session | PostgreSQL `default_transaction_read_only=on`, SQLite `PRAGMA query_only`, MySQL `SET SESSION TRANSACTION READ ONLY` + `max_execution_time`, and a per-statement timeout everywhere |
 
-Plus: profile variables are identifier-safe (`^[A-Za-z0-9_]{1,16}$`, so `"001; DROP TABLE x"` raises before any connection), secrets never live in config files (the loader refuses embedded credentials — use `url_env`), every executed statement ships in the report's audit trail, and a row cap (default 500k) bounds any single query.
+**Ad-hoc SQL — the agent path — is stricter still.** `query` and `guarded_query` run in strict mode, which default-denies *every function the guard cannot name*: `sqlglot`'s function registry is the allowlist, since it knows the portable analytic functions and nothing that reads a file or opens a socket. All four bundled profiles pass it — they call no unrecognised function at all.
+
+**And the layer that isn't ours.** MSSQL has no session-level read-only switch, so run the engine under a **least-privilege, read-only login** (`db_datareader` on MSSQL, a `SELECT`-only grant on PostgreSQL — ideally a read replica). The guard is defence in depth; the grant is the layer that holds if the guard has a hole. It has had one before: these function bypasses were found by auditing this repo, and are now pinned in [`tests/test_guard.py`](tests/test_guard.py) by name, per dialect.
+
+Plus: profile variables are identifier-safe (`^[A-Za-z0-9_]{1,16}$`, so `"001; DROP TABLE x"` raises before any connection), secrets never live in config files (the loader refuses embedded credentials in any spelling — `password`, `passwd`, `pwd`, `sslpassword`, ODBC `PWD=` — use `url_env`), every executed statement ships in the report's audit trail, and a row cap (default 500k) bounds any single query.
 
 The test suite throws a battery of injection attempts at the guard — multi-statement, comment smuggling in three syntaxes, transaction-control splices (`ROLLBACK`/`COMMIT`), `SELECT INTO`, lock hints, and a `DELETE` hidden inside a CTE — and expects every one to raise. See [SECURITY.md](SECURITY.md).
 
@@ -173,7 +178,7 @@ The signature is the **Trust page**: source reconciliation, the data-quality gat
 
 ## Ask your ERP through an agent — the guarded MCP server
 
-An AI agent connecting to an ERP is a trust problem nobody has solved well: every existing "ERP MCP" is a REST wrapper that leans on the ERP's own permissions, and every database MCP hands the agent raw tables. This engine ships the combination that doesn't exist elsewhere — a [Model Context Protocol](https://modelcontextprotocol.io) server where the agent talks to **canonical entities** (`orders`, never `LG_001_01_ORFICHE`), through the **same three-layer read-only guard and audit trail** as the report, with every data result framed as untrusted input.
+An AI agent connecting to an ERP is a trust problem nobody has solved well: every existing "ERP MCP" is a REST wrapper that leans on the ERP's own permissions, and every database MCP hands the agent raw tables. This engine ships the combination that doesn't exist elsewhere — a [Model Context Protocol](https://modelcontextprotocol.io) server where the agent talks to **canonical entities** (`orders`, never `LG_001_01_ORFICHE`), through the **same read-only guard and audit trail** as the report — in strict mode, which default-denies every function the guard cannot name, with every data result framed as untrusted input.
 
 ```bash
 pipx install "erp-report-engine[mcp]"
@@ -199,7 +204,7 @@ Point Claude Desktop (or any MCP client) at it:
 { "mcpServers": { "erp": { "command": "erp-report-engine", "args": ["mcp", "-c", "C:\\path\\config.yaml"] } } }
 ```
 
-The agent **cannot write**: the lexical + AST guard rejects anything but a single read query, the session is read-only, and — per the 2025 MCP data-exfiltration incidents — every returned value carries a note that rows are data, not instructions. It is, as far as we can find, the first SQL-level-guarded ERP MCP server, and the first for Logo Tiger.
+The agent **cannot write**: the guard rejects anything but a single read query calling only functions it recognises, the session is read-only, and — per the 2025 MCP data-exfiltration incidents — every returned value carries a note that rows are data, not instructions. It is, as far as we can find, the first SQL-level-guarded ERP MCP server, and the first for Logo Tiger.
 
 ## What this does NOT do
 

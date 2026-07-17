@@ -45,10 +45,19 @@ def test_aging_report_buckets_open_receivables(demo_cfg):
     assert a["_note"] == _UNTRUSTED
 
 
-def test_check_query_allows_select_blocks_write():
-    assert _check_query("SELECT * FROM orders")["allowed"] is True
-    bad = _check_query("DROP TABLE orders")
+def test_check_query_allows_select_blocks_write(demo_cfg):
+    assert _check_query(demo_cfg, "SELECT * FROM orders")["allowed"] is True
+    bad = _check_query(demo_cfg, "DROP TABLE orders")
     assert bad["allowed"] is False and bad["reason"]
+
+
+def test_check_query_answers_for_the_policy_query_actually_runs(demo_cfg):
+    """check_query must not be more permissive than query, or it is a liar:
+    'allowed', then refused on execution. Both are strict."""
+    sql = "SELECT load_extension('evil.so')"
+    assert _check_query(demo_cfg, sql)["allowed"] is False
+    with pytest.raises(EngineError):        # ReadOnlyViolation is an EngineError
+        _query(demo_cfg, sql)
 
 
 def test_query_returns_rows_with_untrusted_note(demo_cfg):

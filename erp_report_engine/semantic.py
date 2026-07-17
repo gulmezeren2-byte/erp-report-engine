@@ -40,7 +40,7 @@ from pathlib import Path
 
 import yaml
 
-from .connect import assert_read_only
+from .connect import _SQLGLOT_DIALECT, assert_read_only
 from .errors import ContractError
 
 _BUNDLED = "erp_report_engine.profiles"
@@ -103,7 +103,10 @@ class Profile:
                 f"entity '{entity}' still contains unfilled placeholder {{{leftover.group(1)}}} - "
                 "add it to profile_vars in the config"
             )
-        assert_read_only(sql)
+        # Check with the dialect the profile DECLARES. Checking dialect-blind here
+        # while safe_read re-checks with the engine's dialect let the two disagree:
+        # the guard that ran at load time was not the guard that ran at execution.
+        assert_read_only(sql, dialect=_SQLGLOT_DIALECT.get(self.dialect))
         return sql
 
 

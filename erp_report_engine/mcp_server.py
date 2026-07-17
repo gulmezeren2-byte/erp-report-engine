@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 
 from .config import Config, load_config
-from .connect import ReadOnlyViolation, assert_read_only
+from .connect import _SQLGLOT_DIALECT, ReadOnlyViolation, assert_read_only
 from .errors import EngineError
 from .runner import build_report, guarded_query, validate
 from .semantic import OPTIONAL_COLUMNS, REQUIRED_COLUMNS, load_profile
@@ -102,10 +102,23 @@ def _reconcile(cfg: Config) -> dict:
     }
 
 
-def _check_query(sql: str) -> dict:
-    """Would this SQL be allowed by the read-only guard? Does not execute."""
+def _profile_dialect(cfg: Config) -> str:
+    """The dialect the active profile declares ('mssql', 'any', ...)."""
     try:
-        assert_read_only(sql)
+        return load_profile(cfg.profile_path).dialect
+    except Exception:
+        return "any"
+
+
+def _check_query(cfg: Config, sql: str) -> dict:
+    """Would this SQL be allowed by the read-only guard? Does not execute.
+
+    Answers for the policy `query` actually applies - strict mode, and the
+    profile's own dialect. Checking under a laxer policy than the one that will
+    run would make this tool a liar: 'allowed', then refused on execution.
+    """
+    try:
+        assert_read_only(sql, dialect=_SQLGLOT_DIALECT.get(_profile_dialect(cfg)), strict=True)
     except ReadOnlyViolation as e:
         return {"allowed": False, "reason": str(e)}
     return {"allowed": True}
@@ -161,7 +174,7 @@ def build_server(cfg: Config):
     @server.tool()
     def check_query(sql: str) -> dict:
         """Check whether a SQL statement would pass the read-only guard, without running it."""
-        return _check_query(sql)
+        return _check_query(cfg, sql)
 
     @server.tool()
     def query(sql: str, max_rows: int = _MCP_ROW_CAP) -> dict:

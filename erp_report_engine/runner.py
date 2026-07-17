@@ -88,8 +88,14 @@ def build_report(cfg: Config, *, write: bool = True, narrate: bool = False) -> R
 def guarded_query(cfg: Config, sql: str, params: dict | None = None,
                   row_cap: int | None = None) -> pd.DataFrame:
     """Run an ad-hoc read query through the same guarded, audited path as the
-    report. The guard (lexical + AST) and the read-only session both apply, so
-    this is safe to expose to an agent. Returns the resulting DataFrame."""
+    report, in STRICT mode. Returns the resulting DataFrame.
+
+    Strict is the point: this SQL did not come from the operator's config, it
+    came from an agent that may be repeating something it read in a database
+    row. On top of the usual guard it default-denies every function the guard
+    cannot name, so a novel vendor built-in cannot talk its way through.
+    """
     profile, engine, auditor = _prepare(cfg)  # noqa: F841 - profile validates config
     return safe_read(engine, auditor, "ad-hoc", sql, params or {},
-                     row_cap if row_cap is not None else cfg.row_cap)
+                     row_cap if row_cap is not None else cfg.row_cap,
+                     strict=True)
