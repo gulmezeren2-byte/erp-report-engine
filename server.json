@@ -1,0 +1,25 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.gulmezeren2-byte/erp-report-engine",
+  "description": "A guarded, read-only MCP server over the SQL database behind an ERP. The agent sees canonical entities (orders, order_lines, inventory, receivables) - never raw ERP tables - through a provably read-only guard whose refusals are measured by a public benchmark. Bundled profiles: Logo Tiger, Netsis, Mikro.",
+  "repository": {
+    "url": "https://github.com/gulmezeren2-byte/erp-report-engine",
+    "source": "github"
+  },
+  "version": "0.6.0",
+  "websiteUrl": "https://gulmezeren2-byte.github.io/erp-report-engine/",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "erp-report-engine",
+      "version": "0.6.0",
+      "transport": { "type": "stdio" },
+      "runtimeHint": "Requires the mcp extra: pipx install \"erp-report-engine[mcp]\". Launch: erp-report-engine mcp -c <your-config.yaml>. The config points at the ERP database via an environment variable (never an inline credential); see the repo README.",
+      "packageArguments": [
+        { "type": "positional", "value": "mcp", "description": "run the guarded MCP server over stdio" },
+        { "type": "named", "name": "-c", "description": "path to the engine config YAML (connection via url_env, profile, limits)", "isRequired": true, "format": "filepath" }
+      ]
+    }
+  ]
+}
