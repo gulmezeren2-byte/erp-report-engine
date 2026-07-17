@@ -201,7 +201,7 @@ Hepsi bekçili yoldan geçen altı araç:
 
 | Araç | Ajanın aldığı |
 |---|---|
-| `describe_model` | sorgulayabileceği kanonik varlıklar/kolonlar (ham ERP tablo adları yok; `receivables` gibi opsiyonel varlıklar yalnız profil eşlerse görünür) |
+| `describe_model` | kanonik **semantik katman** — her varlığın granülerliği, her kolonun tipi + *anlamı* (örn. `actual_ship_date` sevkiyata kadar NULL'dır, yani geciken-sevk-edilmemiş sipariş zamanında %'sine sayılmaz) + çalıştırılabilir örnek sorgular. Sadece ad değil anlam — ajanı text-to-SQL'in doğru tarafında tutan şey. Ham ERP tablo adları yok |
 | `weekly_report` | tam KPI brifingi — bulgular, veri kalitesi kapısı, mutabakat, SQL denetim izi |
 | `reconcile` | çekilen satırlar vs varlık başına bağımsız `COUNT(*)`, güven hükmüyle |
 | `aging` | cari yaşlandırma — gün-bazlı kovalarda açık bakiye, gecikme %'si, en çok geciken müşteriler (yalnız agrega) |

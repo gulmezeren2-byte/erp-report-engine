@@ -205,7 +205,7 @@ Six tools, all funneled through the guarded path:
 
 | Tool | What the agent gets |
 |---|---|
-| `describe_model` | the canonical entities/columns it may query (no raw ERP table names; optional entities like `receivables` appear only when the profile maps them) |
+| `describe_model` | the canonical **semantic layer** — each entity's grain, and each column's type + what it *means* (e.g. `actual_ship_date` is NULL until shipment, so a late unshipped order isn't counted against on-time), plus runnable example queries. Meaning, not just names — which is what keeps an agent on the accurate side of text-to-SQL. No raw ERP table names |
 | `weekly_report` | the full KPI briefing — findings, data-quality gate, reconciliation, SQL audit trail |
 | `reconcile` | fetched rows vs an independent `COUNT(*)` per entity, with a trust verdict |
 | `aging` | receivables aging — open balances by days-past-due bucket, overdue %, and the customers who owe the most overdue (aggregates only) |

@@ -45,20 +45,82 @@ from .errors import ContractError
 
 _BUNDLED = "erp_report_engine.profiles"
 
-REQUIRED_COLUMNS: dict[str, list[str]] = {
-    "orders": [
-        "order_id", "order_date", "region", "customer", "status",
-        "promised_date", "actual_ship_date", "net_total",
-    ],
-    "order_lines": ["order_id", "item_code", "qty"],
-    "inventory": ["item_code", "stock_qty"],
+# The canonical schema: for each entity, every column with its type and what it
+# MEANS. This is what separates a semantic layer from a table-rename - an agent
+# that knows `actual_ship_date` is NULL until a shipment happens writes correct
+# on-time SQL; one handed only column names guesses. describe_model serves this
+# to the agent, and REQUIRED_COLUMNS / OPTIONAL_COLUMNS are DERIVED from it below,
+# so the contract the extractor checks and the schema the agent sees never drift.
+#
+# Shape: {entity: {"required": bool, "grain": str, "columns": {name: (type, desc)}}}
+CANONICAL_SCHEMA: dict[str, dict] = {
+    "orders": {
+        "required": True,
+        "grain": "one row per order (duplicates on order_id are collapsed to one)",
+        "columns": {
+            "order_id": ("text", "unique order identifier; the join key for order_lines"),
+            "order_date": ("date", "when the order was placed - drives the ISO-week revenue and order-count KPIs"),
+            "region": ("text", "sales region - used for week-over-week driver attribution"),
+            "customer": ("text", "customer name - used for driver attribution and revenue concentration"),
+            "status": ("text", "order status; 'delivered', 'shipped' or 'closed' count as fulfilled"),
+            "promised_date": ("date", "the date the order was promised to ship"),
+            "actual_ship_date": ("date", "when it actually shipped; on-time = actual_ship_date <= promised_date. "
+                                 "NULL means NOT yet shipped - such a late order is not counted against on-time %"),
+            "net_total": ("number", "order net total - this is the revenue measure"),
+        },
+    },
+    "order_lines": {
+        "required": True,
+        "grain": "one row per order line",
+        "columns": {
+            "order_id": ("text", "the order this line belongs to (joins to orders.order_id)"),
+            "item_code": ("text", "the stock item on the line (joins to inventory.item_code)"),
+            "qty": ("number", "quantity ordered - summed over recent weeks to estimate weekly demand"),
+        },
+    },
+    "inventory": {
+        "required": True,
+        "grain": "one row per item (quantities summed if the source splits by warehouse)",
+        "columns": {
+            "item_code": ("text", "stock item identifier"),
+            "stock_qty": ("number", "units on hand - divided by average weekly demand to get weeks of cover"),
+        },
+    },
+    "receivables": {
+        "required": False,
+        "grain": "one row per open invoice (positive, dated balances)",
+        "columns": {
+            "invoice_id": ("text", "unique open-invoice identifier"),
+            "customer": ("text", "the customer who owes the balance"),
+            "due_date": ("date", "when payment is due; overdue days = report date - due_date"),
+            "open_amount": ("number", "the open balance; only positive, dated balances are aged"),
+        },
+    },
 }
 
-# Entities a profile MAY map; extracted only when present, and every consumer
-# (aging analysis, report sections, Power BI export) is written to no-op without
-# them - so an ERP with no accessible AR ledger still produces the full report.
+# A couple of runnable canonical queries per entity, to show an agent the shape of
+# correct SQL against the semantic layer (all read-only, all in canonical names).
+CANONICAL_EXAMPLES: dict[str, list[str]] = {
+    "orders": [
+        "SELECT customer, SUM(net_total) AS revenue FROM orders GROUP BY customer ORDER BY revenue DESC",
+        "SELECT region, COUNT(*) AS orders FROM orders WHERE status IN ('delivered','shipped','closed') GROUP BY region",
+    ],
+    "order_lines": [
+        "SELECT l.item_code, SUM(l.qty) AS units FROM order_lines l "
+        "JOIN orders o ON o.order_id = l.order_id GROUP BY l.item_code ORDER BY units DESC",
+    ],
+    "inventory": ["SELECT item_code, stock_qty FROM inventory WHERE stock_qty = 0"],
+    "receivables": [
+        "SELECT customer, SUM(open_amount) AS owed FROM receivables GROUP BY customer ORDER BY owed DESC",
+    ],
+}
+
+# Derived contracts - one source (CANONICAL_SCHEMA), no drift with the agent view.
+REQUIRED_COLUMNS: dict[str, list[str]] = {
+    e: list(spec["columns"]) for e, spec in CANONICAL_SCHEMA.items() if spec["required"]
+}
 OPTIONAL_COLUMNS: dict[str, list[str]] = {
-    "receivables": ["invoice_id", "customer", "due_date", "open_amount"],
+    e: list(spec["columns"]) for e, spec in CANONICAL_SCHEMA.items() if not spec["required"]
 }
 
 _SAFE_VAR = re.compile(r"^[A-Za-z0-9_]{1,16}$")

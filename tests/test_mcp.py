@@ -136,3 +136,24 @@ def test_query_reads_canonical_entities_by_name(demo_cfg):
 def test_query_reaches_an_optional_entity_when_the_profile_maps_it(demo_cfg):
     out = _query(demo_cfg, "SELECT customer, open_amount FROM receivables", max_rows=3)
     assert out["columns"] == ["customer", "open_amount"]
+
+
+def test_describe_model_is_a_semantic_layer_not_just_names(demo_cfg):
+    """The agent gets meaning, not just column names - which is what puts a
+    semantic layer on the correct side of the text-to-SQL accuracy line."""
+    d = _describe_model(demo_cfg)
+    o = d["entities"]["orders"]
+    assert o["grain"] and o["examples"]                       # grain + example queries
+    fields = {f["name"]: f for f in o["fields"]}
+    assert fields["net_total"]["type"] == "number"
+    assert "NULL" in fields["actual_ship_date"]["description"]  # the on-time gotcha is spelled out
+
+
+def test_every_advertised_example_query_actually_runs(demo_cfg):
+    """describe_model hands the agent example queries; if any didn't execute
+    through the guarded path, we'd be teaching it to write broken SQL."""
+    from erp_report_engine.semantic import CANONICAL_EXAMPLES
+    for examples in CANONICAL_EXAMPLES.values():
+        for sql in examples:
+            out = _query(demo_cfg, sql, max_rows=2)
+            assert "columns" in out and out["row_count"] >= 0   # ran, guarded, returned
