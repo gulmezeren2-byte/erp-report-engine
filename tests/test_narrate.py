@@ -25,7 +25,7 @@ def _kpis():
         "aging": {"total": 100000.0, "overdue": 60000.0, "overdue_pct": 60.0,
                   "over90": 12000.0, "over90_pct": 12.0, "n_invoices": 42,
                   "buckets": [{"bucket": b, "amount": 20000.0, "pct": 20.0}
-                              for b in ("current", "1-30", "31-60", "61-90", "90+")],
+                              for b in ("current", "1-30", "31-60", "61-90", "91+")],
                   "top_overdue": [{"customer": "C1", "amount": 5000.0}]},
         "_dims": {"orders_frame": "SENTINEL_DIMS_MUST_NOT_LEAK"},
     }

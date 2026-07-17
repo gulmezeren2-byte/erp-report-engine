@@ -23,11 +23,11 @@
                       "Entity": "_Measures"
                     }
                   },
-                  "Property": "AR 90+ Days"
+                  "Property": "AR 91+ Days"
                 }
               },
-              "queryRef": "_Measures.AR 90+ Days",
-              "nativeQueryRef": "AR 90+ Days"
+              "queryRef": "_Measures.AR 91+ Days",
+              "nativeQueryRef": "AR 91+ Days"
             }
           ]
         }

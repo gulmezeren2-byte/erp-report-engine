@@ -359,9 +359,11 @@ table _Measures
 		displayFolder: 5. Receivables
 		lineageTag: 67a9115c-002f-4000-8000-00000000002f
 
-	/// Open receivables 90+ days past due - the hardest to collect.
-	measure 'AR 90+ Days' =
-			CALCULATE ( [Total AR], FactReceivables[Aging Bucket] = "90+" )
+	/// Open receivables more than 90 days past due - the hardest to collect. The
+	/// bucket is labelled 91+ because 61-90 is inclusive of day 90; "90+" would
+	/// claim a boundary the arithmetic does not have.
+	measure 'AR 91+ Days' =
+			CALCULATE ( [Total AR], FactReceivables[Aging Bucket] = "91+" )
 		formatString: #,##0
 		displayFolder: 5. Receivables
 		lineageTag: 67a9115c-0030-4000-8000-000000000030

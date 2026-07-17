@@ -12,7 +12,7 @@ config.yaml shape (see config.example.yaml):
       period_no: "01"
     report:
       company_alias: "Şirket"      # display name only - use an alias if you prefer
-      lookback_weeks: 13
+      lookback_weeks: 26
       low_cover_weeks: 2.0
       out_dir: reports
       state_db: state.db
@@ -66,7 +66,9 @@ class Config:
     profile_path: str
     profile_vars: dict[str, str] = field(default_factory=dict)
     company_alias: str = "Company"
-    lookback_weeks: int = 13
+    # Two quarters. The chart still shows 13 weeks; the extra history is what the
+    # XmR control limits are computed from, and limits only settle around n>=15.
+    lookback_weeks: int = 26
     low_cover_weeks: float = 2.0
     out_dir: str = "reports"
     state_db: str = "state.db"
@@ -110,7 +112,7 @@ def load_config(path: str) -> Config:
         profile_path=profile,
         profile_vars={k: str(v) for k, v in (raw.get("profile_vars") or {}).items()},
         company_alias=rep.get("company_alias", "Company"),
-        lookback_weeks=int(rep.get("lookback_weeks", 13)),
+        lookback_weeks=int(rep.get("lookback_weeks", 26)),
         low_cover_weeks=float(rep.get("low_cover_weeks", 2.0)),
         out_dir=rep.get("out_dir", "reports"),
         state_db=rep.get("state_db", "state.db"),

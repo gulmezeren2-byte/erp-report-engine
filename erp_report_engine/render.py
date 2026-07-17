@@ -95,7 +95,7 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <h2>Stock attention list</h2>
 <table><tr><th>Item</th><th>Stock</th><th>Cover (weeks)</th></tr>{% for x in low_cover %}<tr><td>{{ x.item_code }}</td><td>{{ x.stock_qty }}</td><td>{{ x.cover_weeks }}</td></tr>{% else %}<tr><td colspan="3">none</td></tr>{% endfor %}</table>
 {% if aging %}<h2>Receivables aging</h2>
-<div class="sub">{{ aging.total }} open across {{ aging.n_invoices }} invoices · <b style="color:{{ aging.color }}">{{ aging.overdue_pct }}% overdue</b> ({{ aging.overdue }}) · {{ aging.over90_pct }}% is 90+ days</div>
+<div class="sub">{{ aging.total }} open across {{ aging.n_invoices }} invoices · <b style="color:{{ aging.color }}">{{ aging.overdue_pct }}% overdue</b> ({{ aging.overdue }}) · {{ aging.over90_pct }}% is over 90 days</div>
 <table style="margin-top:8px"><tr><th>Days past due</th><th>Amount</th><th>Share</th></tr>{% for b in aging.buckets %}<tr><td>{{ b.label }}</td><td>{{ b.amount }}</td><td>{{ b.pct }}%</td></tr>{% endfor %}</table>
 {% if aging.top_overdue %}<details><summary>Top overdue customers</summary>
 <table><tr><th>Customer</th><th>Overdue balance</th></tr>{% for t in aging.top_overdue %}<tr><td>{{ t.customer }}</td><td>{{ t.amount }}</td></tr>{% endfor %}</table></details>{% endif %}{% endif %}
@@ -173,7 +173,7 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak, narrative=
     aging_ctx = None
     if aging:
         _label = {"current": "Current (not due)", "1-30": "1–30 days", "31-60": "31–60 days",
-                  "61-90": "61–90 days", "90+": "90+ days"}
+                  "61-90": "61–90 days", "91+": "91+ days"}
         aging_ctx = {
             "total": f"{aging['total']:,.0f}", "overdue": f"{aging['overdue']:,.0f}",
             "overdue_pct": aging["overdue_pct"], "over90_pct": aging["over90_pct"],

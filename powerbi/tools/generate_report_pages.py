@@ -77,6 +77,45 @@ def card(measure_prop: str, title: str | None = None) -> dict:
     }
 
 
+def trend_window_filter(name: str) -> dict:
+    """A LOCKED visual filter pinning the chart to DimWeek[Is Trend Week] = 1.
+
+    This is the report's central promise made structural. The base measures carry
+    no calendar guard - only the '(This Week)' and sparkline measures do - so a
+    plain trend over DimWeek[Week] happily ends on the in-progress week and draws
+    a cliff that is really a two-day week. That is the exact failure the engine
+    exists to prevent, on the surface a manager actually sits in front of.
+
+    Is Trend Week is written by the exporter from the engine's own window
+    constant, so this filter cannot drift from what the HTML report plots.
+
+    Locked, so a viewer cannot switch the guarantee off. Visible, not hidden, so
+    the filter card states the scope - the flag is surfaced, never buried.
+    """
+    return {
+        "name": name,
+        "displayName": "Completed weeks only (the engine's trend window)",
+        "field": column("DimWeek", "Is Trend Week"),
+        "type": "Categorical",
+        "filter": {
+            "Version": 2,
+            "From": [{"Name": "w", "Entity": "DimWeek", "Type": 0}],
+            "Where": [{
+                "Condition": {
+                    "In": {
+                        "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": "w"}},
+                                                    "Property": "Is Trend Week"}}],
+                        "Values": [[{"Literal": {"Value": "1L"}}]],
+                    },
+                },
+            }],
+        },
+        "howCreated": "User",
+        "isLockedInViewMode": True,
+        "isHiddenInViewMode": False,
+    }
+
+
 def line_chart(cat_entity: str, cat_prop: str, y_props: list[str], title: str) -> dict:
     return {
         "visualType": "lineChart",
@@ -174,9 +213,13 @@ def main() -> None:
         "card_alerts": visual("card_alerts", 960, 92, 296, 144, 2300,
                               card("Alert Count", "Signals firing now")),
         "trend_revenue": visual("trend_revenue", 24, 252, 608, 292, 3000,
-                                line_chart("DimWeek", "Week", ["Revenue"], "Weekly revenue")),
+                                line_chart("DimWeek", "Week", ["Revenue"],
+                                           "Weekly revenue — completed weeks"),
+                                filters=[trend_window_filter("trend_revenue_full_weeks")]),
         "trend_ontime": visual("trend_ontime", 648, 252, 608, 292, 3100,
-                               line_chart("DimWeek", "Week", ["On-Time %"], "On-time shipping %")),
+                               line_chart("DimWeek", "Week", ["On-Time %"],
+                                          "On-time shipping % — completed weeks"),
+                               filters=[trend_window_filter("trend_ontime_full_weeks")]),
         "card_verdict": visual("card_verdict", 24, 560, 1232, 140, 4000,
                                card("Weekly Verdict", "What changed — plain language")),
     })
@@ -253,7 +296,7 @@ def main() -> None:
         "card_overdue_pct": visual("card_overdue_pct", 336, 92, 296, 140, 2100,
                                    card("Overdue %", "Share past due")),
         "card_over90": visual("card_over90", 648, 92, 296, 140, 2200,
-                              card("AR 90+ Days", "Hardest to collect")),
+                              card("AR 91+ Days", "Hardest to collect")),
         "bar_buckets": visual("bar_buckets", 24, 252, 608, 428, 3000,
                               bar_chart("FactReceivables", "Aging Bucket", "Total AR",
                                         "Open receivables by age", chart_type="columnChart",

@@ -294,7 +294,7 @@ _TEMPLATE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
   {% if aging %}
   <div class="card panel wide" style="animation-delay:660ms"><h3>Receivables aging · {{ aging.total }} open · {{ aging.n_invoices }} invoices</h3>
     <div class="conc-head"><span class="conc-big" style="color:{{ aging.color }}">{{ aging.overdue_pct }}%</span>
-      <span class="conc-sub">overdue · {{ aging.over90_pct }}% is 90+ days past due</span></div>
+      <span class="conc-sub">overdue · {{ aging.over90_pct }}% is over 90 days past due</span></div>
     <div class="aging-cols">
       <div>
         <div class="agebar">{% for b in aging.buckets %}{% if b.pct > 0 %}<span style="width:{{ b.pct }}%;background:{{ b.color }}"></span>{% endif %}{% endfor %}</div>
@@ -411,7 +411,7 @@ def render(cfg, profile, kpis, findings, extraction, auditor, streak) -> str:
     aging = kpis.get("aging")
     aging_ctx = None
     if aging:
-        seg = {"current": GOOD, "1-30": BLUE, "31-60": WARN, "61-90": SERIOUS, "90+": CRIT}
+        seg = {"current": GOOD, "1-30": BLUE, "31-60": WARN, "61-90": SERIOUS, "91+": CRIT}
         aging_ctx = {
             "total": f"{aging['total']:,.0f}", "n_invoices": aging["n_invoices"],
             "overdue_pct": aging["overdue_pct"], "over90_pct": aging["over90_pct"],

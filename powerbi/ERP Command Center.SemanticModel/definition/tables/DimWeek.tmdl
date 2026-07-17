@@ -1,5 +1,7 @@
 /// ISO week calendar for the extraction window. The current partial week is
-/// flagged (Is Full Week = 0), never hidden - measures exclude it explicitly.
+/// flagged (Is Full Week = 0), never hidden - measures exclude it explicitly,
+/// and the trend visuals carry a locked Is Trend Week = 1 filter so a chart can
+/// never end on a two-day week.
 table DimWeek
 	lineageTag: 86013298-0f2a-42d1-8bdb-a8c81f77abb1
 
@@ -60,6 +62,19 @@ table DimWeek
 
 		annotation SummarizationSetBy = User
 
+	/// 1 for the completed weeks the engine plots (its trend window), 0 otherwise.
+	/// Written by the exporter from the engine's own window constant, so a report
+	/// visual filtering on it shows exactly the weeks the HTML report charts - the
+	/// window is defined once, in Python, and travels here as data.
+	column 'Is Trend Week'
+		dataType: int64
+		formatString: 0
+		lineageTag: c4d99364-89ca-49f3-b6f7-733a881a561d
+		summarizeBy: none
+		sourceColumn: is_trend_week
+
+		annotation SummarizationSetBy = User
+
 	partition DimWeek = m
 		mode: import
 		source =
@@ -74,7 +89,8 @@ table DimWeek
 							{"week_ordinal", Int64.Type},
 							{"week_start", type date},
 							{"week_end", type date},
-							{"is_full_week", Int64.Type}
+							{"is_full_week", Int64.Type},
+							{"is_trend_week", Int64.Type}
 						},
 						"en-US"
 					)

@@ -64,6 +64,7 @@ def extract_all(engine, auditor: Auditor, profile: Profile, cfg: Config) -> Extr
         ex.frames[entity] = df
 
     _quality_gate(ex)
+    _inventory_gate(ex)
     if "receivables" in ex.frames:
         _receivables_gate(ex)
 
@@ -124,6 +125,38 @@ def _quality_gate(ex: Extraction) -> None:
         ex.issues.append(f"order_lines: {orphan} lines reference orders outside the window (ignored)")
 
     ex.frames["orders"] = o
+
+
+def _inventory_gate(ex: Extraction) -> None:
+    """Collapse duplicate item_code rows by SUMMING the stock.
+
+    Every bundled ERP profile already groups by the item and sums the quantity,
+    so the canonical contract is one row per item carrying the total on hand. A
+    profile that returns a row per warehouse (or joins a lot/batch table) breaks
+    that contract silently: a lookup by item_code then yields a Series instead of
+    a number, and the Power BI dim_item key stops being unique. Sum it here so
+    the contract holds for every profile - and say so in the gate.
+    """
+    inv = ex.frames["inventory"].copy()
+    inv["stock_qty"] = pd.to_numeric(inv.stock_qty, errors="coerce").fillna(0.0)
+
+    dupes = int(inv.duplicated(subset=["item_code"]).sum())
+    if dupes:
+        others = {c: "first" for c in inv.columns if c not in ("item_code", "stock_qty")}
+        inv = inv.groupby("item_code", as_index=False).agg({"stock_qty": "sum", **others})
+        ex.issues.append(
+            f"inventory: {dupes} duplicated item_code rows summed into one row per item "
+            "(a row per warehouse or lot? add a GROUP BY to the profile)"
+        )
+
+    neg = int((inv.stock_qty < 0).sum())
+    if neg:
+        ex.issues.append(
+            f"inventory: {neg} items with negative stock_qty (oversold or a data error? "
+            "counted as-is, and they sort to the top of low cover)"
+        )
+
+    ex.frames["inventory"] = inv
 
 
 def _receivables_gate(ex: Extraction) -> None:

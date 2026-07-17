@@ -129,7 +129,7 @@ def build(target_dir: str | Path | None = None, today: dt.date | None = None) ->
             elif u < 0.97:
                 overdue = int(rng.integers(70, 100))     # 61-90
             else:
-                overdue = int(rng.integers(100, 190))    # 90+
+                overdue = int(rng.integers(100, 190))    # 91+
             due = today - dt.timedelta(days=overdue)
             receivables.append((f"INV-{inv_id:05d}", cust, due.isoformat(),
                                 round(float(rng.uniform(500, 12000)), 2)))
@@ -147,7 +147,7 @@ def build(target_dir: str | Path | None = None, today: dt.date | None = None) ->
 profile: generic
 report:
   company_alias: "Demo Dagitim A.S."
-  lookback_weeks: 13
+  lookback_weeks: 26
   low_cover_weeks: 2.0
   out_dir: reports
   state_db: state.db

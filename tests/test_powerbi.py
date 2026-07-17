@@ -47,7 +47,7 @@ def test_export_powerbi_end_to_end(tmp_path):
     assert rec, "demo should export open receivables"
     assert set(rec[0]) == {"invoice_id", "customer", "due_date", "open_amount",
                            "overdue_days", "aging_bucket", "bucket_order"}
-    assert {r["aging_bucket"] for r in rec} <= {"current", "1-30", "31-60", "61-90", "90+"}
+    assert {r["aging_bucket"] for r in rec} <= {"current", "1-30", "31-60", "61-90", "91+"}
     assert all(float(r["open_amount"]) > 0 for r in rec)          # only positive open balances
 
     # fact must have a unique order_id (the model relies on it as a key)
@@ -112,3 +112,74 @@ def test_pbip_project_integrity():
     for p in REPORT.rglob("visual.json"):
         for entity in entity_re.findall(p.read_text(encoding="utf-8")):
             assert entity in tmdl_tables, f"{p.name} references unknown table {entity!r}"
+
+
+def test_every_week_trend_visual_is_pinned_to_completed_weeks():
+    """The report's central promise, enforced on the surface that once broke it.
+
+    README: "The current partial week is never plotted." The base measures carry
+    no calendar guard - only the '(This Week)' and sparkline measures do - so a
+    line chart over DimWeek[Week] would happily end on the in-progress week and
+    draw a cliff that is really a two-day week. Every week-axis trend must pin
+    itself to the engine's window, and a viewer must not be able to unpin it.
+    """
+    checked = []
+    for p in (REPORT / "definition" / "pages").glob("*/visuals/*/visual.json"):
+        v = json.loads(p.read_text(encoding="utf-8"))
+        vis = v.get("visual", {})
+        if vis.get("visualType") != "lineChart":
+            continue
+        cats = vis.get("query", {}).get("queryState", {}).get("Category", {}).get("projections", [])
+        if not any(c.get("queryRef", "").startswith("DimWeek.") for c in cats):
+            continue
+
+        name = p.parent.name
+        checked.append(name)
+        pinned = [f for f in v.get("filterConfig", {}).get("filters", [])
+                  if f.get("field", {}).get("Column", {}).get("Property") == "Is Trend Week"]
+        assert pinned, f"{name}: week trend with no completed-week filter — it can plot a partial week"
+        assert pinned[0].get("isLockedInViewMode") is True, \
+            f"{name}: the completed-week guarantee must not be switchable off in view mode"
+
+    assert sorted(checked) == ["trend_ontime", "trend_revenue"], checked
+
+
+def test_is_trend_week_marks_exactly_the_weeks_the_engine_plots(tmp_path):
+    """dim_week carries the engine's own trend window as data, so the report's
+    filter consumes that definition instead of restating it in DAX."""
+    import datetime as dt
+
+    import pandas as pd
+
+    from erp_report_engine.config import Config
+    from erp_report_engine.connect import Auditor
+    from erp_report_engine.export_powerbi import export_all
+    from erp_report_engine.extract import Extraction
+    from erp_report_engine.kpi import _TREND_WINDOW, compute
+    from erp_report_engine.semantic import load_profile
+
+    as_of = dt.date(2026, 7, 16)
+    mondays = [dt.date(2026, 7, 6) - dt.timedelta(weeks=i) for i in range(20)]
+    o = pd.DataFrame(
+        [(f"SO-{i}", pd.Timestamp(m), "Ege", "C", "delivered",
+          pd.Timestamp(m), pd.Timestamp(m), 100.0) for i, m in enumerate(mondays)],
+        columns=["order_id", "order_date", "region", "customer", "status",
+                 "promised_date", "actual_ship_date", "net_total"])
+    frames = {
+        "orders": o,
+        "order_lines": pd.DataFrame([("SO-0", "ITM-A", 1.0)], columns=["order_id", "item_code", "qty"]),
+        "inventory": pd.DataFrame([("ITM-A", 5.0)], columns=["item_code", "stock_qty"]),
+    }
+    ex = Extraction(frames=frames, as_of=as_of)
+    cfg = Config(db_url="sqlite:///x", profile_path="generic")
+    export_all(cfg, load_profile("generic"), ex, Auditor(), str(tmp_path), streak=0)
+
+    with open(tmp_path / "dim_week.csv", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    marked = [r["week_key"] for r in rows if r["is_trend_week"] == "1"]
+    kpis = compute(frames, low_cover_weeks=2.0, as_of=as_of)
+
+    assert marked == kpis["trend"]["weeks"]          # the same weeks, from the same constant
+    assert len(marked) == _TREND_WINDOW
+    # and the partial week is never among them, by construction
+    assert all(r["is_full_week"] == "1" for r in rows if r["is_trend_week"] == "1")

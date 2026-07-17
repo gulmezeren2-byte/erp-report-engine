@@ -40,7 +40,7 @@ def test_aging_report_buckets_open_receivables(demo_cfg):
     a = _aging_report(demo_cfg)
     assert a["available"] is True
     assert a["total_open"] > 0 and 0 <= a["overdue_pct"] <= 100
-    assert [b["bucket"] for b in a["buckets"]] == ["current", "1-30", "31-60", "61-90", "90+"]
+    assert [b["bucket"] for b in a["buckets"]] == ["current", "1-30", "31-60", "61-90", "91+"]
     assert a["top_overdue_customers"]                 # a per-customer aggregate, not raw invoice rows
     assert a["_note"] == _UNTRUSTED
 

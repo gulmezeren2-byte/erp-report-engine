@@ -147,12 +147,14 @@ def test_receivables_aging_buckets_are_inclusive_at_the_edges():
         ("C", "C2", due(1), 100.0), ("D", "C2", due(30), 100.0),    # 1-30
         ("E", "C3", due(31), 100.0), ("F", "C3", due(60), 100.0),   # 31-60
         ("G", "C4", due(61), 100.0), ("H", "C4", due(90), 100.0),   # 61-90
-        ("I", "C5", due(91), 100.0), ("J", "C5", due(200), 300.0),  # 90+
+        ("I", "C5", due(91), 100.0), ("J", "C5", due(200), 300.0),  # 91+
     ], columns=["invoice_id", "customer", "due_date", "open_amount"])
 
     a = _aging(rec, as_of)
     b = {x["bucket"]: x["amount"] for x in a["buckets"]}
-    assert b == {"current": 200.0, "1-30": 200.0, "31-60": 200.0, "61-90": 200.0, "90+": 400.0}
+    # 61-90 is inclusive of day 90, so the last bucket starts at 91 and is named
+    # for it. "90+" would have claimed a boundary the arithmetic does not have.
+    assert b == {"current": 200.0, "1-30": 200.0, "31-60": 200.0, "61-90": 200.0, "91+": 400.0}
     assert a["total"] == 1200.0 and a["overdue"] == 1000.0 and a["over90"] == 400.0
     assert a["top_overdue"][0] == {"customer": "C5", "amount": 400.0}   # worst overdue first
 

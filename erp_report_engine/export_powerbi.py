@@ -20,7 +20,9 @@ from . import week_calendar as wc
 from .config import Config
 from .connect import Auditor
 from .extract import Extraction
-from .kpi import _AGING_BUCKETS, _bucket  # one bucket definition, shared with the HTML aging
+
+# one definition per rule, imported - never restated here
+from .kpi import _AGING_BUCKETS, _TREND_WINDOW, _bucket
 from .semantic import Profile
 
 _ENC = "utf-8"  # no BOM: Power BI's Csv.Document reads 65001 cleanly
@@ -128,10 +130,11 @@ def export_all(cfg: Config, profile: Profile, ex: Extraction, auditor: Auditor,
     completed_axis = wc.week_axis(first_monday, last_full_monday)  # excludes it
     demand_weeks = completed_axis[-8:]                             # last 8 completed weeks, same as kpi.py
 
-    # item dimension with demand context (8 completed weeks, same rule as kpi.py)
+    # item dimension with demand context (8 completed weeks, same rule as kpi.py -
+    # including the divisor: the weeks actually measured, never a hoped-for 8)
     recent = o[o.week_key.isin(demand_weeks)][["order_id"]]
     weekly_demand = (lines.merge(recent, on="order_id")
-                     .groupby("item_code").qty.sum() / 8.0)
+                     .groupby("item_code").qty.sum() / len(demand_weeks))
     inv = ex.frames["inventory"].copy()
     inv["stock_qty"] = pd.to_numeric(inv.stock_qty, errors="coerce").fillna(0.0)
     item_rows = []
@@ -154,17 +157,21 @@ def export_all(cfg: Config, profile: Profile, ex: Extraction, auditor: Auditor,
 
     # week dimension over the continuous calendar axis. week_ordinal is a gapless
     # 1..n counter (safe for year boundaries AND empty weeks); is_full_week is 0
-    # only for the current, still-open week.
+    # only for the current, still-open week; is_trend_week marks the exact weeks
+    # the engine plots, so the report's trend filter consumes the engine's window
+    # instead of restating it in DAX and drifting from it.
+    trend_weeks = set(completed_axis[-_TREND_WINDOW:])
     week_rows = []
     for i, w in enumerate(dim_axis, start=1):
         year, num = int(w[:4]), int(w[-2:])
         monday = dt.date.fromisocalendar(year, num, 1)
         week_rows.append([w, year * 100 + num, i, monday.isoformat(),
                           (monday + dt.timedelta(days=6)).isoformat(),
-                          int(w != current_wk)])
+                          int(w != current_wk), int(w in trend_weeks)])
     counts["dim_week.csv"] = _write(
         os.path.join(out_dir, "dim_week.csv"),
-        ["week_key", "week_index", "week_ordinal", "week_start", "week_end", "is_full_week"],
+        ["week_key", "week_index", "week_ordinal", "week_start", "week_end",
+         "is_full_week", "is_trend_week"],
         week_rows,
     )
 

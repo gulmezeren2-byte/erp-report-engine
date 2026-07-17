@@ -5,7 +5,9 @@ Definitions are explicit and travel with the report:
 - on-time %: delivered orders with actual_ship_date <= promised_date
   (an OTIF-lite: completeness requires line-level receipts most ERPs lack;
   the report says so instead of pretending)
-- stock cover: stock_qty / average weekly demand of the last 8 weeks
+- stock cover: stock_qty / average weekly demand over the last 8 completed
+  weeks - or fewer, when the window holds fewer; the divisor is always the
+  number of weeks actually measured, never a hopeful 8
 """
 
 from __future__ import annotations
@@ -16,6 +18,12 @@ import pandas as pd
 
 from . import week_calendar as wc
 from .errors import EngineError
+
+# Two different questions, two different windows - stated once, here, and imported
+# by every surface (the Power BI exporter marks the trend weeks in dim_week from
+# _TREND_WINDOW, so the report's chart filter cannot drift from the engine's).
+_TREND_WINDOW = 13  # completed weeks a chart can show legibly
+_SPC_WINDOW = 26    # completed weeks the control limits deserve
 
 
 def _week(s: pd.Series) -> pd.Series:
@@ -47,10 +55,13 @@ def _concentration(o: pd.DataFrame, weeks: list[str], value_col: str = "net_tota
     }
 
 
-_AGING_BUCKETS = ("current", "1-30", "31-60", "61-90", "90+")
+_AGING_BUCKETS = ("current", "1-30", "31-60", "61-90", "91+")
 
 
 def _bucket(days: int) -> str:
+    """Days past due -> bucket. Edges are inclusive of the label's upper number,
+    so an invoice exactly 90 days overdue is in "61-90" and "90+" starts at 91 -
+    which is why the last bucket is labelled 91+, not 90+."""
     if days <= 0:
         return "current"
     if days <= 30:
@@ -59,12 +70,12 @@ def _bucket(days: int) -> str:
         return "31-60"
     if days <= 90:
         return "61-90"
-    return "90+"
+    return "91+"
 
 
 def _aging(rec: pd.DataFrame | None, as_of: dt.date) -> dict | None:
     """Receivables aging as of the report date: open balances bucketed by days
-    past due (current / 1-30 / 31-60 / 61-90 / 90+), the overdue share, and the
+    past due (current / 1-30 / 31-60 / 61-90 / 91+), the overdue share, and the
     customers who owe the most overdue. Scores only positive, dated balances -
     the extraction gate already flagged the rest."""
     if rec is None or len(rec) == 0:
@@ -81,7 +92,7 @@ def _aging(rec: pd.DataFrame | None, as_of: dt.date) -> dict | None:
     by_bucket = r.groupby("bucket")["open_amount"].sum()
     total = float(r["open_amount"].sum())
     overdue = float(r.loc[r["overdue_days"] > 0, "open_amount"].sum())
-    over90 = float(by_bucket.get("90+", 0.0))
+    over90 = float(by_bucket.get("91+", 0.0))   # "over 90 days" == the 91+ bucket
     by_cust = (r.loc[r["overdue_days"] > 0].groupby("customer")["open_amount"].sum()
                .sort_values(ascending=False))
     return {
@@ -121,7 +132,11 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
 
     baseline_weeks = axis[-9:-1]   # the 8 completed weeks before this_w
     demand_weeks = axis[-8:]       # the last 8 completed weeks (incl. this_w)
-    trend_weeks = axis[-13:]       # up to 13 completed weeks ending at this_w
+    trend_weeks = axis[-_TREND_WINDOW:]   # completed weeks ending at this_w (the chart)
+    # Control limits get their own, longer window. 13 weeks is a chart-legibility
+    # choice and it should not cap the statistics: XmR limits sharpen with baseline
+    # history, so give them every completed week the extraction window holds.
+    spc_weeks = axis[-_SPC_WINDOW:]
 
     rev = o.groupby("week").net_total.sum().reindex(axis, fill_value=0.0)
     cnt = o.groupby("week").size().reindex(axis, fill_value=0).astype(float)
@@ -138,16 +153,32 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
     lines["qty"] = pd.to_numeric(lines.qty, errors="coerce").fillna(0.0)
     recent_orders = o[o.week.isin(demand_weeks)][["order_id"]]
     recent_lines = lines.merge(recent_orders, on="order_id")
-    weekly_demand = recent_lines.groupby("item_code").qty.sum() / 8.0
+    # Divide by the weeks actually measured, not a hoped-for 8. Early in a
+    # deployment the window IS shorter, and dividing by 8 would understate weekly
+    # demand by 8/n - inflating cover and hiding stockout risk on the very first
+    # run, which is the failure direction that costs money.
+    weekly_demand = recent_lines.groupby("item_code").qty.sum() / len(demand_weeks)
 
     inv = frames["inventory"].copy()
     inv["stock_qty"] = pd.to_numeric(inv.stock_qty, errors="coerce").fillna(0.0)
     inv = inv.set_index("item_code")
+    if inv.index.has_duplicates:  # the extraction gate sums these; say so if it was skipped
+        raise EngineError(
+            "inventory has duplicate item_code rows - one row per item is the canonical "
+            "contract (extract._inventory_gate sums them; compute() was handed ungated frames)"
+        )
     cover = (inv.stock_qty / weekly_demand.reindex(inv.index)).rename("cover_weeks")
     # A stocked-out item is always "low cover", even with no recent demand signal -
     # otherwise stock_qty 0 / demand NaN = NaN slips past the threshold (K5).
     cover.loc[inv.stock_qty == 0] = 0.0
     low = cover[cover < low_cover_weeks].sort_values()
+
+    def series_over(weeks: list[str]) -> dict:
+        return {
+            "weeks": weeks,
+            "revenue": [float(rev.get(w, 0.0)) for w in weeks],
+            "on_time": [float(otp.get(w, float("nan"))) for w in weeks],
+        }
 
     def wow(series: pd.Series) -> dict:
         now = float(series.get(this_w, float("nan")))
@@ -163,16 +194,16 @@ def compute(frames: dict[str, pd.DataFrame], low_cover_weeks: float, as_of: dt.d
         "revenue": wow(rev),
         "orders": wow(cnt),
         "on_time_pct": {**wow(otp), "scored": scored_this, "delivered": delivered_this},
-        "trend": {  # completed weeks only - the current partial week is never plotted
-            "weeks": trend_weeks,
-            "revenue": [float(rev.get(w, 0.0)) for w in trend_weeks],
-            "on_time": [float(otp.get(w, float("nan"))) for w in trend_weeks],
-        },
+        # completed weeks only - the current partial week is never plotted
+        "trend": series_over(trend_weeks),
+        # same rule, longer window: what the control limits are computed from
+        "spc": series_over(spc_weeks),
         "low_cover": [
             {"item_code": str(i), "stock_qty": float(inv.loc[i, "stock_qty"]), "cover_weeks": round(float(c), 1)}
             for i, c in low.head(10).items()
         ],
         "n_low_cover": int(len(low)),
+        "demand_window_weeks": len(demand_weeks),  # <8 early on; surfaces disclose it
         "concentration": _concentration(o, trend_weeks),
         "aging": _aging(frames.get("receivables"), as_of),
         "_dims": {"orders_frame": o, "this_w": this_w, "prev_w": prev_w},

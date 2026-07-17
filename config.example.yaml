@@ -21,7 +21,9 @@ profile_vars:                       # substituted into {placeholders} in the pro
 
 report:
   company_alias: "Company"          # display name in the report header - alias is fine
-  lookback_weeks: 13                # extraction window (completed ISO weeks)
+  lookback_weeks: 26                # extraction window (completed ISO weeks). The chart
+                                    # shows the last 13; the rest is baseline for the SPC
+                                    # control limits, which only settle around n>=15.
   low_cover_weeks: 2.0              # stock-cover alert threshold
   out_dir: reports
   state_db: state.db                # run memory (decline streaks)

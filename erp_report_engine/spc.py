@@ -6,10 +6,20 @@ check it with a pocket calculator. Deterministic: no model, no black box - which
 is exactly the measurement-honesty brand, and exactly what NHS England board
 reporting and Grafana's production anomaly detection actually use.
 
-For weekly ops KPIs (a ~13-week window) XmR is the defensible choice: seasonal
+For weekly ops KPIs (a two-quarter window) XmR is the defensible choice: seasonal
 decomposition and Prophet need two-plus years of data these series don't have.
 The 2.66 constant is 3 / d2 with d2 = 1.128 for a moving range of two points
 (Shewhart control-chart theory).
+
+Two caveats stated rather than buried:
+- Limits are computed from the `spc` series, which is deliberately LONGER than
+  the 13-week chart. Baseline size drives limit quality, and how many weeks a
+  chart can legibly show is not a statistical argument. Every signal carries its
+  baseline n, so the reader can weigh it.
+- On-time % is a proportion over a varying denominator, and an individuals chart
+  weights a 2-delivery week the same as a 200-delivery week. A p-chart with
+  variable limits is the stricter tool; until then the baseline n travels with
+  the signal and insights.py refuses to call a move on a thin sample.
 """
 
 from __future__ import annotations
@@ -47,10 +57,15 @@ def evaluate_metric(label: str, values, *, pct: bool = False, higher_is_better: 
         return f"{x:.1f}%" if pct else f"{x:,.0f}"
 
     current = clean[-1]
-    provisional = (f" [limits provisional: baseline n={lim['n']}, stabilize at n>={_STABLE_N}]"
-                   if lim["n"] < _STABLE_N else "")
+    # The baseline size travels with EVERY signal, not just the weak ones - a
+    # reader weighing a control limit needs to know what it was computed from.
+    # The extra warning below fires when that baseline is genuinely thin, and it
+    # names the lever that fixes it instead of promising it will fix itself.
+    provisional = (f" [limits provisional: baseline is only {lim['n']} weeks — raise "
+                   f"report.lookback_weeks to extract more history; limits settle around "
+                   f"n>={_STABLE_N}]" if lim["n"] < _STABLE_N else "")
     receipt = (f"UCL {f(lim['ucl'])} / LCL {f(lim['lcl'])} = mean {f(lim['cl'])} "
-               f"± 2.66 × avg moving range {f(lim['mr_bar'])}")
+               f"± 2.66 × avg moving range {f(lim['mr_bar'])}, baseline n={lim['n']} weeks")
 
     if current > lim["ucl"]:
         tone = "good" if higher_is_better else "bad"
@@ -76,9 +91,13 @@ def evaluate_metric(label: str, values, *, pct: bool = False, higher_is_better: 
 
 
 def signals(kpis: dict) -> list[dict]:
-    """SPC findings for the report's trend series (revenue and on-time %)."""
-    trend = kpis.get("trend", {})
+    """SPC findings for revenue and on-time %.
+
+    Reads the `spc` window (every completed week the extraction holds, capped),
+    falling back to the 13-week chart series for callers that predate it.
+    """
+    series = kpis.get("spc") or kpis.get("trend", {})
     out: list[dict] = []
-    out += evaluate_metric("Revenue", trend.get("revenue", []))
-    out += evaluate_metric("On-time shipping", trend.get("on_time", []), pct=True)
+    out += evaluate_metric("Revenue", series.get("revenue", []))
+    out += evaluate_metric("On-time shipping", series.get("on_time", []), pct=True)
     return out
