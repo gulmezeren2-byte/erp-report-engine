@@ -97,8 +97,13 @@ Salt-okunur **dört katmanda** zorlanır; tek bir hata motoru yazma yapabilir ha
 
 **Sözüme güvenme — ölç.** Bekçi, tekrar üretilebilir bir güven benchmark'ıyla gelir: şekil-odaklı bir bekçinin geçirdiği, dört diyalektte 28 kusursuz-SQL saldırısı — hepsi reddedilir — artı geçmesi gereken meşru okumalar. Sayı düzyazıda iddia edilmez, canlı bir bekçi koşusundan hesaplanır ve CI her commit'te doğrular.
 
+"28/28" ancak *aynı* 28 saldırıya karşı daha zayıf bir bekçinin skoruyla yan yana anlam taşır. Bu yüzden benchmark, aynı korpusu gerçek araçların sıkça kullandığı kestirmelerden geçirir — `SELECT` ile mi başlıyor kontrolü ve yazma-anahtarkelime kara listesi — ve farkı gösterir: bunlar 28'in yalnızca **6**'sını ve **9**'unu reddeder (kara liste, metninde "delete" geçen meşru bir okumayı bile bloklar), bu bekçi ise 28'in hepsini reddeder ve hiçbir okumayı bloklamaz. Bir test, her kestirmeyi kesin olarak geçtiğini sabitler.
+
 ```bash
-erp-report-engine trust-benchmark      # 28/28 saldırı reddedildi · 8/8 okuma serbest
+erp-report-engine trust-benchmark
+#   bu bekçi                  28/28 saldırı reddedildi · 8/8 okuma serbest
+#   SELECT ile başlıyor mu      6/28                   · 8/8   (22'sini geçirir)
+#   yazma-anahtarkelime listesi 9/28                   · 7/8   (hem sızdırır hem meşru okumayı kırar)
 ```
 
 **▶ Sonuçları görün: [güven benchmark'ı](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** — her vaka, şiddeti ve gerçekte ne yaptığı. Ya da **[kendin kır](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)**: tarayıcında çalışan gerçek bekçiye SQL yapıştır (kurulum yok, hiçbir yere bir şey gitmez — Pyodide üzerinden, testlerin çalıştırdığı `guard.py`'nin ta kendisi).
