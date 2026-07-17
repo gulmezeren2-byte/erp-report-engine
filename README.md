@@ -6,13 +6,13 @@
 
 [![CI](https://github.com/gulmezeren2-byte/erp-report-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/gulmezeren2-byte/erp-report-engine/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/requirements.txt)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/LICENSE)
 
-🇹🇷 Türkçesi: [README.tr.md](README.tr.md)
+🇹🇷 Türkçesi: [README.tr.md](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/README.tr.md)
 
-One scheduled `run` executes **6 audited SELECT statements** and delivers a self-contained HTML report: four KPIs against an 8-week baseline, findings with named drivers, a data-quality gate, and row counts reconciled against the source. No BI license, no agent installed on the ERP server, and **no writes — enforced in four layers (lexical, parse-tree, a side-effecting-function guard, and a read-only session), not promised in prose**.
+One scheduled `run` executes **9 audited SELECT statements** and delivers a self-contained HTML report: four KPIs against an 8-week baseline, findings with named drivers, a data-quality gate, and row counts reconciled against the source. No BI license, no agent installed on the ERP server, and **no writes — enforced in four layers (lexical, parse-tree, a side-effecting-function guard, and a read-only session), not promised in prose**.
 
-![Weekly report produced by the engine from the bundled demo database](assets/erp_report_preview.png)
+![Weekly report produced by the engine from the bundled demo database](https://raw.githubusercontent.com/gulmezeren2-byte/erp-report-engine/main/assets/erp_report_preview.png)
 
 *This exact report was produced by one command against the bundled demo database — including the three data-quality problems deliberately seeded into it, all caught by the gate.*
 
@@ -29,23 +29,23 @@ erp-report-engine run -c config.demo.yaml
 
 Every command is also available as `python -m erp_report_engine …`. Add a database driver with the extras: `pipx install "erp-report-engine[mssql]"` (Logo Tiger / Netsis / Mikro — SQL Server) or `[postgres]`.
 
-**Prefer Docker?** `docker build -t erp-report-engine .` then `docker run --rm -v "$PWD:/work" erp-report-engine run -c config.demo.yaml`. SQLite and PostgreSQL work out of the box; for MSSQL add Microsoft's ODBC driver (see the [`Dockerfile`](Dockerfile)). Publishing to PyPI is a GitHub Release away — [`publish.yml`](.github/workflows/publish.yml) builds and uploads via [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) (OIDC, no stored token), and CI already builds the wheel and asserts every bundled profile ships.
+**Prefer Docker?** `docker build -t erp-report-engine .` then `docker run --rm -v "$PWD:/work" erp-report-engine run -c config.demo.yaml`. SQLite and PostgreSQL work out of the box; for MSSQL add Microsoft's ODBC driver (see the [`Dockerfile`](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/Dockerfile)). Publishing to PyPI is a GitHub Release away — [`publish.yml`](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/.github/workflows/publish.yml) builds and uploads via [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) (OIDC, no stored token), and CI already builds the wheel and asserts every bundled profile ships.
 
 Open `reports/erp_report_<week>.html`. You'll see the engine catch a revenue spike and attribute it to one region, flag a two-point on-time decline, list items below two weeks of stock cover — and confess every duplicate and negative row it found on the way.
 
-**▶ See a live sample report: [gulmezeren2-byte.github.io/erp-report-engine](https://gulmezeren2-byte.github.io/erp-report-engine/)** (also committed at [`docs/sample-report.html`](docs/sample-report.html)).
+**▶ See a live sample report: [gulmezeren2-byte.github.io/erp-report-engine](https://gulmezeren2-byte.github.io/erp-report-engine/)** (also committed at [`docs/sample-report.html`](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/docs/sample-report.html)).
 
 Or run `run --dashboard` for the premium **Command Center** — a dark, modern, self-contained dashboard with animated KPIs and glowing SPC control-band charts (**[live](https://gulmezeren2-byte.github.io/erp-report-engine/dashboard.html)**):
 
-![The Command Center dashboard — dark glassmorphic bento grid with SPC control-band charts](assets/dashboard_preview.png)
+![The Command Center dashboard — dark glassmorphic bento grid with SPC control-band charts](https://raw.githubusercontent.com/gulmezeren2-byte/erp-report-engine/main/assets/dashboard_preview.png)
 
 ## What one run produces
 
 | Section | What it answers |
 |---|---|
 | KPI cards | Revenue, orders, on-time %, low-stock count — each vs last week **and** vs an 8-week baseline |
-| Findings | *"Revenue +25.4% — main driver: region 'Ege' (111% of the move)"* — driver named, action suggested |
-| Signals (SPC) | *"Revenue signal: 148,291 is ABOVE the control limits (UCL 143,078 = mean 93,168 ± 2.66 × avg moving range 18,763)"* — a genuine shift, separated from week-to-week noise, with the arithmetic shown |
+| Findings | *"Revenue +6.5% week-over-week — main driver: region 'Ege' (54% of the week's movement, partly offset by Marmara (−14,697))"* — driver named, the segment pulling the other way named too, action suggested |
+| Signals (SPC) | *"Revenue signal: 148,291 is ABOVE the control limits (UCL 143,078 = mean 93,168 ± 2.66 × avg moving range 18,763, baseline n=25 weeks)"* — a genuine shift, separated from week-to-week noise, with the arithmetic and its sample size shown |
 | Trends | 13 full weeks of revenue and on-time %, inline SVG (no external assets) |
 | Stock attention list | Items below the cover threshold, worst first |
 | Data-quality gate | Duplicate IDs, unparseable dates, negative totals, ship-before-order rows |
@@ -89,11 +89,11 @@ Read-only is enforced in **four layers**, so no single mistake makes the engine 
 
 **Ad-hoc SQL — the agent path — is stricter still.** `query` and `guarded_query` run in strict mode, which default-denies *every function the guard cannot name*: `sqlglot`'s function registry is the allowlist, since it knows the portable analytic functions and nothing that reads a file or opens a socket. All four bundled profiles pass it — they call no unrecognised function at all.
 
-**And the layer that isn't ours.** MSSQL has no session-level read-only switch, so run the engine under a **least-privilege, read-only login** (`db_datareader` on MSSQL, a `SELECT`-only grant on PostgreSQL — ideally a read replica). The guard is defence in depth; the grant is the layer that holds if the guard has a hole. It has had one before: these function bypasses were found by auditing this repo, and are now pinned in [`tests/test_guard.py`](tests/test_guard.py) by name, per dialect.
+**And the layer that isn't ours.** MSSQL has no session-level read-only switch, so run the engine under a **least-privilege, read-only login** (`db_datareader` on MSSQL, a `SELECT`-only grant on PostgreSQL — ideally a read replica). The guard is defence in depth; the grant is the layer that holds if the guard has a hole. It has had one before: these function bypasses were found by auditing this repo, and are now pinned in [`tests/test_guard.py`](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/tests/test_guard.py) by name, per dialect.
 
 Plus: profile variables are identifier-safe (`^[A-Za-z0-9_]{1,16}$`, so `"001; DROP TABLE x"` raises before any connection), secrets never live in config files (the loader refuses embedded credentials in any spelling — `password`, `passwd`, `pwd`, `sslpassword`, ODBC `PWD=` — use `url_env`), every executed statement ships in the report's audit trail, and a row cap (default 500k) bounds any single query.
 
-The test suite throws a battery of injection attempts at the guard — multi-statement, comment smuggling in three syntaxes, transaction-control splices (`ROLLBACK`/`COMMIT`), `SELECT INTO`, lock hints, and a `DELETE` hidden inside a CTE — and expects every one to raise. See [SECURITY.md](SECURITY.md).
+The test suite throws a battery of injection attempts at the guard — multi-statement, comment smuggling in three syntaxes, transaction-control splices (`ROLLBACK`/`COMMIT`), `SELECT INTO`, lock hints, and a `DELETE` hidden inside a CTE — and expects every one to raise. See [SECURITY.md](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/SECURITY.md).
 
 ## Connect your own ERP
 
@@ -161,7 +161,7 @@ Each run appends to `state.db`, which is how the report can say *"third consecut
 
 **An optional AI summary that can't lie.** `run --narrate` adds an LLM executive summary — but honest *by construction*: the model is fed **only** the audited aggregates (KPIs, findings, aging/concentration — never a raw row), and the report prints the exact payload it saw, so anyone can verify what it was given. No key configured → the flag no-ops and the report is unchanged. Any OpenAI-compatible endpoint works, including a **local, keyless** model (Ollama / LM Studio). Most tools bolt on hallucination checks *after* generation; here the model simply never sees anything it could leak or over-claim from.
 
-**Delivery is built in.** `run --send` emails the report (SMTP), posts a summary to Slack or Teams (Power Automate Workflows), and pings a [healthchecks.io](https://healthchecks.io) dead-man's-switch on success *or* failure — so a silent cron is detectable. Every secret comes from an environment variable; a channel that fails is logged, never fatal. Configure it in a `delivery:` block (see `config.example.yaml`). For a full hands-off pipeline, the `power_automate` channel posts an Adaptive Card to Teams **and** archives the HTML report to SharePoint/OneDrive — an importable flow and step-by-step guide live in **[automation/POWER-AUTOMATE.md](automation/POWER-AUTOMATE.md)**. The report writes itself *and* delivers itself — the feature most BI tools charge for.
+**Delivery is built in.** `run --send` emails the report (SMTP), posts a summary to Slack or Teams (Power Automate Workflows), and pings a [healthchecks.io](https://healthchecks.io) dead-man's-switch on success *or* failure — so a silent cron is detectable. Every secret comes from an environment variable; a channel that fails is logged, never fatal. Configure it in a `delivery:` block (see `config.example.yaml`). For a full hands-off pipeline, the `power_automate` channel posts an Adaptive Card to Teams **and** archives the HTML report to SharePoint/OneDrive — an importable flow and step-by-step guide live in **[automation/POWER-AUTOMATE.md](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/automation/POWER-AUTOMATE.md)**. The report writes itself *and* delivers itself — the feature most BI tools charge for.
 
 ## The Power BI Command Center
 
@@ -174,7 +174,7 @@ The engine also feeds an interactive Power BI layer — and there is no `.pbix` 
 erp-report-engine export-powerbi -c config.yaml
 ```
 
-The signature is the **Trust page**: source reconciliation, the data-quality gate and the full SQL audit trail rendered as visuals — the dashboard shows its receipts. Alert thresholds are the same ones as `insights.py`, re-derived in DAX: one definition, two surfaces. Field bindings are validated against the TMDL model by `pbir-cli` before the project ever meets Desktop. Full guide: [powerbi/README.md](powerbi/README.md).
+The signature is the **Trust page**: source reconciliation, the data-quality gate and the full SQL audit trail rendered as visuals — the dashboard shows its receipts. Alert thresholds are the same ones as `insights.py`, re-derived in DAX: one definition, two surfaces. Field bindings are validated against the TMDL model by `pbir-cli` before the project ever meets Desktop. Full guide: [powerbi/README.md](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/powerbi/README.md).
 
 ## Ask your ERP through an agent — the guarded MCP server
 
@@ -196,7 +196,7 @@ Six tools, all funneled through the guarded path:
 | `check_query` | whether a SQL statement would pass the guard — *without running it* |
 | `query` | run a read-only `SELECT`/`WITH`, capped and audited; rows returned as **untrusted data** |
 
-A first-party **[agent skill pack](skills/)** (`erp-safe-query`, `explain-kpi-move`, `write-erp-profile`) teaches an agent to work *with* this grain — dry-run before querying, aggregate instead of dumping rows, cite audited numbers, and never treat ERP text as a command.
+A first-party **[agent skill pack](https://github.com/gulmezeren2-byte/erp-report-engine/tree/main/skills)** (`erp-safe-query`, `explain-kpi-move`, `write-erp-profile`) teaches an agent to work *with* this grain — dry-run before querying, aggregate instead of dumping rows, cite audited numbers, and never treat ERP text as a command.
 
 Point Claude Desktop (or any MCP client) at it:
 
@@ -254,4 +254,4 @@ Tools that tell you the truth about your operation, by [Eren Gülmez](https://gi
 
 ## License
 
-[MIT](LICENSE) © Eren Gülmez
+[MIT](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/LICENSE) © Eren Gülmez

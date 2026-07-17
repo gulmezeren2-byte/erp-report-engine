@@ -10,7 +10,7 @@
 
 🇬🇧 English: [README.md](README.md)
 
-Zamanlanmış tek bir `run` komutu **6 denetlenmiş SELECT** çalıştırır ve kendi kendine yeten bir HTML rapor üretir: 8 haftalık taban çizgisine karşı dört KPI, sürücüsü isimlendirilmiş bulgular, veri kalitesi kapısı ve kaynakla mutabakatı yapılmış satır sayıları. BI lisansı yok, ERP sunucusuna kurulan ajan yok ve **yazma yok — dört katmanda zorlanır (sözcüksel, ayrıştırma-ağacı, yan etkili fonksiyon bekçisi ve salt-okunur oturum), dokümanda vaat edilerek değil**.
+Zamanlanmış tek bir `run` komutu **9 denetlenmiş SELECT** çalıştırır ve kendi kendine yeten bir HTML rapor üretir: 8 haftalık taban çizgisine karşı dört KPI, sürücüsü isimlendirilmiş bulgular, veri kalitesi kapısı ve kaynakla mutabakatı yapılmış satır sayıları. BI lisansı yok, ERP sunucusuna kurulan ajan yok ve **yazma yok — dört katmanda zorlanır (sözcüksel, ayrıştırma-ağacı, yan etkili fonksiyon bekçisi ve salt-okunur oturum), dokümanda vaat edilerek değil**.
 
 ![Motorun ürettiği haftalık rapor (demo veritabanından)](assets/erp_report_preview.png)
 
@@ -44,8 +44,8 @@ Ya da premium **Command Center** için `run --dashboard`: koyu, modern, kendi ke
 | Bölüm | Neyi cevaplar |
 |---|---|
 | KPI kartları | Ciro, sipariş, zamanında sevkiyat %, düşük stok sayısı — hem geçen haftaya **hem** 8 haftalık taban çizgisine karşı |
-| Bulgular | *"Ciro +%25,4 — ana sürücü: 'Ege' bölgesi (hareketin %111'i)"* — sürücü isimli, aksiyon önerili |
-| Sinyaller (SPC) | *"Ciro sinyali: 148.291 kontrol limitlerinin ÜSTÜNDE (UCL 143.078 = ortalama 93.168 ± 2,66 × ort. hareketli menzil 18.763)"* — gerçek bir kayma, haftalık gürültüden ayrılmış, aritmetiğiyle |
+| Bulgular | *"Ciro +%6,5 haftalık — ana sürücü: 'Ege' bölgesi (haftanın hareketinin %54'ü, kısmen Marmara tarafından dengelendi (−14.697))"* — sürücü isimli, ters yöne çeken segment de isimli, aksiyon önerili |
+| Sinyaller (SPC) | *"Ciro sinyali: 148.291 kontrol limitlerinin ÜSTÜNDE (UCL 143.078 = ortalama 93.168 ± 2,66 × ort. hareketli menzil 18.763, baz n=25 hafta)"* — gerçek bir kayma, haftalık gürültüden ayrılmış, aritmetiği ve örneklem büyüklüğüyle |
 | Trendler | 13 tam haftalık ciro ve zamanında sevkiyat, satır-içi SVG (harici varlık yok) |
 | Stok dikkat listesi | Karşılama eşiğinin altındaki kalemler, en kötüsü başta |
 | Veri kalitesi kapısı | Mükerrer ID, okunamayan tarih, eksi tutar, siparişten önce sevkiyat |

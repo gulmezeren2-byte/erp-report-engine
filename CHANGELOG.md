@@ -3,6 +3,43 @@
 All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+Nothing yet.
+
+## [0.6.0] — 2026-07-17 · "Receivables, a narrative that can't lie, and a guard that keeps its word"
+
+The headline is not the new features — it is that a five-way audit of this repository found the honesty discipline holding in the Python core and **not** travelling to the newer surfaces. Everything under *Fixed* below is a place where this project said more than it knew. For a project whose entire claim is measurement honesty, those are not ordinary bugs.
+
+### Added
+- **Receivables aging (cari yaşlandırma)** as an *optional* canonical entity: open balances bucketed `current / 1-30 / 31-60 / 61-90 / 91+`, the overdue share, and the customers who owe the most overdue. One bucket definition, imported by every surface. A profile that cannot reach an AR ledger simply omits it and everything downstream degrades gracefully — the report still runs.
+- **Real-ERP AR mappings** for all three Turkish profiles, with their weak points flagged inline rather than smoothed over: Logo Tiger (`PAYTRANS`, TOTAL−PAID), Netsis (`TBLCAHAR`, with the open-item caveat), Mikro (`CARI_HESAP_HAREKETLERI`, where `open_amount` is gross because Mikro has no per-invoice open flag).
+- **Mikro profile** — the third Turkish ERP. With Logo Tiger and Netsis, the bundled profiles now cover most of the Turkish SME ERP market.
+- **Optional LLM narrative** (`run --narrate`): an executive summary built **only** from audited aggregates — never from `extraction.frames`, by construction — with the exact payload printed in the report as a "what the model saw" appendix. Any OpenAI-compatible endpoint, including a local keyless one (Ollama / LM Studio). No key configured → the flag no-ops and the report is unchanged.
+- **Revenue concentration**: top-3 share + the Herfindahl-Hirschman Index, across all three surfaces. Concentration is risk, not a forecast, and the report says so.
+- **Agent skill pack** (`skills/`) — `erp-safe-query`, `explain-kpi-move`, `write-erp-profile` — plus an `aging` MCP tool (the sixth), and `describe_model` now flags which entities are optional.
+- **Power BI**: a receivables Aging page, a dark theme validated against the official `reportThemeSchema-2.155.json` (0 errors), DAX SVG micro-charts, and rendered previews of every page.
+- **Packaging**: PyPI Trusted Publishing (OIDC, no stored token) and a lean non-root Docker image. CI builds the wheel on every leg and asserts all four profiles ship inside it.
+
+### Fixed
+- **Power BI plotted the current partial week.** The README's central promise is that it never does — *"a Monday-morning 'crash' that's really a two-day week is how dashboards lose trust"* — and the Overview's trend visuals had no calendar guard at any level, while the sparklines of the same metrics did. `dim_week` now carries `is_trend_week`, written from the engine's own window constant, and the trend visuals filter on it: **locked**, so a viewer cannot switch the guarantee off, and visible, so the filter card states the scope.
+- **"Read-only by construction" did not hold at the guard level.** The guard checked a statement's shape and never asked what it *called*, so `pg_read_file`, `lo_export` (which writes a file), `dblink` (which dials out), `OPENROWSET`, `LOAD_FILE`, `load_extension`, `query_to_xml`, `SLEEP` and — worst — `set_config('default_transaction_read_only','off')` all passed. It was read-only *by configuration*: it held because the docs tell you to use a least-privilege login. Functions are now checked by AST **and** lexically (`OPENROWSET` is precisely what sqlglot cannot parse), the parser **fails closed** instead of waving through what it cannot read, and ad-hoc/agent SQL runs in strict mode that default-denies every function the guard cannot name. Pinned by name and per dialect in `tests/test_guard.py`.
+- **A duplicated `item_code` crashed the entire run.** Orders and receivables were deduplicated; inventory was not. The three real profiles `GROUP BY` and hid it; `generic.yaml` does not — the "swap the profile, keep the report" path. Summed in the gate now, and said out loud.
+- **Stock cover was overstated on short history**, hiding stockout risk. Weekly demand always divided by 8 even when the window held fewer weeks — suppressing the low-stock alert on exactly the first run, when a new deployment has the least history.
+- **The 8-week baseline was two different numbers under one name.** `AVERAGEX` skips `BLANK`, so an empty week quietly left the DAX divisor while Python counted it as zero. Same window, same name, higher in Power BI.
+- **On-time % can rise as fulfilment collapses** — a late, unshipped order is in neither the numerator nor the denominator, so it never costs the metric a point. Unfixable with what an order table carries, so the engine now counts what the percentage cannot see: *promised this week, not shipped*.
+- **Attribution could claim 999% of a move.** Share was taken against the *net* delta, which goes to zero when segments move in opposite directions — so the absurd number appeared exactly when attribution mattered most. Measured against gross movement now, bounded 0–100% by construction, and the offsetting segment is named.
+- **On-time findings ignored their own denominator** — two deliveries going 1-of-2 to 2-of-2 fired a confident "+50.0 pts". Below five scored deliveries a move is reported and explicitly not called.
+- **Every SPC signal was labelled provisional, forever.** Limits promised to stabilise at n≥15 while the trend was hard-capped at 13 weeks, so the non-provisional branch was dead code — and `lookback_weeks` above 13 pulled rows and used none of them. Control limits now get their own, longer window; the default lookback is two quarters, so the threshold is reachable out of the box.
+- **The `90+` aging bucket actually held 91+**; `61-90` is inclusive of day 90. The arithmetic was right and consistent everywhere — only the label claimed a boundary it did not have.
+- **The dashboard claimed the data-viz skill's validated palette while using brightened approximations of it**, on a surface it was never validated against. Two of its colours were below the normal-vision ΔE floor — hard to tell apart even with full colour vision. Re-validated against the actual plane and corrected to the validated steps, in the validated order.
+- **The LLM narrative's "aggregates only" understated what left the building.** No raw row ever reached the model, but an aggregate can still name a party — `top_overdue` *is* customer names, and driver findings name accounts. Names are pseudonymised by default now; `narrative.include_names: true` is an explicit opt-in that the payload appendix records either way. The narrative call also no longer follows redirects while holding an API key.
+- MySQL had neither a read-only session nor a statement timeout, so `SELECT SLEEP(100000)` was a guard-legal denial of service. The credential check missed `?passwd=` (MySQLdb) and `?sslpassword=` (libpq). `SELECT 'please delete this note'` was refused, because the keyword scan read string literals as code.
+
+### Changed
+- **`report.lookback_weeks` now defaults to 26** (was 13). The chart still shows 13; the extra history is what the control limits are computed from, and they only settle around n≥15. The demo already generated 26 weeks — half of it was being discarded.
+- The delivered-status set and both window constants are defined once and imported, rather than restated per surface.
+
 ## [0.5.0] — 2026-07-16 · "Signals, contracts, delivery, a plural profile library"
 
 ### Added

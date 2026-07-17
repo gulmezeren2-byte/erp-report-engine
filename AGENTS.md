@@ -49,7 +49,7 @@ Power BI layer rules: keep DAX alert thresholds identical to `insights.py` (5% r
 
 ```bash
 pip install -e ".[dev]"                         # editable install with dev tools
-python -m pytest tests/ -q                       # must stay green (59 tests)
+python -m pytest tests/ -q                       # must stay green (134 tests)
 python -m ruff check erp_report_engine demo tests
 erp-report-engine init-demo                      # rebuild demo.db + config.demo.yaml
 erp-report-engine run -c config.demo.yaml

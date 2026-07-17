@@ -16,7 +16,8 @@ Use this whenever you need data from an ERP that is exposed through the
    ERP's raw table names (`LG_001_01_ORFICHE`, `TBLSIPAMAS`, `SIPARISLER`…). The
    active profile maps the canonical names to this ERP's real ones for you.
 2. **Read-only, always.** Only `SELECT` and `WITH … SELECT`. `INSERT`/`UPDATE`/
-   `DELETE`/`EXEC`/DDL are refused by a three-layer guard; do not try to slip one
+   `DELETE`/`EXEC`/DDL are refused by a four-layer guard, and so is any function
+   that reads a file, dials out or edits the session; do not try to slip one
    through with comments, stacked statements, or CTE tricks.
 3. **Dry-run before you run.** Call `check_query(sql)` first — it returns
    `{allowed: true}` or the exact reason it's blocked, *without* executing. Fix

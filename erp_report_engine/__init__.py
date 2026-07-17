@@ -11,4 +11,4 @@ Design pillars:
   reconciliation counts and explicit metric definitions.
 """
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
