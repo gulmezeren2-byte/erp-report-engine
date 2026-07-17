@@ -1,0 +1,38 @@
+# Static analysis on every push, and weekly, so a security-positioned project
+# actually has its own code scanned - results land in the repo's Security tab.
+# A separate workflow from CI on purpose: a code-scanning finding is advisory
+# and must never break the build that gates a release. Actions are pinned by
+# commit SHA, matching ci.yml.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "27 4 * * 1"   # Mondays 04:27 UTC - off the top of the hour on purpose
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (python)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write   # upload findings to code scanning
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v5.0.1
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@e58424170fb0262c8d7ed60a2e84b9bffe205c67 # codeql-bundle-v2.26.1
+        with:
+          languages: python
+          build-mode: none          # pure Python - nothing to compile
+          queries: security-and-quality
+      - name: Analyze
+        uses: github/codeql-action/analyze@e58424170fb0262c8d7ed60a2e84b9bffe205c67 # codeql-bundle-v2.26.1
+        with:
+          category: "/language:python"
