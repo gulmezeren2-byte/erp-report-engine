@@ -61,3 +61,55 @@ jobs:
         run: python -m twine check --strict dist/*
       - name: Publish to PyPI (Trusted Publishing)
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
+
+  # List the guarded MCP server on the official MCP registry, so anyone searching
+  # "read-only / secure / database MCP" finds it. Runs AFTER the PyPI upload (the
+  # registry verifies the package exists on PyPI and carries the `mcp-name`
+  # marker in its README), and is best-effort: the registry is in preview, so a
+  # hiccup here must not fail a release whose PyPI publish already succeeded.
+  publish-mcp:
+    needs: [publish]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      id-token: write            # OIDC login to the registry (io.github.* namespace)
+      contents: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v5.0.1
+      - name: Set server.json version to the release tag
+        run: |
+          VERSION="${TAG#v}"
+          python - "$VERSION" <<'PY'
+          import json, sys, pathlib
+          v = sys.argv[1]
+          p = pathlib.Path("server.json")
+          d = json.loads(p.read_text(encoding="utf-8"))
+          d["version"] = v
+          for pkg in d.get("packages", []):
+              pkg["version"] = v
+          p.write_text(json.dumps(d, indent=2) + "\n", encoding="utf-8")
+          print("server.json version ->", v)
+          PY
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+      - name: Wait for the version to be live on PyPI (propagation)
+        run: |
+          VERSION="${TAG#v}"
+          for i in $(seq 1 30); do
+            if curl -fsSL "https://pypi.org/pypi/erp-report-engine/$VERSION/json" >/dev/null 2>&1; then
+              echo "erp-report-engine $VERSION is live on PyPI"; exit 0
+            fi
+            echo "not yet on PyPI, retry $i/30…"; sleep 10
+          done
+          echo "timed out waiting for PyPI"; exit 1
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+      - name: Validate server.json
+        run: ./mcp-publisher validate
+      - name: Authenticate to the MCP registry (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+      - name: Publish to the MCP registry
+        run: ./mcp-publisher publish

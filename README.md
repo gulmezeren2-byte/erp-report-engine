@@ -1,5 +1,7 @@
 # erp-report-engine
 
+<!-- mcp-name: io.github.gulmezeren2-byte/erp-report-engine -->
+
 > The numbers for Monday's meeting are already sitting in your ERP's database. So who's still writing the report?
 
 **A read-only, self-verifying data layer for the SQL database behind your ERP — weekly reports *and* a guarded MCP server for AI agents. Every query provably read-only: measured against 28 attacks, not promised in prose.**
