@@ -63,6 +63,23 @@ erp-report-engine trust-benchmark</pre>
     Or — no install — <a href="playground.html">paste your own SQL into the guard, in your browser →</a>
   </div>
 
+  <h2>The same corpus, three ways to guard it</h2>
+  <p class="muted" style="margin-top:-4px">Most tools enforce "read-only" by reading a statement's <em>shape</em>
+  (is the first word <span class="mono">SELECT</span>?) or scanning its text for write keywords. Here is how each
+  fares against the exact cases below — computed in this same run, so the contrast is measured, not asserted.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Approach</th><th>Attacks refused</th><th>Reads allowed</th><th></th></tr></thead>
+    <tbody>
+<tr><td class="mono">starts-with-SELECT</td><td class="verdict" style="color:#d03b3b">6/28</td><td class="verdict" style="color:#0ca30c">8/8</td><td class="muted">lets 22 attacks through</td></tr>
+<tr><td class="mono">write-keyword blocklist</td><td class="verdict" style="color:#d03b3b">9/28</td><td class="verdict" style="color:#d03b3b">7/8</td><td class="muted">lets 19 attacks through, and blocks 1 legitimate read</td></tr>
+<tr><td class="mono">erp-report-engine — this guard</td><td class="verdict" style="color:#0ca30c">28/28</td><td class="verdict" style="color:#0ca30c">8/8</td><td class="muted">checks what each statement <em>calls</em> — refuses every attack, blocks no read</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted">A keyword scan is the worst of both: it still misses the file-reading and socket-opening
+  functions (they contain no write word), yet it blocks a legitimate <span class="mono">SELECT 'please delete
+  this note'</span> because the word is <em>in the string</em>. The only guard that clears every attack and every
+  read is the one that inspects what each statement actually calls.</p>
+
   <h2>Attacks — 28 well-formed SELECTs that are not reads</h2>
   <div class="scroll"><table>
     <thead><tr><th>Severity</th><th>Function</th><th>Dialect</th><th>What it actually does</th><th>Guard</th></tr></thead>

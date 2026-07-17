@@ -176,3 +176,16 @@ def summarize(results: list[dict]) -> dict:
         "reads_allowed": sum(1 for r in reads if not r["blocked"]),
         "all_correct": all(r["correct"] for r in results),
     }
+
+
+def compare(guards: dict) -> list[dict]:
+    """Summarize the whole corpus through several guards - one row per guard.
+
+    `guards` maps a label to a guard callable with the same `(sql, dialect=...)`
+    shape as the engine's `assert_read_only`. Returns a summary row per guard in
+    the given order, so the CLI and the results page can show the *same* corpus
+    walking straight past the shape-only checks that ship in the wild, and not
+    past this one. Every number is computed from a live run, like the headline -
+    never asserted in prose.
+    """
+    return [{"guard": label, **summarize(run(fn))} for label, fn in guards.items()]

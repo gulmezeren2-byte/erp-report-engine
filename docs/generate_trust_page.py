@@ -17,7 +17,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from erp_report_engine import __version__
-from erp_report_engine.attack_corpus import CASES, run, summarize
+from erp_report_engine.attack_corpus import CASES, compare, run, summarize
+from erp_report_engine.baseline_guards import baselines
 from erp_report_engine.connect import assert_read_only
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trust.html")
@@ -52,9 +53,37 @@ def _rows(results: list[dict]) -> str:
     return "\n".join(out)
 
 
+def _comparison_rows(rows: list[dict]) -> str:
+    out = []
+    for r in rows:
+        a_ok = r["attacks_blocked"] == r["attacks_total"]
+        r_ok = r["reads_allowed"] == r["reads_total"]
+        missed = r["attacks_total"] - r["attacks_blocked"]
+        broke = r["reads_total"] - r["reads_allowed"]
+        if a_ok and r_ok:
+            note = "checks what each statement <em>calls</em> — refuses every attack, blocks no read"
+        else:
+            bits = [f"lets {missed} attack{'s' if missed != 1 else ''} through"]
+            if broke:
+                bits.append(f"and blocks {broke} legitimate read{'s' if broke != 1 else ''}")
+            note = ", ".join(bits)
+        out.append(
+            "<tr>"
+            f'<td class="mono">{html.escape(r["guard"])}</td>'
+            f'<td class="verdict" style="color:{GOOD if a_ok else BAD}">'
+            f'{r["attacks_blocked"]}/{r["attacks_total"]}</td>'
+            f'<td class="verdict" style="color:{GOOD if r_ok else BAD}">'
+            f'{r["reads_allowed"]}/{r["reads_total"]}</td>'
+            f'<td class="muted">{note}</td>'
+            "</tr>"
+        )
+    return "\n".join(out)
+
+
 def build() -> None:
     results = run(assert_read_only)
     s = summarize(results)
+    comparison = compare({**baselines(), "erp-report-engine — this guard": assert_read_only})
     attacks = [r for r in results if r["expected_block"]]
     reads = [r for r in results if not r["expected_block"]]
     stat_color = GOOD if s["all_correct"] else BAD
@@ -123,6 +152,21 @@ erp-report-engine trust-benchmark</pre>
     The same corpus is enforced by CI on every commit, so this page can never claim a result the tests don't hold.
     Or — no install — <a href="playground.html">paste your own SQL into the guard, in your browser →</a>
   </div>
+
+  <h2>The same corpus, three ways to guard it</h2>
+  <p class="muted" style="margin-top:-4px">Most tools enforce "read-only" by reading a statement's <em>shape</em>
+  (is the first word <span class="mono">SELECT</span>?) or scanning its text for write keywords. Here is how each
+  fares against the exact cases below — computed in this same run, so the contrast is measured, not asserted.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Approach</th><th>Attacks refused</th><th>Reads allowed</th><th></th></tr></thead>
+    <tbody>
+{_comparison_rows(comparison)}
+    </tbody>
+  </table></div>
+  <p class="muted">A keyword scan is the worst of both: it still misses the file-reading and socket-opening
+  functions (they contain no write word), yet it blocks a legitimate <span class="mono">SELECT 'please delete
+  this note'</span> because the word is <em>in the string</em>. The only guard that clears every attack and every
+  read is the one that inspects what each statement actually calls.</p>
 
   <h2>Attacks — {len(attacks)} well-formed SELECTs that are not reads</h2>
   <div class="scroll"><table>

@@ -114,14 +114,17 @@ def cmd_trust_benchmark(args) -> None:
     `erp-report-engine trust-benchmark`. Exits non-zero if any case is wrong,
     so it doubles as a self-check.
     """
-    from .attack_corpus import CASES, run, summarize
+    from .attack_corpus import CASES, compare, run, summarize
+    from .baseline_guards import baselines
     from .connect import assert_read_only
 
     results = run(assert_read_only)
     s = summarize(results)
+    comparison = compare({**baselines(), "this guard": assert_read_only})
 
     if args.json:
-        print(json.dumps({"summary": s, "cases": results}, indent=2, ensure_ascii=False))
+        print(json.dumps({"summary": s, "cases": results, "comparison": comparison},
+                         indent=2, ensure_ascii=False))
     else:
         by = {c.name: c for c in CASES}
         order = {"critical": 0, "high": 1, "medium": 2, "-": 3}
@@ -143,6 +146,18 @@ def cmd_trust_benchmark(args) -> None:
         print("\nThe guard checks the functions a statement CALLS, not just its shape. "
               "Run in strict mode (the agent path) it also default-denies every "
               "function it does not recognise. See SECURITY.md.")
+
+        print("\nThe same corpus, against the shape-only checks real tools ship:")
+        for row in comparison:
+            note = ""
+            if row["reads_allowed"] < row["reads_total"]:
+                broke = row["reads_total"] - row["reads_allowed"]
+                note = f"  (and breaks {broke} legitimate read{'s' if broke != 1 else ''})"
+            print(f"  {row['guard']:24} {row['attacks_blocked']:2}/{row['attacks_total']} attacks refused"
+                  f" · {row['reads_allowed']}/{row['reads_total']} reads allowed{note}")
+        print("A guard that reads only a statement's shape, or scans it for keywords, "
+              "lets most of these through — and a keyword scan even blocks a read whose "
+              "text merely contains a write word.")
 
     if not s["all_correct"]:
         raise EngineError(

@@ -107,6 +107,9 @@ def test_trust_benchmark_cli_reports_and_exits_clean(capsys):
     assert f"{n_attacks}/{n_attacks} attacks refused" in human   # computed, so adding a case never breaks this
     assert f"{n_reads}/{n_reads} reads allowed" in human
     assert "ALL CORRECT" in human
+    # the contrast against the shape-only checks is shown too
+    assert "shape-only checks real tools ship" in human
+    assert "starts-with-SELECT" in human
 
     cmd_trust_benchmark(SimpleNamespace(json=True))
     import json as _json
@@ -114,3 +117,6 @@ def test_trust_benchmark_cli_reports_and_exits_clean(capsys):
     assert payload["summary"]["all_correct"] is True
     assert payload["summary"]["attacks_blocked"] == payload["summary"]["attacks_total"] == n_attacks
     assert len(payload["cases"]) == len(CASES)
+    # the baselines travel in the machine-readable payload, our guard last and perfect
+    assert payload["comparison"][-1]["all_correct"] is True
+    assert any(r["all_correct"] is False for r in payload["comparison"][:-1])

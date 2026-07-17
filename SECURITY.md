@@ -20,6 +20,10 @@ Read-only is enforced in four independent layers, so no single mistake makes the
 - **`query` reads whatever the login can read.** The guard constrains *how* a statement reads, not *what* it may reach; the semantic profile shapes the report, but ad-hoc SQL is bounded by the grant. This is another reason the read-only login should also be a *narrow* one.
 - **The guard has been wrong before.** The function bypasses above were found by auditing this repository, not reported from outside. They are pinned by name and per dialect in `tests/test_guard.py`.
 
+### Measured, not asserted
+
+None of the above is a claim you have to take on faith. `erp-report-engine trust-benchmark` runs 28 well-formed-SQL attacks and 8 legitimate reads through the guard, in memory, no database — and prints the same number the [results page](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html) shows (CI regenerates the page from this run and fails on drift). It also runs the corpus through the naive checks common in the wild — a starts-with-`SELECT` head check and a write-keyword blocklist — so the contrast is visible: those refuse 6 and 9 of the 28, and the keyword scan additionally blocks a legitimate read whose string literal contains a write word, while the layered guard refuses all 28 and blocks none. `tests/test_baseline_guards.py` pins that the guard strictly dominates every such shortcut. You can also paste your own SQL into the guard, in your browser, on the [playground](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html).
+
 ## The MCP server (agent access)
 
 The optional MCP server (`erp-report-engine mcp`) exposes the ERP to an AI agent, so it is held to the model above **plus** the lessons of the 2025 MCP data-exfiltration incidents:
