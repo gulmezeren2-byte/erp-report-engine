@@ -2,7 +2,7 @@
 
 > The numbers for Monday's meeting are already sitting in your ERP's database. So who's still writing the report?
 
-**Autonomous weekly reports straight from the SQL database behind your ERP — read-only by construction, every query audited.**
+**A read-only, self-verifying data layer for the SQL database behind your ERP — weekly reports *and* a guarded MCP server for AI agents. Every query provably read-only: measured against 24 attacks, not promised in prose.**
 
 [![CI](https://github.com/gulmezeren2-byte/erp-report-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/gulmezeren2-byte/erp-report-engine/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/requirements.txt)
@@ -15,6 +15,10 @@ One scheduled `run` executes **9 audited SELECT statements** and delivers a self
 ![Weekly report produced by the engine from the bundled demo database](https://raw.githubusercontent.com/gulmezeren2-byte/erp-report-engine/main/assets/erp_report_preview.png)
 
 *This exact report was produced by one command against the bundled demo database — including the three data-quality problems deliberately seeded into it, all caught by the gate.*
+
+**The same guarded engine talks to AI agents, too.** `erp-report-engine mcp` exposes the ERP to an agent through *canonical entities* (`orders`, never `LG_001_01_ORFICHE`) behind the same read-only guard — the layer the MCP ecosystem keeps getting wrong. The reference PostgreSQL MCP server's read-only mode was walked out of with `COMMIT; DROP SCHEMA public CASCADE;` and [archived](https://github.com/modelcontextprotocol/servers-archived/tree/HEAD/src/postgres); Supabase's MCP became the textbook ["lethal trifecta"](https://simonwillison.net/2025/Jul/6/supabase-mcp-lethal-trifecta/). Here the guard checks the **functions a statement calls**, not just its shape — and you don't have to take the adjective's word for it:
+
+**▶ [Run the 24-attack trust benchmark](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** · **[break the guard yourself, in your browser](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)** (the real `guard.py`, via Pyodide, nothing sent anywhere).
 
 ## 60-second demo (no ERP required)
 

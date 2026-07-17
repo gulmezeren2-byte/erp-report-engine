@@ -2,7 +2,7 @@
 
 > Pazartesi toplantısının rakamları zaten ERP'nizin veritabanında duruyor. Peki raporu hâlâ kim yazıyor?
 
-**ERP'nizin arkasındaki SQL veritabanından otonom haftalık raporlar — mimarisi gereği salt-okunur, her sorgu denetim izinde.**
+**ERP'nizin arkasındaki SQL veritabanı için salt-okunur, kendini doğrulayan bir veri katmanı — hem haftalık raporlar *hem de* AI ajanları için korumalı bir MCP sunucusu. Her sorgu kanıtlanabilir şekilde salt-okunur: 24 saldırıya karşı ölçülmüş, düzyazıda vaat edilmemiş.**
 
 [![CI](https://github.com/gulmezeren2-byte/erp-report-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/gulmezeren2-byte/erp-report-engine/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/requirements.txt)
@@ -15,6 +15,10 @@ Zamanlanmış tek bir `run` komutu **9 denetlenmiş SELECT** çalıştırır ve 
 ![Motorun ürettiği haftalık rapor (demo veritabanından)](assets/erp_report_preview.png)
 
 *Yukarıdaki rapor, pakete dahil demo veritabanına karşı tek komutla üretildi — içine bilerek ekilmiş üç veri kalitesi sorunu dahil; üçünü de kapı yakaladı.*
+
+**Aynı korumalı motor AI ajanlarıyla da konuşur.** `erp-report-engine mcp`, ERP'yi bir ajana *kanonik varlıklar* üzerinden açar (`orders`, asla `LG_001_01_ORFICHE`) — aynı salt-okunur bekçinin arkasında. Bu, MCP ekosisteminin sürekli yanlış yaptığı katman: referans PostgreSQL MCP sunucusunun salt-okunur modu `COMMIT; DROP SCHEMA public CASCADE;` ile aşıldı ve [arşivlendi](https://github.com/modelcontextprotocol/servers-archived/tree/HEAD/src/postgres); Supabase'in MCP'si ders kitabı ["lethal trifecta"](https://simonwillison.net/2025/Jul/6/supabase-mcp-lethal-trifecta/) vakası oldu. Burada bekçi ifadenin **çağırdığı fonksiyonları** denetler, sadece şeklini değil — ve sıfatın sözüne güvenmek zorunda değilsiniz:
+
+**▶ [24 saldırılık güven benchmark'ını çalıştır](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** · **[bekçiyi tarayıcında kendin kır](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)** (gerçek `guard.py`, Pyodide ile, hiçbir yere bir şey gitmez).
 
 ## 60 saniyede demo (ERP gerekmez)
 

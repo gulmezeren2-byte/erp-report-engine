@@ -4,12 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "erp-report-engine"
-description = "Autonomous weekly reports straight from the SQL database behind your ERP - read-only by construction, every query audited."
+description = "A read-only, self-verifying data layer for the SQL database behind your ERP - weekly reports and a guarded MCP server for AI agents, every query provably read-only."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [{ name = "Eren Gülmez" }]
-keywords = ["erp", "reporting", "sql", "kpi", "logo-tiger", "mssql", "audit", "read-only", "supply-chain"]
+keywords = ["erp", "reporting", "sql", "kpi", "logo-tiger", "mssql", "audit", "read-only",
+            "supply-chain", "mcp", "model-context-protocol", "ai-agents", "text-to-sql"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
