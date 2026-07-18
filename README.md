@@ -240,7 +240,7 @@ Point Claude Desktop (or any MCP client) at it:
 
 The server launches via `uvx` (no manual install), reading `erp-config.yaml` from your project. The skills and the benchmark/schema commands work immediately, before you wire a database. (Details: [`.claude-plugin/`](https://github.com/gulmezeren2-byte/erp-report-engine/tree/main/.claude-plugin).)
 
-The agent **cannot write**: the guard rejects anything but a single read query calling only functions it recognises, the session is read-only, and — per the 2025 MCP data-exfiltration incidents — every returned value carries a note that rows are data, not instructions. It is, as far as we can find, the first SQL-level-guarded ERP MCP server, and the first for Logo Tiger.
+The agent **cannot write**: the guard rejects anything but a single read query calling only functions it recognises, the session is read-only, and — per the 2025 MCP data-exfiltration incidents — every returned value carries a note that rows are data, not instructions. It is, as far as we can find, the first SQL-level-guarded ERP MCP server, and the first for Logo Tiger. It's listed in [awesome-turkish-mcp](https://github.com/gulmezeren2-byte/awesome-turkish-mcp), a curated map of MCP servers for Turkish data and domains.
 
 ## What this does NOT do
 
