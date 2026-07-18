@@ -5,7 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
-Shaping up as **0.7.0**. The through-line is a repositioning that the tool had already grown into: the durable, differentiated wedge is not "another weekly report generator" but a **verifiably-safe, read-only access layer for the SQL database behind an ERP — for AI agents as much as for reports.** Everything below serves making that claim, and making it checkable.
+_Nothing yet._
+
+## [0.7.0] — 2026-07-18 · "The read-only agent layer — measured, not asserted"
+
+The through-line is a repositioning the tool had already grown into: the durable, differentiated wedge is not "another weekly report generator" but a **verifiably-safe, read-only access layer for the SQL database behind an ERP — for AI agents as much as for reports.** Everything below serves making that claim, and making it checkable — most of all the new benchmark contrast, which turns "read-only" from an adjective into a number you can reproduce.
 
 ### Added
 - **Reproducible trust benchmark.** A single attack corpus (`erp_report_engine/attack_corpus.py`) — 28 well-formed-SQL attacks across four dialects that a shape-only guard waves through, plus the legitimate reads that must still pass — is the one source read by the guard tests, the new `erp-report-engine trust-benchmark` CLI command, and a published results page. The number is computed from a live guard run and CI enforces it (page-drift gate), so the site can never claim a result the tests don't hold. It reproduces the two most-cited MCP database failures by name: the `COMMIT; DROP SCHEMA public CASCADE;` transaction escape that got Anthropic's reference Postgres server [archived](https://github.com/modelcontextprotocol/servers-archived/tree/HEAD/src/postgres), and the Supabase [lethal-trifecta](https://simonwillison.net/2025/Jul/6/supabase-mcp-lethal-trifecta/) write leg — both refused.
