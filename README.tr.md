@@ -20,6 +20,10 @@ Zamanlanmış tek bir `run` komutu **9 denetlenmiş SELECT** çalıştırır ve 
 
 **▶ [28 saldırılık güven benchmark'ını çalıştır](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** · **[bekçiyi tarayıcında kendin kır](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)** (gerçek `guard.py`, Pyodide ile, hiçbir yere bir şey gitmez).
 
+[![Salt-okunur bekçi, tarayıcı oyun alanında: bir sunucu-dosyası okuması ve meşhur COMMIT; DROP Postgres bypass'ı reddediliyor, gerçek analitik serbest — gerçek guard.py Pyodide ile çalışıyor](https://raw.githubusercontent.com/gulmezeren2-byte/erp-report-engine/main/docs/assets/playground-demo.gif)](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)
+
+*Testlerin çalıştırdığı `guard.py`'nin ta kendisi, tarayıcıda: bir dosya okuması ve salt-okunur-transaction kaçışı reddediliyor, gerçek bir agregasyon serbest. [Kendi saldırını yapıştır →](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)*
+
 ## 60 saniyede demo (ERP gerekmez)
 
 ```bash

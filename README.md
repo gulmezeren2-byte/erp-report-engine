@@ -22,6 +22,10 @@ One scheduled `run` executes **9 audited SELECT statements** and delivers a self
 
 **▶ [Run the 28-attack trust benchmark](https://gulmezeren2-byte.github.io/erp-report-engine/trust.html)** · **[break the guard yourself, in your browser](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)** (the real `guard.py`, via Pyodide, nothing sent anywhere).
 
+[![The read-only guard, in the browser playground: a server-file read and the famous COMMIT; DROP Postgres bypass are refused, real analytics is allowed — running the real guard.py via Pyodide](https://raw.githubusercontent.com/gulmezeren2-byte/erp-report-engine/main/docs/assets/playground-demo.gif)](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)
+
+*The exact `guard.py` the tests run, executing in the browser — a file read and the read-only-transaction escape refused, a real aggregate allowed. [Paste your own attack →](https://gulmezeren2-byte.github.io/erp-report-engine/playground.html)*
+
 ## 60-second demo (no ERP required)
 
 ```bash
