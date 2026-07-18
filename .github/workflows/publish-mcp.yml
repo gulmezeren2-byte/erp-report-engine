@@ -1,0 +1,63 @@
+# Publish server.json to the official MCP registry on demand, from main.
+#
+# The release pipeline (publish.yml) also does this, but it checks out the
+# release tag - so a fix to server.json after a release can't reach the
+# registry without a new release. This workflow closes that gap: run it by hand
+# (Actions -> "Publish to MCP registry" -> Run workflow) to (re)publish the
+# current main. Auth is GitHub OIDC, same as the release path - no stored token.
+name: Publish to MCP registry
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "PyPI version to publish to the registry (must already be live on PyPI)"
+        required: true
+        default: "0.7.0"
+
+permissions:
+  contents: read
+
+jobs:
+  publish-mcp:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write            # OIDC login to the registry (io.github.* namespace)
+      contents: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v5.0.1
+      - name: Set server.json version to the requested version
+        run: |
+          python - "$VERSION" <<'PY'
+          import json, sys, pathlib
+          v = sys.argv[1]
+          p = pathlib.Path("server.json")
+          d = json.loads(p.read_text(encoding="utf-8"))
+          d["version"] = v
+          for pkg in d.get("packages", []):
+              pkg["version"] = v
+          p.write_text(json.dumps(d, indent=2) + "\n", encoding="utf-8")
+          print("server.json version ->", v)
+          PY
+        env:
+          VERSION: ${{ inputs.version }}
+      - name: Confirm the version is live on PyPI
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsSL "https://pypi.org/pypi/erp-report-engine/$VERSION/json" >/dev/null 2>&1; then
+              echo "erp-report-engine $VERSION is live on PyPI"; exit 0
+            fi
+            echo "not yet on PyPI, retry $i/30…"; sleep 10
+          done
+          echo "timed out waiting for PyPI"; exit 1
+        env:
+          VERSION: ${{ inputs.version }}
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+      - name: Validate server.json
+        run: ./mcp-publisher validate
+      - name: Authenticate to the MCP registry (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+      - name: Publish to the MCP registry
+        run: ./mcp-publisher publish

@@ -2,18 +2,18 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.gulmezeren2-byte/erp-report-engine",
   "title": "ERP Report Engine",
-  "description": "A guarded, read-only MCP server over the SQL database behind an ERP. The agent sees canonical entities (orders, order_lines, inventory, receivables) - never raw ERP tables - through a provably read-only guard whose refusals are measured by a public benchmark. Profiles: Logo Tiger, Netsis, Mikro.",
+  "description": "Read-only MCP for the SQL database behind an ERP: provably read-only guard, public benchmark.",
   "repository": {
     "url": "https://github.com/gulmezeren2-byte/erp-report-engine",
     "source": "github"
   },
-  "version": "0.6.0",
+  "version": "0.7.0",
   "websiteUrl": "https://gulmezeren2-byte.github.io/erp-report-engine/",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "erp-report-engine",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "transport": { "type": "stdio" },
       "packageArguments": [
         { "type": "positional", "value": "mcp" },
