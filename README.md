@@ -231,6 +231,15 @@ Point Claude Desktop (or any MCP client) at it:
 { "mcpServers": { "erp": { "command": "erp-report-engine", "args": ["mcp", "-c", "C:\\path\\config.yaml"] } } }
 ```
 
+**Or install it as a Claude Code plugin** — the guarded MCP server, the safe-query skills, and zero-setup `/trust-benchmark` and `/erp-schema` commands, in two lines:
+
+```
+/plugin marketplace add gulmezeren2-byte/erp-report-engine
+/plugin install erp-report-engine
+```
+
+The server launches via `uvx` (no manual install), reading `erp-config.yaml` from your project. The skills and the benchmark/schema commands work immediately, before you wire a database. (Details: [`.claude-plugin/`](https://github.com/gulmezeren2-byte/erp-report-engine/tree/main/.claude-plugin).)
+
 The agent **cannot write**: the guard rejects anything but a single read query calling only functions it recognises, the session is read-only, and — per the 2025 MCP data-exfiltration incidents — every returned value carries a note that rows are data, not instructions. It is, as far as we can find, the first SQL-level-guarded ERP MCP server, and the first for Logo Tiger.
 
 ## What this does NOT do

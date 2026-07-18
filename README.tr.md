@@ -225,6 +225,15 @@ Claude Desktop'ı (veya herhangi bir MCP istemcisini) ona yöneltin:
 { "mcpServers": { "erp": { "command": "erp-report-engine", "args": ["mcp", "-c", "C:\\yol\\config.yaml"] } } }
 ```
 
+**Ya da Claude Code eklentisi olarak kurun** — korumalı MCP sunucusu, güvenli-sorgu skill'leri ve sıfır-kurulum `/trust-benchmark` + `/erp-schema` komutları, iki satırda:
+
+```
+/plugin marketplace add gulmezeren2-byte/erp-report-engine
+/plugin install erp-report-engine
+```
+
+Sunucu `uvx` ile başlar (elle kurulum yok), projenizden `erp-config.yaml` okur. Skill'ler ve benchmark/şema komutları, siz bir veritabanı bağlamadan **hemen** çalışır. (Ayrıntı: [`.claude-plugin/`](https://github.com/gulmezeren2-byte/erp-report-engine/tree/main/.claude-plugin).)
+
 Ajan **yazamaz**: sözcüksel + AST bekçisi tek okuma sorgusu dışında her şeyi reddeder, oturum salt-okunurdur ve — 2025 MCP veri-sızdırma olaylarının dersiyle — dönen her değer, satırların komut değil veri olduğu notunu taşır. Bildiğimiz kadarıyla, SQL-düzeyinde bekçili ilk ERP MCP sunucusu ve Logo Tiger için ilk.
 
 ## Bu sistem ne YAPMAZ?

@@ -1,0 +1,39 @@
+{
+  "name": "erp-report-engine",
+  "owner": {
+    "name": "Eren Gülmez"
+  },
+  "metadata": {
+    "description": "A provably read-only SQL layer for AI agents over the database behind an ERP - statement-checking guard, public benchmark, in-browser playground."
+  },
+  "plugins": [
+    {
+      "name": "erp-report-engine",
+      "source": "./",
+      "description": "The agent queries an ERP's database through canonical entities (never raw tables) behind a four-layer read-only guard that checks the statement itself - refusing the file reads, shell calls and write-escapes a shape-only check waves through. Bundles the guarded MCP server, safe-query skills, and a zero-setup trust benchmark. Profiles: Logo Tiger, Netsis, Mikro.",
+      "version": "0.7.0",
+      "author": {
+        "name": "Eren Gülmez"
+      },
+      "homepage": "https://gulmezeren2-byte.github.io/erp-report-engine/",
+      "repository": "https://github.com/gulmezeren2-byte/erp-report-engine",
+      "license": "MIT",
+      "keywords": [
+        "mcp",
+        "erp",
+        "read-only",
+        "ai-agents",
+        "sql",
+        "security"
+      ],
+      "category": "mcp",
+      "tags": [
+        "mcp",
+        "database",
+        "security",
+        "erp",
+        "read-only"
+      ]
+    }
+  ]
+}
