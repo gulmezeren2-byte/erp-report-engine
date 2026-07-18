@@ -5,7 +5,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- **The canonical model is now a published, machine-readable contract.** `erp-report-engine schema` prints it, and it ships as [`docs/model.json`](https://gulmezeren2-byte.github.io/erp-report-engine/model.json) — every entity's grain, each column's type and meaning, and runnable example queries — so a tool can consume the semantic layer without connecting to the MCP server. One source (`semantic.canonical_model()`), shared by `describe_model`, the CLI, and the published file; CI regenerates it and fails on drift. The model carries its own `model_version`, so the contract is stable across engine releases and moves only when the model does.
+- A recorded **playground demo** (the real `guard.py` refusing a file read and the famous `COMMIT; DROP` Postgres bypass, then allowing a real aggregate) and a social-preview card, featured on the READMEs and the landing page.
 
 ## [0.7.0] — 2026-07-18 · "The read-only agent layer — measured, not asserted"
 

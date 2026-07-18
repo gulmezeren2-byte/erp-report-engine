@@ -106,6 +106,17 @@ def cmd_mcp(args) -> None:
     serve(args.config)
 
 
+def cmd_schema(args) -> None:
+    """Print the canonical model as JSON - the machine-readable semantic contract.
+
+    No database, no config: it is the same model `describe_model` exposes to an
+    agent, profile-independent, so a tool can consume it without connecting.
+    """
+    from .semantic import canonical_model
+
+    print(json.dumps(canonical_model(), indent=2, ensure_ascii=False))
+
+
 def cmd_trust_benchmark(args) -> None:
     """Run the read-only guard against its own attack corpus and report.
 
@@ -232,6 +243,10 @@ def main(argv: list[str] | None = None) -> None:
                        help="run the read-only guard against its attack corpus (no DB needed)")
     s.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     s.set_defaults(fn=cmd_trust_benchmark)
+
+    s = sub.add_parser("schema",
+                       help="print the canonical model as JSON (the machine-readable semantic contract)")
+    s.set_defaults(fn=cmd_schema)
 
     args = p.parse_args(argv)
     run_id = logsetup.configure(verbose=args.verbose, log_file=args.log_file)

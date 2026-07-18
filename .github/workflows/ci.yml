@@ -83,6 +83,10 @@ jobs:
           python docs/generate_trust_page.py
           python docs/generate_playground.py
           git diff --exit-code -- docs/trust.html docs/playground.html
+      - name: The published canonical model matches the code (no drift)
+        run: |
+          python docs/generate_model_json.py
+          git diff --exit-code -- docs/model.json
       - name: The trust-benchmark CLI passes (every attack refused)
         run: python -m erp_report_engine trust-benchmark
 

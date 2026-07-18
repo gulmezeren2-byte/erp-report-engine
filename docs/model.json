@@ -1,0 +1,128 @@
+{
+  "model_version": "1",
+  "entities": {
+    "orders": {
+      "required": true,
+      "grain": "one row per order (duplicates on order_id are collapsed to one)",
+      "columns": [
+        {
+          "name": "order_id",
+          "type": "text",
+          "description": "unique order identifier; the join key for order_lines"
+        },
+        {
+          "name": "order_date",
+          "type": "date",
+          "description": "when the order was placed - drives the ISO-week revenue and order-count KPIs"
+        },
+        {
+          "name": "region",
+          "type": "text",
+          "description": "sales region - used for week-over-week driver attribution"
+        },
+        {
+          "name": "customer",
+          "type": "text",
+          "description": "customer name - used for driver attribution and revenue concentration"
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "description": "order status; 'delivered', 'shipped' or 'closed' count as fulfilled"
+        },
+        {
+          "name": "promised_date",
+          "type": "date",
+          "description": "the date the order was promised to ship"
+        },
+        {
+          "name": "actual_ship_date",
+          "type": "date",
+          "description": "when it actually shipped; on-time = actual_ship_date <= promised_date. NULL means NOT yet shipped - such a late order is not counted against on-time %"
+        },
+        {
+          "name": "net_total",
+          "type": "number",
+          "description": "order net total - this is the revenue measure"
+        }
+      ],
+      "examples": [
+        "SELECT customer, SUM(net_total) AS revenue FROM orders GROUP BY customer ORDER BY revenue DESC",
+        "SELECT region, COUNT(*) AS orders FROM orders WHERE status IN ('delivered','shipped','closed') GROUP BY region"
+      ]
+    },
+    "order_lines": {
+      "required": true,
+      "grain": "one row per order line",
+      "columns": [
+        {
+          "name": "order_id",
+          "type": "text",
+          "description": "the order this line belongs to (joins to orders.order_id)"
+        },
+        {
+          "name": "item_code",
+          "type": "text",
+          "description": "the stock item on the line (joins to inventory.item_code)"
+        },
+        {
+          "name": "qty",
+          "type": "number",
+          "description": "quantity ordered - summed over recent weeks to estimate weekly demand"
+        }
+      ],
+      "examples": [
+        "SELECT l.item_code, SUM(l.qty) AS units FROM order_lines l JOIN orders o ON o.order_id = l.order_id GROUP BY l.item_code ORDER BY units DESC"
+      ]
+    },
+    "inventory": {
+      "required": true,
+      "grain": "one row per item (quantities summed if the source splits by warehouse)",
+      "columns": [
+        {
+          "name": "item_code",
+          "type": "text",
+          "description": "stock item identifier"
+        },
+        {
+          "name": "stock_qty",
+          "type": "number",
+          "description": "units on hand - divided by average weekly demand to get weeks of cover"
+        }
+      ],
+      "examples": [
+        "SELECT item_code, stock_qty FROM inventory WHERE stock_qty = 0"
+      ]
+    },
+    "receivables": {
+      "required": false,
+      "grain": "one row per open invoice (positive, dated balances)",
+      "columns": [
+        {
+          "name": "invoice_id",
+          "type": "text",
+          "description": "unique open-invoice identifier"
+        },
+        {
+          "name": "customer",
+          "type": "text",
+          "description": "the customer who owes the balance"
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "description": "when payment is due; overdue days = report date - due_date"
+        },
+        {
+          "name": "open_amount",
+          "type": "number",
+          "description": "the open balance; only positive, dated balances are aged"
+        }
+      ],
+      "examples": [
+        "SELECT customer, SUM(open_amount) AS owed FROM receivables GROUP BY customer ORDER BY owed DESC"
+      ]
+    }
+  },
+  "notes": "Query only these canonical entities and columns through the guarded, read-only path (the MCP `query` tool). A semantic profile maps them to a specific ERP's real tables; the raw schema is never exposed. Optional entities appear only when a profile maps them. Every access is read-only and audited."
+}

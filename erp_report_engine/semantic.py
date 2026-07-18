@@ -123,6 +123,44 @@ OPTIONAL_COLUMNS: dict[str, list[str]] = {
     e: list(spec["columns"]) for e, spec in CANONICAL_SCHEMA.items() if not spec["required"]
 }
 
+# The canonical model has its own version, bumped only when an entity or column
+# changes - so the published contract (docs/model.json) is stable across engine
+# releases and only moves when the *model* does.
+CANONICAL_MODEL_VERSION = "1"
+
+
+def canonical_model() -> dict:
+    """The full canonical model as a stable, JSON-serialisable contract.
+
+    This is the machine-readable form of what `describe_model` tells an agent:
+    every entity's grain, every column's type and meaning, and runnable example
+    queries - independent of any one ERP profile. Published as docs/model.json
+    and emitted by `erp-report-engine schema`, so a tool can consume the model
+    without connecting, and CI fails if the published copy drifts from the code.
+    """
+    entities = {}
+    for name, spec in CANONICAL_SCHEMA.items():
+        entities[name] = {
+            "required": spec["required"],
+            "grain": spec["grain"],
+            "columns": [
+                {"name": col, "type": typ, "description": desc}
+                for col, (typ, desc) in spec["columns"].items()
+            ],
+            "examples": CANONICAL_EXAMPLES.get(name, []),
+        }
+    return {
+        "model_version": CANONICAL_MODEL_VERSION,
+        "entities": entities,
+        "notes": (
+            "Query only these canonical entities and columns through the guarded, "
+            "read-only path (the MCP `query` tool). A semantic profile maps them to a "
+            "specific ERP's real tables; the raw schema is never exposed. Optional "
+            "entities appear only when a profile maps them. Every access is read-only "
+            "and audited."
+        ),
+    }
+
 _SAFE_VAR = re.compile(r"^[A-Za-z0-9_]{1,16}$")
 
 

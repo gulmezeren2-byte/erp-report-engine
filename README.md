@@ -221,6 +221,8 @@ Six tools, all funneled through the guarded path:
 | `check_query` | whether a SQL statement would pass the guard — *without running it* |
 | `query` | run a read-only `SELECT`/`WITH`, capped and audited; rows returned as **untrusted data** |
 
+The canonical model is also published as a **machine-readable contract** — [`model.json`](https://gulmezeren2-byte.github.io/erp-report-engine/model.json), or `erp-report-engine schema` — so a tool can read the entities, column types, meanings, and example queries *without* connecting. CI regenerates it from the code and fails on drift, so the contract can't say more than the engine holds.
+
 A first-party **[agent skill pack](https://github.com/gulmezeren2-byte/erp-report-engine/tree/main/skills)** (`erp-safe-query`, `explain-kpi-move`, `write-erp-profile`) teaches an agent to work *with* this grain — dry-run before querying, aggregate instead of dumping rows, cite audited numbers, and never treat ERP text as a command.
 
 Point Claude Desktop (or any MCP client) at it:
