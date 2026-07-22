@@ -102,6 +102,20 @@ def cmd_init_demo(args) -> None:
 def cmd_mcp(args) -> None:
     from .mcp_server import serve
 
+    if getattr(args, "demo", False):
+        # Zero-setup mode: build the bundled demo DB in a temp dir and serve
+        # against it. Lets anyone (and directory evaluators like Glama) start the
+        # server and introspect its tools with no ERP and no config.
+        import tempfile
+
+        from .demo_builder import build
+        demo_dir = os.path.join(tempfile.gettempdir(), "erp-report-engine-demo")
+        cfg_path = build(demo_dir)
+        _log.info("starting MCP server (stdio) against the bundled DEMO database")
+        serve(str(cfg_path))
+        return
+    if not args.config:
+        raise EngineError("mcp needs -c/--config <config.yaml> (or --demo for a zero-setup try)")
     _log.info("starting MCP server (stdio) with config %s", args.config)
     serve(args.config)
 
@@ -236,7 +250,9 @@ def main(argv: list[str] | None = None) -> None:
     s.set_defaults(fn=cmd_init_demo)
 
     s = sub.add_parser("mcp", help="run the guarded MCP server (stdio) for agent access to the ERP")
-    s.add_argument("-c", "--config", required=True)
+    s.add_argument("-c", "--config", help="path to the engine config YAML (DB via url_env, profile, limits)")
+    s.add_argument("--demo", action="store_true",
+                   help="serve against the bundled demo database, no config needed - for a zero-setup try")
     s.set_defaults(fn=cmd_mcp)
 
     s = sub.add_parser("trust-benchmark",

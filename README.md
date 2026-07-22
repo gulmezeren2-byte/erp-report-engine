@@ -227,7 +227,13 @@ The canonical model is also published as a **machine-readable contract** — [`m
 
 A first-party **[agent skill pack](https://github.com/gulmezeren2-byte/erp-report-engine/tree/main/skills)** (`erp-safe-query`, `explain-kpi-move`, `write-erp-profile`) teaches an agent to work *with* this grain — dry-run before querying, aggregate instead of dumping rows, cite audited numbers, and never treat ERP text as a command.
 
-Point Claude Desktop (or any MCP client) at it:
+**Try it in one line, no ERP, no config** — serve the guarded MCP over the bundled demo database:
+
+```bash
+erp-report-engine mcp --demo        # or: docker run --rm -i erp-report-engine
+```
+
+Then point Claude Desktop (or any MCP client) at it:
 
 ```json
 { "mcpServers": { "erp": { "command": "erp-report-engine", "args": ["mcp", "-c", "C:\\path\\config.yaml"] } } }

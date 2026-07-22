@@ -25,4 +25,7 @@ USER app
 WORKDIR /work
 
 ENTRYPOINT ["erp-report-engine"]
-CMD ["--help"]
+# Default to a zero-setup guarded MCP server over the bundled demo database, so
+# `docker run erp-report-engine` is a working server anyone (or a registry
+# evaluator) can introspect. Override for real use: `docker run ... run -c config.yaml`.
+CMD ["mcp", "--demo"]
