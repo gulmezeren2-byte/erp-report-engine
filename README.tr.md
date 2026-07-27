@@ -114,6 +114,8 @@ erp-report-engine trust-benchmark
 
 Sadece bekçiyi kendi MCP sunucun ya da DB aracın için mi istiyorsun? Bağımsız paket olarak çıkarıldı: **[`readonly-sql-guard`](https://github.com/gulmezeren2-byte/readonly-sql-guard)** (`pip install readonly-sql-guard`) — tek fonksiyon, yalnız `re` + `sqlglot`.
 
+Aynı fikrin bir üst katmanı: **[`ossie-guard`](https://github.com/gulmezeren2-byte/ossie-guard)** — [Apache Ossie](https://github.com/apache/ossie) semantik modellerinde bir metriğin lehçeleri sessizce farklı hesap yapıyorsa (bir ambarda `SUM`, diğerinde `AVG`) ve ifadeler saf/tekrar-üretilebilir birer okuma değilse yakalar; bulguları SARIF ile GitHub code scanning'e raporlar.
+
 Daha fazlası: **["düzyazıda salt-okunur" neden salt-okunur değildir](https://gulmezeren2-byte.github.io/erp-report-engine/case-study.html)** (MCP dünyasının iki meşhur veritabanı faciası ve arkasındaki saldırı sınıfı) · **[AI ajanları için salt-okunur veritabanı erişimi, karşılaştırıldı](https://gulmezeren2-byte.github.io/erp-report-engine/comparison.html)** (transaction vs rol vs ifade bekçisi vs semantik katman — her birinin nerede kazandığı konusunda dürüst).
 
 Ayrıca: profil değişkenleri tanımlayıcı-güvenli (`^[A-Za-z0-9_]{1,16}$`, yani `"001; DROP TABLE x"` daha bağlantı kurulmadan hata fırlatır), sırlar asla config dosyasında yaşamaz (yükleyici gömülü kimlik bilgisini her yazımıyla reddeder — `password`, `passwd`, `pwd`, `sslpassword`, ODBC `PWD=` — `url_env` kullanın), çalıştırılan her ifade raporun denetim izinde gönderilir ve satır tavanı (varsayılan 500 bin) her sorguyu sınırlar.

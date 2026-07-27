@@ -116,6 +116,8 @@ erp-report-engine trust-benchmark
 
 Want just the guard for your *own* MCP server or DB tool? It's extracted as a standalone package: **[`readonly-sql-guard`](https://github.com/gulmezeren2-byte/readonly-sql-guard)** (`pip install readonly-sql-guard`) — one function, `re` + `sqlglot` only.
 
+Same idea one layer up: **[`ossie-guard`](https://github.com/gulmezeren2-byte/ossie-guard)** lints [Apache Ossie](https://github.com/apache/ossie) semantic models for metrics whose dialects silently disagree (`SUM` on one warehouse, `AVG` on another) and for expressions that are not pure, reproducible reads — reporting to GitHub code scanning as SARIF.
+
 Further reading: **[why "read-only-in-prose" is not read-only](https://gulmezeren2-byte.github.io/erp-report-engine/case-study.html)** (the two famous MCP database failures and the class of attack behind them) · **[read-only database access for AI agents, compared](https://gulmezeren2-byte.github.io/erp-report-engine/comparison.html)** (transactions vs roles vs statement guards vs semantic layers — honest about where each wins).
 
 Plus: profile variables are identifier-safe (`^[A-Za-z0-9_]{1,16}$`, so `"001; DROP TABLE x"` raises before any connection), secrets never live in config files (the loader refuses embedded credentials in any spelling — `password`, `passwd`, `pwd`, `sslpassword`, ODBC `PWD=` — use `url_env`), every executed statement ships in the report's audit trail, and a row cap (default 500k) bounds any single query.
