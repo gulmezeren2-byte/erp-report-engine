@@ -17,7 +17,11 @@ FROM python:3.14-slim@sha256:d3400aa122fa42cf0af0dbe8ec3091b047eac5c8f7e3539f713
 WORKDIR /app
 COPY pyproject.toml README.md LICENSE ./
 COPY erp_report_engine ./erp_report_engine
-RUN pip install --no-cache-dir ".[postgres]"
+# The default CMD below is the MCP server, so the [mcp] extra belongs in the
+# image too - without it `docker run erp-report-engine` exits immediately with
+# "the MCP server needs the 'mcp' extra", which is what a registry evaluator
+# sees when it tries to introspect the server.
+RUN pip install --no-cache-dir ".[postgres,mcp]"
 
 # never run as root; work out of a mounted /work volume
 RUN useradd --create-home --uid 10001 app
