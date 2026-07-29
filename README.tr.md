@@ -12,7 +12,7 @@
 
 Zamanlanmış tek bir `run` komutu **9 denetlenmiş SELECT** çalıştırır ve kendi kendine yeten bir HTML rapor üretir: 8 haftalık taban çizgisine karşı dört KPI, sürücüsü isimlendirilmiş bulgular, veri kalitesi kapısı ve kaynakla mutabakatı yapılmış satır sayıları. BI lisansı yok, ERP sunucusuna kurulan ajan yok ve **yazma yok — dört katmanda zorlanır (sözcüksel, ayrıştırma-ağacı, yan etkili fonksiyon bekçisi ve salt-okunur oturum), dokümanda vaat edilerek değil**.
 
-![Motorun ürettiği haftalık rapor (demo veritabanından)](assets/erp_report_preview.png)
+![Motorun ürettiği haftalık rapor (demo veritabanından)](docs/assets/erp_report_preview.png)
 
 *Yukarıdaki rapor, pakete dahil demo veritabanına karşı tek komutla üretildi — içine bilerek ekilmiş üç veri kalitesi sorunu dahil; üçünü de kapı yakaladı.*
 
@@ -45,7 +45,7 @@ Her komut `python -m erp_report_engine …` olarak da çalışır. Veritabanı s
 
 Ya da premium **Command Center** için `run --dashboard`: koyu, modern, kendi kendine yeten; animasyonlu KPI'lar ve parlayan SPC kontrol-bantlı grafiklerle (**[canlı](https://gulmezeren2-byte.github.io/erp-report-engine/dashboard.html)**):
 
-![Command Center dashboard — SPC kontrol-bantlı grafiklerle koyu glassmorphic bento grid](assets/dashboard_preview.png)
+![Command Center dashboard — SPC kontrol-bantlı grafiklerle koyu glassmorphic bento grid](docs/assets/dashboard_preview.png)
 
 ## Tek çalıştırma ne üretir?
 

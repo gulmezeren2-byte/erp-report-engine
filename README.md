@@ -14,7 +14,7 @@
 
 One scheduled `run` executes **9 audited SELECT statements** and delivers a self-contained HTML report: four KPIs against an 8-week baseline, findings with named drivers, a data-quality gate, and row counts reconciled against the source. No BI license, no agent installed on the ERP server, and **no writes — enforced in four layers (lexical, parse-tree, a side-effecting-function guard, and a read-only session), not promised in prose**.
 
-![Weekly report produced by the engine from the bundled demo database](https://raw.githubusercontent.com/gulmezeren2-byte/erp-report-engine/main/assets/erp_report_preview.png)
+![Weekly report produced by the engine from the bundled demo database](https://raw.githubusercontent.com/gulmezeren2-byte/erp-report-engine/main/docs/assets/erp_report_preview.png)
 
 *This exact report was produced by one command against the bundled demo database — including the three data-quality problems deliberately seeded into it, all caught by the gate.*
 
@@ -47,7 +47,7 @@ Open `reports/erp_report_<week>.html`. You'll see the engine catch a revenue spi
 
 Or run `run --dashboard` for the premium **Command Center** — a dark, modern, self-contained dashboard with animated KPIs and glowing SPC control-band charts (**[live](https://gulmezeren2-byte.github.io/erp-report-engine/dashboard.html)**):
 
-![The Command Center dashboard — dark glassmorphic bento grid with SPC control-band charts](https://raw.githubusercontent.com/gulmezeren2-byte/erp-report-engine/main/assets/dashboard_preview.png)
+![The Command Center dashboard — dark glassmorphic bento grid with SPC control-band charts](https://raw.githubusercontent.com/gulmezeren2-byte/erp-report-engine/main/docs/assets/dashboard_preview.png)
 
 ## What one run produces
 

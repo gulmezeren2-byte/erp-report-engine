@@ -5,91 +5,286 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>erp-report-engine — weekly reports from the SQL behind your ERP</title>
 <meta name="description" content="A read-only, self-verifying data layer for the SQL database behind your ERP — weekly reports and a guarded MCP server for AI agents. Every query provably read-only, measured against 28 attacks.">
+<meta property="og:title" content="erp-report-engine — provably read-only ERP reporting">
+<meta property="og:description" content="Weekly reports and a guarded MCP server over your ERP's database. Read-only measured against 28 attacks, not promised in prose.">
+<meta property="og:image" content="https://gulmezeren2-byte.github.io/erp-report-engine/assets/social-card.png">
+<meta name="twitter:card" content="summary_large_image">
 <style>
- *{box-sizing:border-box}
- body{margin:0;background:#0b0d10;color:#f4f6f8;
-   font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-   -webkit-font-smoothing:antialiased}
- .wrap{max-width:900px;margin:0 auto;padding:64px 22px 80px}
- a{color:#3987e5;text-decoration:none} a:hover{text-decoration:underline}
- h1{font-size:34px;line-height:1.2;margin:0 0 10px;letter-spacing:-.6px}
- .tag{color:#c7d1db;font-size:19px;margin:0 0 8px}
- .sub{color:#7d8590;font-size:15px;margin:0 0 30px}
- pre{background:#111418;border:1px solid #20242b;border-radius:8px;padding:14px 16px;overflow-x:auto;
-   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;color:#c7d1db;margin:0 0 34px}
- .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:0 0 40px}
- .card{display:block;background:#0f1216;border:1px solid #20242b;border-radius:12px;padding:20px 22px;
-   color:inherit;transition:border-color .15s,transform .15s}
- .card:hover{border-color:#3987e5;transform:translateY(-2px);text-decoration:none}
- .card h3{margin:0 0 6px;font-size:17px}
- .card p{margin:0;color:#7d8590;font-size:14px;line-height:1.5}
- .card .go{color:#3987e5;font-size:13px;margin-top:12px;display:inline-block}
- .pill{display:inline-block;background:#0f2a16;color:#0ca30c;border:1px solid #14401f;border-radius:20px;
-   padding:3px 12px;font-size:13px;font-weight:600;margin:0 0 26px}
- h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:#7d8590;margin:38px 0 12px;font-weight:600}
- ul{margin:0 0 30px;padding-left:20px;color:#c7d1db} li{margin:5px 0}
- footer{margin-top:52px;padding-top:20px;border-top:1px solid #20242b;color:#7d8590;font-size:13px}
+  :root{
+    --bg:#08090c; --panel:#0f1216; --line:#1c212a; --line-soft:#161a21;
+    --ink:#f2f5f8; --ink-2:#c3ccd6; --ink-3:#78828f;
+    --accent:#3b82f6; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+
+  /* ---------- hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    padding:84px 0 64px;
+    background:
+      radial-gradient(900px 420px at 15% -10%, rgba(59,130,246,.16), transparent 60%),
+      radial-gradient(700px 380px at 88% 0%, rgba(34,197,94,.10), transparent 60%);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    border:1px solid var(--line);background:rgba(255,255,255,.03);
+    color:var(--ink-2);border-radius:999px;padding:5px 14px;font-size:13px;margin-bottom:22px;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px rgba(34,197,94,.15)}
+  h1{font-size:clamp(34px,5.4vw,52px);line-height:1.08;margin:0 0 18px;letter-spacing:-1.2px;font-weight:700}
+  h1 .grad{background:linear-gradient(100deg,#60a5fa,#22c55e);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{font-size:clamp(17px,2.2vw,20px);color:var(--ink-2);margin:0 0 14px;max-width:44em}
+  .sub{color:var(--ink-3);font-size:15px;margin:0 0 30px;max-width:44em}
+  .cta{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:34px}
+  .btn{
+    display:inline-block;padding:11px 20px;border-radius:9px;font-size:15px;font-weight:600;
+    border:1px solid var(--line);color:var(--ink);background:rgba(255,255,255,.04);transition:.15s;
+  }
+  .btn:hover{text-decoration:none;border-color:#2f3846;transform:translateY(-1px)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#2f76e8}
+  code.inline{background:#12161c;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.9em;color:#cfe0f5}
+
+  /* ---------- proof bars ---------- */
+  .proof{margin:0;padding:56px 0;border-bottom:1px solid var(--line-soft)}
+  .kicker{font-size:12px;text-transform:uppercase;letter-spacing:1.1px;color:var(--ink-3);font-weight:700;margin:0 0 10px}
+  .proof h2{font-size:clamp(22px,3vw,30px);margin:0 0 8px;letter-spacing:-.5px}
+  .proof p.note{color:var(--ink-3);font-size:14.5px;margin:0 0 26px;max-width:52em}
+  .bars{display:grid;gap:12px;max-width:760px}
+  .bar-row{display:grid;grid-template-columns:minmax(150px,210px) 1fr auto;gap:14px;align-items:center}
+  .bar-label{color:var(--ink-2);font-size:14px}
+  /* both must be block: they are <span>s, and an inline box ignores height/width */
+  .bar-track{display:block;background:#12161c;border:1px solid var(--line);border-radius:6px;height:26px;overflow:hidden}
+  .bar-fill{display:block;height:100%;border-radius:5px 0 0 5px}
+  .bar-val{font-variant-numeric:tabular-nums;font-size:14px;font-weight:700;min-width:64px;text-align:right}
+  .w6{width:21.4%;background:linear-gradient(90deg,#7f1d1d,#ef4444)}
+  .w9{width:32.1%;background:linear-gradient(90deg,#78350f,#f59e0b)}
+  .w28{width:100%;background:linear-gradient(90deg,#14532d,#22c55e)}
+  .muted{color:var(--ink-3)} .strong{color:var(--good)}
+
+  /* ---------- showcase ---------- */
+  section.shots{padding:60px 0 20px}
+  .shot{margin:0 0 64px}
+  .shot h3{font-size:clamp(20px,2.6vw,26px);margin:0 0 8px;letter-spacing:-.4px}
+  .shot .why{color:var(--ink-2);font-size:15.5px;margin:0 0 20px;max-width:56em}
+  .frame{
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);
+    box-shadow:0 20px 55px rgba(0,0,0,.5);transition:.2s;display:block;
+  }
+  a.frame:hover{border-color:#2f4f7a;transform:translateY(-3px);text-decoration:none}
+  .frame .chrome{
+    display:flex;align-items:center;gap:7px;padding:9px 13px;background:#12161c;border-bottom:1px solid var(--line);
+  }
+  .frame .chrome i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .frame .chrome span{margin-left:8px;color:var(--ink-3);font-size:12px;font-weight:600}
+  .frame img{display:block;width:100%;height:auto}
+  .shot .cap{color:var(--ink-3);font-size:13.5px;margin:12px 0 0}
+  .tall{max-height:560px;overflow:hidden;position:relative}
+  .tall::after{content:"";position:absolute;left:0;right:0;bottom:0;height:120px;
+    background:linear-gradient(180deg,transparent,var(--panel))}
+  .tall-more{position:absolute;bottom:14px;left:0;right:0;text-align:center;z-index:2;
+    color:#cfe0f5;font-size:13px;font-weight:600}
+
+  /* ---------- cards ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:0 0 18px}
+  .card{display:block;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;
+    color:inherit;transition:.15s}
+  .card:hover{border-color:var(--accent);transform:translateY(-2px);text-decoration:none}
+  .card h4{margin:0 0 6px;font-size:16px}
+  .card p{margin:0;color:var(--ink-3);font-size:13.5px;line-height:1.55}
+  .card .go{color:var(--accent);font-size:13px;margin-top:11px;display:inline-block}
+
+  /* ---------- facts ---------- */
+  .facts{padding:52px 0;border-top:1px solid var(--line-soft)}
+  .fact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:26px}
+  .fact h4{margin:0 0 8px;font-size:15px;color:var(--ink)}
+  .fact ul{margin:0;padding-left:18px;color:var(--ink-2);font-size:14.5px}
+  .fact li{margin:6px 0}
+  pre{background:#0d1116;border:1px solid var(--line);border-radius:9px;padding:15px 17px;overflow-x:auto;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13.5px;color:#c7d1db;margin:0 0 8px}
+
+  footer{padding:34px 0 60px;border-top:1px solid var(--line-soft);color:var(--ink-3);font-size:13.5px;margin-top:34px}
+
+  @media (max-width:640px){
+    .bar-row{grid-template-columns:1fr;gap:5px}
+    .bar-val{text-align:left}
+    .hero{padding:56px 0 44px}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>erp-report-engine</h1>
-  <p class="tag">A read-only, self-verifying data layer for the SQL database behind your ERP — weekly reports, and a guarded MCP server for AI agents.</p>
-  <p class="sub">Every query provably read-only, measured against 28 attacks. No BI license, no agent installed on the ERP server, no writes.</p>
 
-  <a class="pill" href="playground.html">✓ read-only guard: 28/28 attacks refused — try to break it →</a>
-
-  <a href="playground.html" style="display:block;margin:22px 0 26px">
-    <img src="assets/playground-demo.gif" alt="The read-only guard in the browser playground: a server-file read and the famous COMMIT; DROP Postgres bypass are refused, real analytics is allowed"
-         style="max-width:100%;border:1px solid #20242b;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.4)">
-  </a>
-
-  <pre>pipx install erp-report-engine
+<!-- ============ HERO ============ -->
+<div class="hero">
+  <div class="wrap">
+    <span class="eyebrow"><span class="dot"></span> 28/28 attacks refused · 8/8 legitimate reads allowed</span>
+    <h1>The numbers for Monday's meeting are already in your ERP.<br><span class="grad">So who's still writing the report?</span></h1>
+    <p class="lede">A read-only, self-verifying data layer for the SQL database behind your ERP — weekly reports, <em>and</em> a guarded MCP server for AI agents.</p>
+    <p class="sub">Every query provably read-only: <strong>measured against 28 attacks, not promised in prose.</strong> No BI licence, no agent installed on the ERP server, no writes.</p>
+    <div class="cta">
+      <a class="btn primary" href="sample-report.html">See a real report →</a>
+      <a class="btn" href="dashboard.html">Open the dashboard</a>
+      <a class="btn" href="playground.html">Try to break the guard</a>
+      <a class="btn" href="https://github.com/gulmezeren2-byte/erp-report-engine">GitHub</a>
+    </div>
+    <pre>pip install erp-report-engine
 erp-report-engine init-demo
 erp-report-engine run -c config.demo.yaml</pre>
+    <p class="sub" style="margin:0">Three commands, no ERP required — the demo database ships with the package.</p>
+  </div>
+</div>
 
+<!-- ============ PROOF ============ -->
+<div class="proof">
+  <div class="wrap">
+    <p class="kicker">The difference, measured</p>
+    <h2>Everyone <em>says</em> read-only. This one is scored.</h2>
+    <p class="note">The same 28-attack corpus — file reads, shell execution, outbound sockets, the read-only-transaction escape — run through the shortcuts real tools ship, and through this guard. A guard that blocks nothing is useless, so legitimate reads are scored too.</p>
+    <div class="bars">
+      <div class="bar-row">
+        <span class="bar-label muted">starts-with-<code class="inline">SELECT</code></span>
+        <span class="bar-track"><span class="bar-fill w6"></span></span>
+        <span class="bar-val muted">6 / 28</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label muted">write-keyword blocklist</span>
+        <span class="bar-track"><span class="bar-fill w9"></span></span>
+        <span class="bar-val muted">9 / 28</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label"><strong>this guard</strong></span>
+        <span class="bar-track"><span class="bar-fill w28"></span></span>
+        <span class="bar-val strong">28 / 28</span>
+      </div>
+    </div>
+    <p class="note" style="margin:22px 0 0">The keyword blocklist also breaks a legitimate read — one whose text merely <em>contains</em> a write word. <a href="trust.html">See the full benchmark →</a></p>
+  </div>
+</div>
+
+<!-- ============ SHOWCASE ============ -->
+<section class="shots">
+  <div class="wrap">
+
+    <div class="shot">
+      <p class="kicker">What one run produces</p>
+      <h3>A weekly report that audits itself</h3>
+      <p class="why">Four KPIs against an 8-week baseline, findings with <strong>named drivers</strong> (not just "revenue is up" — <em>which region</em>, and how much of the move), receivables aging, a data-quality gate that confesses the problems in your own data, and row counts reconciled against the source.</p>
+      <a class="frame" href="sample-report.html">
+        <span class="chrome"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Weekly ERP Report — 2026-W30</span></span>
+        <span class="tall" style="display:block">
+          <img src="assets/erp_report_preview.png" alt="The weekly report: KPI cards, findings with named drivers, trends, stock attention list, receivables aging, data-quality gate and source reconciliation">
+          <span class="tall-more">Open the live report →</span>
+        </span>
+      </a>
+      <p class="cap">Produced by one command against the bundled demo database — including the data-quality problems deliberately seeded into it, every one caught by the gate.</p>
+    </div>
+
+    <div class="shot">
+      <p class="kicker">Proof, not adjectives</p>
+      <h3>The guard, scored against 28 real attacks</h3>
+      <p class="why">The famous <code class="inline">COMMIT; DROP SCHEMA</code> escape that got the reference Postgres MCP server archived. Server-file reads. Shell execution. Outbound sockets. Each one refused — while eight ordinary reporting queries pass untouched.</p>
+      <a class="frame" href="trust.html">
+        <span class="chrome"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>$ erp-report-engine trust-benchmark</span></span>
+        <img src="assets/trust_benchmark_preview.png" alt="The trust benchmark terminal output: 28 attacks blocked, 8 legitimate reads allowed, and the comparison against shape-only checks">
+      </a>
+      <p class="cap">Runs on your machine in seconds, no database required: <code class="inline">erp-report-engine trust-benchmark</code></p>
+    </div>
+
+    <div class="shot">
+      <p class="kicker">Interactive</p>
+      <h3>Don't take the adjective's word for it</h3>
+      <p class="why">The <em>real</em> <code class="inline">guard.py</code> the tests run, executing in your browser via Pyodide. Paste your own attack and watch it get refused — or find one that isn't, and tell me.</p>
+      <a class="frame" href="playground.html">
+        <span class="chrome"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Read-only guard — browser playground</span></span>
+        <img src="assets/playground-demo.gif" alt="The read-only guard in the browser playground: a server-file read and the COMMIT; DROP Postgres bypass refused, real analytics allowed">
+      </a>
+      <p class="cap">Nothing is sent anywhere — the guard runs entirely in your browser.</p>
+    </div>
+
+    <div class="shot">
+      <p class="kicker">The same guarded extraction, visualised</p>
+      <h3>A Power BI Command Center, authored as code</h3>
+      <p class="why">Star schema, measures and report pages generated as TMDL + PBIR from the same read-only path — plus this dark HTML dashboard with SPC control bands that separate a real signal from week-to-week noise.</p>
+      <a class="frame" href="dashboard.html">
+        <span class="chrome"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>Command Center — dashboard</span></span>
+        <span class="tall" style="display:block">
+          <img src="assets/dashboard_preview.png" alt="The Command Center dashboard: dark bento grid with KPI tiles, SPC control-band charts, receivables aging and revenue concentration">
+          <span class="tall-more">Open the dashboard →</span>
+        </span>
+      </a>
+      <p class="cap">Every chart drawn from the same guarded extraction that produced the report — one definition of every metric.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ EXPLORE ============ -->
+<div class="wrap">
+  <p class="kicker">Go deeper</p>
   <div class="grid">
-    <a class="card" href="sample-report.html">
-      <h3>Live sample report →</h3>
-      <p>One command against the bundled demo database: four KPIs vs an 8-week baseline, named drivers, a data-quality gate, reconciled counts — self-contained HTML.</p>
-      <span class="go">open the report</span>
+    <a class="card" href="case-study.html">
+      <h4>Why "read-only in prose" isn't read-only →</h4>
+      <p>The two famous MCP database failures, what actually went wrong in each, and how to build a guard you can prove.</p>
+      <span class="go">read the case study</span>
     </a>
-    <a class="card" href="dashboard.html">
-      <h3>Command Center →</h3>
-      <p>The premium dark dashboard: animated KPIs, SPC control-band charts, receivables aging and revenue concentration — a real chart in every cell, no external assets.</p>
-      <span class="go">open the dashboard</span>
+    <a class="card" href="comparison.html">
+      <h4>Compared: agent DB access →</h4>
+      <p>Transactions vs roles vs statement guards vs semantic layers — and where each one is genuinely the right choice.</p>
+      <span class="go">weigh the options</span>
     </a>
-    <a class="card" href="playground.html">
-      <h3>Break the guard →</h3>
-      <p>Paste SQL and watch the <em>real</em> read-only guard allow or refuse it — running in your browser, on the exact code the engine ships. Interactive.</p>
-      <span class="go">try it yourself</span>
+    <a class="card" href="https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/SECURITY.md">
+      <h4>The security model →</h4>
+      <p>Four layers: lexical, parse-tree, a side-effecting-function check, and a read-only session. Including what it does <em>not</em> claim.</p>
+      <span class="go">read SECURITY.md</span>
     </a>
   </div>
-  <p style="margin:-22px 0 14px;color:#7d8590;font-size:14px">Prefer the static results? See the <a href="trust.html">full 28-attack trust benchmark →</a> — where the same corpus is run through the shortcuts real tools ship: a starts-with-<code>SELECT</code> check refuses just 6 of the 28, a keyword blocklist 9 (and it blocks a legitimate read); this guard refuses all 28.</p>
-  <p style="margin:0 0 14px;color:#7d8590;font-size:14px">Or read the story: <a href="case-study.html">why "read-only-in-prose" is not read-only →</a> — the two famous MCP database failures, and how to build a guard you can prove.</p>
-  <p style="margin:0 0 40px;color:#7d8590;font-size:14px">Weighing your options? <a href="comparison.html">Read-only database access for AI agents, compared →</a> — transactions vs roles vs statement guards vs semantic layers, and where each is the right choice.</p>
+</div>
 
-  <h2>What one run produces</h2>
-  <ul>
-    <li>KPI cards — revenue, orders, on-time %, low-stock count, each vs last week and an 8-week baseline</li>
-    <li>Findings with named drivers, and SPC signals separated from week-to-week noise, with the arithmetic shown</li>
-    <li>A data-quality gate and source reconciliation — the report audits its own inputs</li>
-    <li>A Power BI Command Center (TMDL + PBIR, authored as code) from the same guarded extraction</li>
-  </ul>
+<!-- ============ FACTS ============ -->
+<div class="facts">
+  <div class="wrap">
+    <div class="fact-grid">
+      <div class="fact">
+        <h4>What one run produces</h4>
+        <ul>
+          <li>KPI cards vs last week <em>and</em> an 8-week baseline</li>
+          <li>Findings with named drivers; SPC signals separated from noise, arithmetic shown</li>
+          <li>A data-quality gate and source reconciliation — the report audits its own inputs</li>
+          <li>A Power BI Command Center from the same guarded extraction</li>
+        </ul>
+      </div>
+      <div class="fact">
+        <h4>Read-only, enforced in code</h4>
+        <ul>
+          <li>Four layers: lexical, parse-tree, side-effecting-function check, read-only session</li>
+          <li>Checks the functions a statement <em>calls</em>, not just its shape — and fails closed when it cannot parse one</li>
+          <li>Three Turkish ERP profiles: Logo Tiger, Netsis, Mikro</li>
+          <li>A guarded MCP server, so an AI agent gets the same guarantee</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
 
-  <h2>Read-only, enforced in code</h2>
-  <ul>
-    <li>A four-layer guard: lexical, parse-tree, a side-effecting-function check, and a read-only session</li>
-    <li>The guard checks the functions a statement calls, not just its shape — and fails closed when it can't parse one</li>
-    <li>Three Turkish ERP profiles (Logo Tiger, Netsis, Mikro) plus a guarded MCP server for agent access</li>
-  </ul>
-
-  <footer>
+<footer>
+  <div class="wrap">
     <a href="https://github.com/gulmezeren2-byte/erp-report-engine">GitHub</a> ·
     <a href="https://pypi.org/project/erp-report-engine/">PyPI</a> ·
-    <a href="https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/SECURITY.md">Security model</a><br>
-    Designed by Eren Gülmez.
-  </footer>
-</div>
+    <a href="https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/SECURITY.md">Security model</a> ·
+    <a href="https://github.com/gulmezeren2-byte/erp-report-engine/blob/main/README.tr.md">🇹🇷 Türkçe</a><br>
+    <span style="opacity:.75">All screenshots are real output from the bundled demo database — synthetic data, real code. Designed by Eren Gülmez.</span>
+  </div>
+</footer>
+
 </body>
 </html>
