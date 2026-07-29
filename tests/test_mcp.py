@@ -157,3 +157,88 @@ def test_every_advertised_example_query_actually_runs(demo_cfg):
         for sql in examples:
             out = _query(demo_cfg, sql, max_rows=2)
             assert "columns" in out and out["row_count"] >= 0   # ran, guarded, returned
+
+
+# --- SDK compatibility: the 1.x/2.x rename -------------------------------
+#
+# mcp 2.0 renamed mcp.server.fastmcp.FastMCP to mcp.server.MCPServer. A fresh
+# `pip install erp-report-engine[mcp]` resolves to 2.x, so pinning to one major
+# would break half the ecosystem either way; `_server_class` accepts both.
+# These tests fake each SDK layout so they run whichever SDK is installed.
+
+import builtins
+import sys
+
+import pytest
+
+from erp_report_engine.errors import EngineError
+from erp_report_engine.mcp_server import _server_class
+
+
+def _hide(monkeypatch, *blocked: str):
+    """Make the named modules look absent to `import`, however they resolve."""
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if any(name == b or name.startswith(b + ".") for b in blocked):
+            raise ImportError(f"No module named {name!r}")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    for mod in list(sys.modules):
+        if any(mod == b or mod.startswith(b + ".") for b in blocked):
+            monkeypatch.delitem(sys.modules, mod, raising=False)
+
+
+def test_returns_a_server_class_with_the_api_we_use():
+    cls = _server_class()
+    # whichever SDK is installed, we rely on exactly these three
+    assert callable(cls)
+    server = cls("probe")
+    assert hasattr(server, "tool") and hasattr(server, "run")
+
+
+def test_falls_back_to_the_2x_name_when_1x_is_absent(monkeypatch):
+    """The 2.x path must be exercised even on a machine running 1.x, so a
+    stub stands in for the renamed module."""
+    import types
+
+    stub = types.ModuleType("mcp.server")
+
+    class MCPServer:  # noqa: D401 - stands in for the 2.x class
+        def __init__(self, name=None):
+            self.name = name
+
+        def tool(self, *a, **k):
+            return lambda fn: fn
+
+        def run(self, *a, **k):
+            raise AssertionError("not started in this test")
+
+    stub.MCPServer = MCPServer
+    _hide(monkeypatch, "mcp.server.fastmcp")
+    monkeypatch.setitem(sys.modules, "mcp.server", stub)
+
+    cls = _server_class()
+    assert cls.__name__ == "MCPServer"
+    assert hasattr(cls("probe"), "tool")
+
+
+def test_missing_extra_says_install_the_extra(monkeypatch):
+    _hide(monkeypatch, "mcp")
+    monkeypatch.setattr(
+        "importlib.util.find_spec", lambda name, *a, **k: None
+    )
+    with pytest.raises(EngineError, match=r"needs the 'mcp' extra"):
+        _server_class()
+
+
+def test_unrecognised_sdk_is_reported_as_such(monkeypatch):
+    # mcp is installed, but exposes neither entry point: a different problem
+    # from "the extra is missing", and it must not be reported as that.
+    _hide(monkeypatch, "mcp.server")
+    monkeypatch.setattr(
+        "importlib.util.find_spec", lambda name, *a, **k: object()
+    )
+    with pytest.raises(EngineError, match=r"neither mcp\.server\.fastmcp"):
+        _server_class()

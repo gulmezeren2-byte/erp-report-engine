@@ -155,16 +155,47 @@ def _query(cfg: Config, sql: str, max_rows: int = _MCP_ROW_CAP) -> dict:
     }
 
 
-def build_server(cfg: Config):
-    """Construct the FastMCP server. Requires the optional `mcp` dependency."""
-    try:
-        from mcp.server.fastmcp import FastMCP
-    except ImportError as e:  # pragma: no cover - exercised only without the extra
-        raise EngineError(
-            "the MCP server needs the 'mcp' extra: pip install \"erp-report-engine[mcp]\""
-        ) from e
+def _server_class():
+    """Return the MCP SDK's server class, across the 1.x/2.x rename.
 
-    server = FastMCP("erp-report-engine")
+    The SDK renamed `mcp.server.fastmcp.FastMCP` to `mcp.server.MCPServer` in
+    2.0. The constructor, the `.tool()` decorator and `.run(transport=...)` are
+    the same shape, so one code path serves both -- and pinning to one major
+    would strand whichever half of the ecosystem is on the other.
+
+    The two failures are reported separately on purpose: "the extra is missing"
+    and "the installed SDK is not one we recognise" need different fixes, and
+    collapsing them into one message sent a previous debugging session chasing
+    the wrong cause.
+    """
+    try:
+        from mcp.server.fastmcp import FastMCP  # mcp 1.x
+
+        return FastMCP
+    except ImportError:
+        pass
+    try:
+        from mcp.server import MCPServer  # mcp 2.x
+
+        return MCPServer
+    except ImportError as exc:
+        import importlib.util
+
+        if importlib.util.find_spec("mcp") is None:
+            raise EngineError(
+                "the MCP server needs the 'mcp' extra: "
+                'pip install "erp-report-engine[mcp]"'
+            ) from exc
+        raise EngineError(
+            "the installed 'mcp' SDK exposes neither mcp.server.fastmcp.FastMCP "
+            "(1.x) nor mcp.server.MCPServer (2.x); erp-report-engine needs one "
+            "of them. Please report the SDK version."
+        ) from exc
+
+
+def build_server(cfg: Config):
+    """Construct the MCP server. Requires the optional `mcp` dependency."""
+    server = _server_class()("erp-report-engine")
 
     @server.tool()
     def describe_model() -> dict:
