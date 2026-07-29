@@ -30,3 +30,6 @@ build/
 .coverage.*
 coverage.xml
 htmlcov/
+
+# Playwright MCP scratch output (screenshots, console logs)
+.playwright-mcp/
