@@ -3,6 +3,9 @@ test builds the FastMCP server when the optional `mcp` extra is installed."""
 
 from __future__ import annotations
 
+import builtins
+import sys
+
 import pytest
 
 from erp_report_engine.config import Config, load_config
@@ -14,6 +17,7 @@ from erp_report_engine.mcp_server import (
     _describe_model,
     _query,
     _reconcile,
+    _server_class,
     _weekly_report,
 )
 
@@ -165,15 +169,6 @@ def test_every_advertised_example_query_actually_runs(demo_cfg):
 # `pip install erp-report-engine[mcp]` resolves to 2.x, so pinning to one major
 # would break half the ecosystem either way; `_server_class` accepts both.
 # These tests fake each SDK layout so they run whichever SDK is installed.
-
-import builtins
-import sys
-
-import pytest
-
-from erp_report_engine.errors import EngineError
-from erp_report_engine.mcp_server import _server_class
-
 
 def _hide(monkeypatch, *blocked: str):
     """Make the named modules look absent to `import`, however they resolve."""
