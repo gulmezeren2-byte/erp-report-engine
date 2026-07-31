@@ -60,7 +60,7 @@ jobs:
         # page for `pipx install erp-report-engine`
         run: python -m twine check --strict dist/*
       - name: Publish to PyPI (Trusted Publishing)
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
+        uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # release/v1
 
   # List the guarded MCP server on the official MCP registry, so anyone searching
   # "read-only / secure / database MCP" finds it. Runs AFTER the PyPI upload (the
