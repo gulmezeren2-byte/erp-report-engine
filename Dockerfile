@@ -12,7 +12,7 @@
 # Pinned by digest so the same commit always builds the same base, not whatever
 # python:3.12-slim happens to point at that day. The tag is kept alongside for
 # readability; Dependabot bumps both together (see .github/dependabot.yml).
-FROM python:3.14-slim@sha256:d3400aa122fa42cf0af0dbe8ec3091b047eac5c8f7e3539f7135e86d855dc015
+FROM python:3.15-slim@sha256:2da676046630d7bf14c6764ae1143dc7fa0377a53f94bf5a642f0b214aca5bce
 
 WORKDIR /app
 COPY pyproject.toml README.md LICENSE ./
