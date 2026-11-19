@@ -12,6 +12,7 @@ taxonomy in errors.py (0 ok, 2 config, 3 database, 4 contract, 5 data-quality).
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import logging
 import os
@@ -110,7 +111,10 @@ def cmd_mcp(args) -> None:
 
         from .demo_builder import build
         demo_dir = os.path.join(tempfile.gettempdir(), "erp-report-engine-demo")
-        cfg_path = build(demo_dir)
+        # stdout is the JSON-RPC channel once serving starts, so the build's
+        # status line goes to stderr; serve() itself keeps the real stdout.
+        with contextlib.redirect_stdout(sys.stderr):
+            cfg_path = build(demo_dir)
         _log.info("starting MCP server (stdio) against the bundled DEMO database")
         serve(str(cfg_path))
         return

@@ -3,11 +3,14 @@ test builds the FastMCP server when the optional `mcp` extra is installed."""
 
 from __future__ import annotations
 
+import argparse
 import builtins
 import sys
+import tempfile
 
 import pytest
 
+from erp_report_engine import cli, mcp_server
 from erp_report_engine.config import Config, load_config
 from erp_report_engine.errors import EngineError
 from erp_report_engine.mcp_server import (
@@ -237,3 +240,19 @@ def test_unrecognised_sdk_is_reported_as_such(monkeypatch):
     )
     with pytest.raises(EngineError, match=r"neither mcp\.server\.fastmcp"):
         _server_class()
+
+
+def test_demo_mode_keeps_stdout_for_the_protocol(monkeypatch, tmp_path, capsys):
+    # A stdio MCP server owns stdout for JSON-RPC. Building the demo DB must not
+    # print there (a strict client rejects a non-JSON line), and the server must
+    # still be handed the real stdout, not the redirect.
+    served = []
+    monkeypatch.setattr(mcp_server, "serve", lambda cfg_path: served.append(sys.stdout is sys.stderr))
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+
+    cli.cmd_mcp(argparse.Namespace(demo=True, config=None))
+
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert "demo.db:" in err          # the status line is redirected, not lost
+    assert served == [False]          # served once, on the real stdout
