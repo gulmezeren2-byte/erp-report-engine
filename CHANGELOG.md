@@ -5,11 +5,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.8.0] — 2026-11-19 · "The MCP server starts on SDK 2.x — and with zero setup"
+
+The reason for this release is the item under *Fixed*: a fresh `pip install "erp-report-engine[mcp]"` now resolves the `mcp` 2.x SDK, and 0.7.0's MCP server does not start on it. The additions had been waiting on `main` since July.
+
 ### Added
-- **`erp-report-engine mcp --demo` — a zero-setup guarded MCP server.** Serves the six tools over the bundled demo database (built in a temp dir), so anyone can start the server and introspect/query it with no ERP and no config — `mcp --demo`, or `docker run` (now the image's default command). The real path stays `mcp -c config.yaml`.
+- **`erp-report-engine mcp --demo` — a zero-setup guarded MCP server.** Serves the six tools over the bundled demo database (built in a temp dir), so anyone can start the server and introspect/query it with no ERP and no config — `mcp --demo`, or `docker run` (now the image's default command). The real path stays `mcp -c config.yaml`. Building the demo prints its one status line to stderr, so stdout carries nothing but the protocol.
 - **Installable as a Claude Code plugin.** `/plugin marketplace add gulmezeren2-byte/erp-report-engine` then `/plugin install erp-report-engine` bundles the guarded MCP server (launched via `uvx`, no manual install), the safe-query skills, and zero-setup `/trust-benchmark` and `/erp-schema` commands. `.claude-plugin/{plugin,marketplace}.json` wire it; the skills and commands work before a database is configured.
 - **The canonical model is now a published, machine-readable contract.** `erp-report-engine schema` prints it, and it ships as [`docs/model.json`](https://gulmezeren2-byte.github.io/erp-report-engine/model.json) — every entity's grain, each column's type and meaning, and runnable example queries — so a tool can consume the semantic layer without connecting to the MCP server. One source (`semantic.canonical_model()`), shared by `describe_model`, the CLI, and the published file; CI regenerates it and fails on drift. The model carries its own `model_version`, so the contract is stable across engine releases and moves only when the model does.
 - A recorded **playground demo** (the real `guard.py` refusing a file read and the famous `COMMIT; DROP` Postgres bypass, then allowing a real aggregate) and a social-preview card, featured on the READMEs and the landing page.
+
+### Fixed
+- **The MCP server starts on the `mcp` SDK 2.x as well as 1.x.** 0.7.0 imported `mcp.server.fastmcp.FastMCP`; 2.x renamed it to `mcp.server.MCPServer` and turned the old import into an error, so `erp-report-engine mcp` exited before its first answer, with a misleading "needs the 'mcp' extra" message. The server class is now resolved for either generation, and "the extra is missing" and "the installed SDK is not one we recognise" are reported separately. Checked with a real stdio handshake — initialize, the six tools listed, `describe_model` and `check_query` called — on `mcp` 1.28.1 and 2.3.0.
 
 ## [0.7.0] — 2026-07-18 · "The read-only agent layer — measured, not asserted"
 

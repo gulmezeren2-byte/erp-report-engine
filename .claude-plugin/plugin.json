@@ -1,6 +1,6 @@
 {
   "name": "erp-report-engine",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "A provably read-only SQL layer for AI agents over the database behind an ERP (Logo Tiger, Netsis, Mikro). The agent queries canonical entities through a statement-checking read-only guard - measured against a public 28-attack benchmark, not promised in prose.",
   "author": {
     "name": "Eren Gülmez",
